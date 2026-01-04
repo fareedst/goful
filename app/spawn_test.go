@@ -8,10 +8,27 @@ import (
 )
 
 func TestExpandMacro(t *testing.T) {
+	tmpHome := t.TempDir()
+
+	prevHome, hadHome := os.LookupEnv("HOME")
+	if err := os.Setenv("HOME", tmpHome); err != nil {
+		t.Fatalf("failed to set HOME: %v", err)
+	}
+	defer func() {
+		if hadHome {
+			_ = os.Setenv("HOME", prevHome)
+		} else {
+			_ = os.Unsetenv("HOME")
+		}
+	}()
+
 	g := NewGoful("")
 	g.Workspace().ReloadAll() // in home directory
 
 	home, _ := os.UserHomeDir()
+	if got := g.File().Name(); got != ".." {
+		t.Fatalf("unexpected cursor file %q in temp home %q", got, home)
+	}
 	macros := []struct {
 		in  string
 		out string
