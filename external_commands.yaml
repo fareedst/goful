@@ -1,0 +1,6 @@
+# mkdir -p ~/.goful
+# cp -p external_commands.yaml ~/.goful/
+- key: O
+  label: "copy %m to %D2    "
+  command: "cp -vai %m %D2"
+  offset: -2

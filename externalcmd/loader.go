@@ -23,6 +23,16 @@ type Options struct {
 	Debug    bool
 }
 
+type fileConfig struct {
+	entries         []Entry
+	inheritDefaults bool
+}
+
+type configWrapper struct {
+	Commands        []Entry `json:"commands" yaml:"commands"`
+	InheritDefaults *bool   `json:"inheritDefaults" yaml:"inheritDefaults"`
+}
+
 // Load resolves and parses the external command configuration file.
 // Falls back to baked-in defaults if the file is missing or invalid.
 // [IMPL:EXTERNAL_COMMAND_LOADER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
@@ -48,56 +58,84 @@ func Load(opts Options) ([]Entry, error) {
 		return defaults, fmt.Errorf("read external commands %s: %w", resolvedPath, err)
 	}
 
-	entries, err := parseEntries(data)
+	cfg, err := parseConfig(data)
 	if err != nil {
 		return defaults, fmt.Errorf("parse external commands %s: %w", resolvedPath, err)
 	}
 
-	sanitized, err := sanitizeEntries(entries, opts.GOOS, &opts, resolvedPath)
+	sanitized, err := sanitizeEntries(cfg.entries, opts.GOOS, &opts, resolvedPath)
 	if err != nil {
 		return defaults, err
 	}
 
-	debugf(&opts, "loaded %d external command(s) from %s", len(sanitized), resolvedPath)
+	// [IMPL:EXTERNAL_COMMAND_APPEND] preserve compiled defaults unless configs opt out.
+	if cfg.inheritDefaults {
+		merged := mergeWithDefaults(defaults, sanitized)
+		debugf(&opts, "[IMPL:EXTERNAL_COMMAND_APPEND] inheritDefaults=true; prepended %d command(s) ahead of %d default(s) from %s", len(sanitized), len(defaults), resolvedPath)
+		return merged, nil
+	}
+
+	debugf(&opts, "[IMPL:EXTERNAL_COMMAND_APPEND] inheritDefaults=false; replacing %d default(s) with %d command(s) from %s", len(defaults), len(sanitized), resolvedPath)
 	return sanitized, nil
 }
 
-func parseEntries(data []byte) ([]Entry, error) {
-	if entries, err := parseJSONEntries(data); err == nil {
-		return entries, nil
+func parseConfig(data []byte) (fileConfig, error) {
+	if cfg, err := parseJSONConfig(data); err == nil {
+		return cfg, nil
 	}
-	if entries, err := parseYAMLEntries(data); err == nil {
-		return entries, nil
+	if cfg, err := parseYAMLConfig(data); err == nil {
+		return cfg, nil
 	}
-	return nil, errors.New("expected JSON or YAML array or object with `commands` field")
+	return fileConfig{}, errors.New("expected JSON or YAML array or object with `commands` field")
 }
 
-func parseJSONEntries(data []byte) ([]Entry, error) {
+func parseJSONConfig(data []byte) (fileConfig, error) {
 	var entries []Entry
 	if err := json.Unmarshal(data, &entries); err == nil {
-		return entries, nil
+		return fileConfig{entries: entries, inheritDefaults: true}, nil
 	}
-	var wrapper struct {
-		Commands []Entry `json:"commands"`
-	}
+
+	var wrapper configWrapper
 	if err := json.Unmarshal(data, &wrapper); err == nil {
-		return wrapper.Commands, nil
+		return fileConfig{
+			entries:         wrapper.Commands,
+			inheritDefaults: inheritDefaultsOrTrue(wrapper.InheritDefaults),
+		}, nil
 	}
-	return nil, errors.New("json decode failed")
+	return fileConfig{}, errors.New("json decode failed")
 }
 
-func parseYAMLEntries(data []byte) ([]Entry, error) {
+func parseYAMLConfig(data []byte) (fileConfig, error) {
 	var entries []Entry
 	if err := yaml.Unmarshal(data, &entries); err == nil {
-		return entries, nil
+		return fileConfig{entries: entries, inheritDefaults: true}, nil
 	}
-	var wrapper struct {
-		Commands []Entry `yaml:"commands"`
-	}
+
+	var wrapper configWrapper
 	if err := yaml.Unmarshal(data, &wrapper); err == nil {
-		return wrapper.Commands, nil
+		return fileConfig{
+			entries:         wrapper.Commands,
+			inheritDefaults: inheritDefaultsOrTrue(wrapper.InheritDefaults),
+		}, nil
 	}
-	return nil, errors.New("yaml decode failed")
+	return fileConfig{}, errors.New("yaml decode failed")
+}
+
+func inheritDefaultsOrTrue(flag *bool) bool {
+	if flag == nil {
+		return true
+	}
+	return *flag
+}
+
+func mergeWithDefaults(defaults, overrides []Entry) []Entry {
+	if len(overrides) == 0 {
+		return defaults
+	}
+	merged := make([]Entry, 0, len(defaults)+len(overrides))
+	merged = append(merged, overrides...)
+	merged = append(merged, defaults...)
+	return merged
 }
 
 func sanitizeEntries(entries []Entry, goos string, opts *Options, path string) ([]Entry, error) {

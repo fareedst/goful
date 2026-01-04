@@ -92,12 +92,13 @@ When documenting architecture decisions, use this format:
 - Removes the need to patch `main.go` to customize the `external-command` menu; teams can distribute curated configs per environment.
 - Mirrors the existing precedence contract so `-commands` (CLI) overrides `GOFUL_COMMANDS_FILE`, which overrides the default `~/.goful/external_commands.yaml`.
 - Preserves current behavior (Windows vs. POSIX defaults, cursor offsets, macros) when no file is present or parsing fails, reducing regression risk.
+- By default, inherits the compiled defaults even when a file is present, then **prepends** file entries so customized shortcuts appear first while legacy entries remain unless the file opts into a "replace defaults" mode.
 - Surfaces `DEBUG:` diagnostics and `message.Errorf` warnings when entries are skipped (duplicate keys, missing fields, unsupported platforms).
 
 **Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
 - `CommandConfigPathResolver` extends `configpaths.Resolver` with `Commands` + provenance metadata and emits `[IMPL:STATE_PATH_RESOLVER]` debug output alongside state/history.
-- `externalcmd.Loader` (`[IMPL:EXTERNAL_COMMAND_LOADER]`) expands `~`, reads JSON or YAML, validates schema, enforces unique `menu/key`, filters by GOOS, honors `disabled`, and falls back to embedded defaults packaged per platform.
-- `externalcmd.Defaults` enumerates the historical Windows/POSIX menus so regression tests can compare lists directly.
+- `externalcmd.Loader` (`[IMPL:EXTERNAL_COMMAND_LOADER]` & `[IMPL:EXTERNAL_COMMAND_APPEND]`) expands `~`, reads JSON or YAML, validates schema, enforces unique `menu/key`, filters by GOOS, honors `disabled`, _merges defaults + file entries with prepend-as-default semantics_, and falls back to embedded defaults packaged per platform.
+- `externalcmd.Defaults` enumerates the historical Windows/POSIX menus so regression tests can compare lists directly and gives the loader something to inherit from when files only supply deltas.
 - `main.registerExternalCommandMenu` (`[IMPL:EXTERNAL_COMMAND_BINDER]`) converts validated entries into `menu.Add` triplets, captures cursor offsets when invoking `g.Shell`, and injects a placeholder item if configuration disables every command to keep `X` from erroring.
 
 **Alternatives Considered:**
@@ -107,7 +108,7 @@ When documenting architecture decisions, use this format:
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
 - `configpaths/resolver.go` comments mention `[IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]` plus the new commands path metadata.
-- `externalcmd/loader.go` and tests include `[IMPL:EXTERNAL_COMMAND_LOADER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]`.
+- `externalcmd/loader.go` and tests include `[IMPL:EXTERNAL_COMMAND_LOADER] [IMPL:EXTERNAL_COMMAND_APPEND] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]`.
 - `main_external_commands.go` helper + tests include `[IMPL:EXTERNAL_COMMAND_BINDER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]`.
 
 **Cross-References**: [REQ:EXTERNAL_COMMAND_CONFIG], [IMPL:EXTERNAL_COMMAND_LOADER], [IMPL:EXTERNAL_COMMAND_BINDER]
@@ -598,4 +599,31 @@ func formatDirs(paths []string, quote bool) string {
 - README/CONTRIBUTING updates describe overrides and reference `[REQ:TERMINAL_PORTABILITY]`.
 
 **Cross-References**: [REQ:TERMINAL_PORTABILITY], [REQ:TERMINAL_CWD], [IMPL:TERMINAL_ADAPTER], [REQ:MODULE_VALIDATION]
+
+## 27. Event Loop Shutdown [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+
+### Decision: Introduce a coordinated shutdown signal for the UI event poller so `app.Goful.Run` can stop `widget.PollEvent` without leaking goroutines or writing to closed channels.
+**Rationale:**
+- Today the poller runs an infinite loop that never observes `g.exit`; once the UI exits the goroutine keeps spinning, causing CPU spikes and stray writes to `g.event`.
+- Explicit stop control aligns with `[REQ:MODULE_VALIDATION]` by giving the poller a contract that can be validated in isolation.
+
+**Architecture Outline:**
+- Wrap `widget.PollEvent` invocations inside a `Poller` module that accepts a context or `stop <-chan struct{}` derived from `app.Goful` lifecycle hooks.
+- Provide a `ShutdownController` that closes the stop signal when `Run` is unwinding, waits for the poller to exit (with timeout), then closes `g.event` safely.
+- Emit `DEBUG: [IMPL:EVENT_LOOP_SHUTDOWN]` logs when shutdown begins, completes, or times out.
+
+**Alternatives Considered:**
+- Leave the infinite loop in place and rely on process exit: rejected because CLI integrations embed goful and expect clean teardown.
+- Use `runtime.Goexit` or `os.Exit` to kill goroutines: rejected because it bypasses cleanup and breaks terminal restoration.
+
+**Module Validation [REQ:MODULE_VALIDATION]:**
+- `Poller` module validated with fakes that simulate tcell events and assert termination once the stop channel closes.
+- `ShutdownController` validated with unit tests that model successful shutdown and timeout paths.
+- Integration tests for `app.Goful.Run` ensure no events are delivered after shutdown and goroutine counts return to baseline.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Code: `app/goful.go` poller, shutdown controller, and any new helper files include `[IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]` comments.
+- Tests: `app/goful_shutdown_test.go` (or equivalent) names incorporate `REQ_EVENT_LOOP_SHUTDOWN` to prove validation coverage.
+
+**Cross-References**: [REQ:EVENT_LOOP_SHUTDOWN], [IMPL:EVENT_LOOP_SHUTDOWN], [REQ:MODULE_VALIDATION]
 

@@ -123,6 +123,7 @@ When referencing other tokens:
 - `[REQ:DEBT_TRIAGE]` - Technical debt and risky areas are triaged with TODOs/issues
 - `[REQ:TERMINAL_PORTABILITY]` - Terminal launcher works across Linux, macOS, and tmux contexts
 - `[REQ:TERMINAL_CWD]` - macOS terminal sessions start in the active directory
+- `[REQ:EVENT_LOOP_SHUTDOWN]` - Event poller must observe shutdown signals and terminate without leaking goroutines
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -158,6 +159,7 @@ When referencing other tokens:
 - `[ARCH:TOKEN_VALIDATION_AUTOMATION]` - Token validation helper automation [REQ:STDD_SETUP]
 - `[ARCH:QUIT_DIALOG_KEYS]` - Quit dialog key translation guarantees [REQ:QUIT_DIALOG_DEFAULT]
 - `[ARCH:TERMINAL_LAUNCHER]` - Cross-platform terminal launcher abstraction [REQ:TERMINAL_PORTABILITY]
+- `[ARCH:EVENT_LOOP_SHUTDOWN]` - Event poller shutdown coordination [REQ:EVENT_LOOP_SHUTDOWN]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -169,6 +171,7 @@ When referencing other tokens:
 - `[IMPL:MODULE_VALIDATION]` - Module validation implementation [ARCH:MODULE_VALIDATION] [REQ:MODULE_VALIDATION]
 - `[IMPL:STATE_PATH_RESOLVER]` - Resolver + bootstrap wiring [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
 - `[IMPL:EXTERNAL_COMMAND_LOADER]` - External command config loader/defaults [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+- `[IMPL:EXTERNAL_COMMAND_APPEND]` - Default inheritance (prepended custom entries) + replacement toggle for external command configs [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
 - `[IMPL:EXTERNAL_COMMAND_BINDER]` - Menu binding helpers for commands [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
 - `[IMPL:WINDOW_MACRO_ENUMERATION]` - `%D@` macro helpers [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
 - `[IMPL:GO_MOD_UPDATE]` - Go version/toolchain update [ARCH:GO_RUNTIME_STRATEGY] [REQ:GO_TOOLCHAIN_LTS]
@@ -187,6 +190,7 @@ When referencing other tokens:
 - `[IMPL:TOKEN_VALIDATION_SCRIPT]` - Shell script enforcing token registry [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
 - `[IMPL:QUIT_DIALOG_ENTER]` - Return/Enter mapping for quit dialog default [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
 - `[IMPL:TERMINAL_ADAPTER]` - Platform-aware terminal command adapter [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
+- `[IMPL:EVENT_LOOP_SHUTDOWN]` - Event poller stop controller [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
 - Add your implementation tokens here
 
 ## Test Tokens Registry
@@ -214,6 +218,7 @@ When referencing other tokens:
 - `[PROC:BUILD_PIPELINE_VALIDATION]` - Build/deploy validation tied to `[REQ:MODULE_VALIDATION]`
 - `[PROC:TOKEN_AUDIT]` - Mandatory checklist ensuring every requirement → architecture → implementation → code/test path is annotated and documented
 - `[PROC:TOKEN_VALIDATION]` - Automated validation workflow (e.g., `./scripts/validate_tokens.sh`) that proves all referenced tokens exist in the registry
+- `[PROC:TERMINAL_VALIDATION]` - Manual macOS/Linux terminal checklist safeguarding `[REQ:TERMINAL_PORTABILITY]`, `[REQ:TERMINAL_CWD]`, and `[ARCH:TERMINAL_LAUNCHER]`
 - Add your process tokens here
 
 ## Usage Examples

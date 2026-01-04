@@ -258,6 +258,7 @@ Install after edit `my/goful/main.go`
 - Flag `-commands /path/to/external_commands.yaml` overrides everything.
 - Environment variable `GOFUL_COMMANDS_FILE` applies when the CLI flag is unset.
 - Defaults fall back to `~/.goful/external_commands.yaml`, with the historical POSIX/Windows bindings baked in if the file does not exist yet.
+- Omit `inheritDefaults` (or set it to `true`) to **prepend** your file-based commands ahead of the compiled defaults; set `inheritDefaults: false` to replace them entirely. `[IMPL:EXTERNAL_COMMAND_APPEND]`
 - Set `GOFUL_DEBUG_COMMANDS=1` to log loader diagnostics (`DEBUG: [IMPL:EXTERNAL_COMMAND_LOADER] ...`).
 
 Each entry accepts (shown in JSON, but the same fields work in YAML):
@@ -284,13 +285,30 @@ Each entry accepts (shown in JSON, but the same fields work in YAML):
 YAML example:
 
 ```yaml
-- key: c
-  label: "copy %m to %D2    "
-  command: "cp -vai %m %D2"
-  offset: -2
-- key: A
-  label: "archives menu     "
-  runMenu: "archive"
+inheritDefaults: true # omit for the default prepend behavior
+commands:
+  - key: c
+    label: "copy %m to %D2    "
+    command: "cp -vai %m %D2"
+    offset: -2
+  - key: A
+    label: "archives menu     "
+    runMenu: "archive"
+```
+
+Need an object wrapper in JSON to drop the defaults entirely:
+
+```jsonc
+{
+  "inheritDefaults": false,
+  "commands": [
+    {
+      "key": "z",
+      "label": "zip %m",
+      "command": "zip -roD %x.zip %m"
+    }
+  ]
+}
 ```
 
 - Use goful macros (`%f`, `%D@`, `%~m`, etc.) inside `command` strings the same way the legacy `main.go` menu did.

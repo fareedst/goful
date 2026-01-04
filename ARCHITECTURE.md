@@ -43,7 +43,7 @@ main.go
 
 - `configpaths.Resolver` enforces precedence for state/history/commands: CLI flag (`-state`, `-history`, `-commands`) → environment (`GOFUL_STATE_PATH`, `GOFUL_HISTORY_PATH`, `GOFUL_COMMANDS_FILE`) → defaults (`~/.goful/...`).  
 - `main.emitPathDebug` logs provenance for all three paths when `GOFUL_DEBUG_PATHS=1` so operators can confirm overrides without editing code.
-- `externalcmd.Load` consumes the resolved commands path, parses either JSON or YAML, and falls back to baked-in defaults while logging `[IMPL:EXTERNAL_COMMAND_LOADER]` diagnostics when configs are missing or filtered.
+- `externalcmd.Load` consumes the resolved commands path, parses either JSON or YAML, and falls back to baked-in defaults while logging `[IMPL:EXTERNAL_COMMAND_LOADER]` diagnostics when configs are missing or filtered. `[IMPL:EXTERNAL_COMMAND_APPEND]` ensures file-defined commands append to the compiled defaults unless `inheritDefaults: false` is supplied, so operators explicitly control whether historical shortcuts persist.
 - `filer.SaveState` + `cmdline.{Load,Save}History` receive the resolved paths and are invoked before exit, ensuring persistence remains in sync with overrides, while `registerExternalCommands` wires loader output into the runtime menu.
 
 ## Menus, Keymaps, and Associations [REQ:BEHAVIOR_BASELINE] [ARCH:BASELINE_CAPTURE]

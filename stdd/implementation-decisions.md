@@ -121,7 +121,7 @@ type Config struct {
 - New package `externalcmd` exposes:
   - `type Entry` with `Menu`, `Key`, `Label`, `Command`, `Offset`, `Platforms`, `Disabled`.
   - `func Defaults(goos string) []Entry` returning the old hard-coded Windows/POSIX menus expressed with `%` macros instead of inline `g.File()` references (e.g., rename defaults to `mv -vi %f %~f`).
-  - `func Load(Options) ([]Entry, error)` where `Options` carries `Path`, `GOOS`, `ReadFile`, `Debug`. Loader expands `~`, reads JSON or YAML (supporting raw arrays or `{ commands: [] }`), validates unique `menu/key`, enforces required fields, filters by `Platforms`, skips disabled entries, and logs diagnostics tagged with `[IMPL:EXTERNAL_COMMAND_LOADER]`.
+  - `func Load(Options) ([]Entry, error)` where `Options` carries `Path`, `GOOS`, `ReadFile`, `Debug`. Loader expands `~`, reads JSON or YAML (supporting raw arrays or `{ commands: [] }`), validates unique `menu/key`, enforces required fields, filters by `Platforms`, skips disabled entries, logs diagnostics tagged with `[IMPL:EXTERNAL_COMMAND_LOADER]`, and **prepends file entries ahead of `Defaults` unless the file sets an explicit opt-out (e.g., `inheritDefaults: false`)**.
 - Errors reading/parsing the config file bubble up so callers can emit `message.Errorf` but still fall back to defaults.
 - Dependency note: Introduced `gopkg.in/yaml.v3` to parse YAML files without writing a bespoke parser; the package is already widely used and compatible with Go 1.24.
 
@@ -163,6 +163,32 @@ type Config struct {
 
 **Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
 - `go test ./...` after integration covers binder tests; `./scripts/validate_tokens.sh` ensures the new tokens are registered.
+
+**Cross-References**: [ARCH:EXTERNAL_COMMAND_REGISTRY], [REQ:EXTERNAL_COMMAND_CONFIG], [REQ:MODULE_VALIDATION]
+
+## 2d. External Command Append Toggle [IMPL:EXTERNAL_COMMAND_APPEND] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+
+### Decision: Preserve built-in Windows/POSIX menu entries whenever a commands file is present, **prepending** file-defined entries by default and only replacing defaults when the file opts out via `inheritDefaults: false`.
+**Rationale:**
+- Operators expect historical shortcuts (`cp`, `mv`, etc.) to remain available unless they explicitly suppress them; this keeps onboarding friction low.
+- Some environments must ship a clean slate for security reasons, so the same config file needs a deterministic switch to drop defaults entirely.
+- Encoding the behavior in semantic tokens makes the inheritance contract testable and discoverable beyond requirements prose.
+
+### Implementation Approach:
+- Extend the loader parser to recognize either an array of entries (prepends defaults implicitly) or an object wrapper containing `commands` and `inheritDefaults` (JSON or YAML). Missing flags default to `true` so existing configs pick up prepend semantics automatically.
+- After sanitizing file entries, merge them with `externalcmd.Defaults` when inheritance is enabled (custom entries first) or return only the sanitized entries when disabled. Emit `DEBUG: [IMPL:EXTERNAL_COMMAND_APPEND]` logs describing whether defaults were included.
+- Surface the new `[IMPL:EXTERNAL_COMMAND_APPEND]` token in loader code comments, docs, and tests so audits can trace the behavior end-to-end.
+
+**Code Markers**:
+- `externalcmd/loader.go` merge logic and debug output include `[IMPL:EXTERNAL_COMMAND_APPEND] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]`.
+- README + STDD docs document the `inheritDefaults` flag and reference this token.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Tests named `TestLoadAppendsDefaultsByDefault_REQ_EXTERNAL_COMMAND_CONFIG` and `TestLoadCanDisableDefaults_REQ_EXTERNAL_COMMAND_CONFIG` include `[IMPL:EXTERNAL_COMMAND_APPEND]` in comments.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./externalcmd` (darwin/arm64, Go 1.24.3) covers prepend vs. replace behaviors.
+- `./scripts/validate_tokens.sh` run after implementation adds `[IMPL:EXTERNAL_COMMAND_APPEND]` to the registry and verifies references.
 
 **Cross-References**: [ARCH:EXTERNAL_COMMAND_REGISTRY], [REQ:EXTERNAL_COMMAND_CONFIG], [REQ:MODULE_VALIDATION]
 
@@ -737,7 +763,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
   - `Factory.CommandWithCwd(cmd string, cwd string) []string` returns:
     - Override path: `TerminalOverride + []string{"bash", "-c", payload}` where `payload` already prefixes macOS commands with `cd "<cwd>";` to satisfy `[REQ:TERMINAL_CWD]`.
     - Tmux path: `[]string{"tmux", "new-window", "-n", title(cmd), cmd + tail}`.
-    - macOS path: `[]string{"osascript", "-e", fmt.Sprintf("tell application \\"Terminal\\" to do script \\"%s\\" & activate", script)}` where `script` embeds the title escape plus the same `cd "<cwd>"; <cmd + tail>` payload.
+    - macOS path: `[]string{"osascript", "-e", fmt.Sprintf("tell application \"Terminal\" to do script \"%s\" & activate", script)}` where `script` embeds the title escape plus the same `cd "<cwd>"; <cmd + tail>` payload.
     - Linux default: maintain current gnome-terminal invocation with title-setting escape.
   - Emits `DEBUG: [IMPL:TERMINAL_ADAPTER] ...` logs describing the branch taken and any overrides, guarded by `GOFUL_DEBUG_TERMINAL=1`.
 
@@ -758,10 +784,50 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
 - Tests named `TestCommandFactoryDarwin_REQ_TERMINAL_PORTABILITY`, etc., assert branch outputs.
-- Manual validation checklist logged in `stdd/tasks.md`.
+- Manual validation checklist is documented as `[PROC:TERMINAL_VALIDATION]` in `stdd/processes.md` and linked from `stdd/tasks.md`.
 
-**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
-- Record `./scripts/validate_tokens.sh` and `go test ./terminalcmd` outputs once implementation lands.
+**Validation Evidence (2026-01-04)** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./terminalcmd` (darwin/arm64, Go 1.24.3) exercises `TestCommandFactory*`, `TestParseOverride`, and `TestApply*`, covering every selection branch plus the configurator glue.
+- `./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 245 token references across 52 files.`
+- Manual execution follows `[PROC:TERMINAL_VALIDATION]`; operators must run the macOS/Linux checklist on physical hardware prior to releases and record findings in `stdd/tasks.md`.
 
 **Cross-References**: [ARCH:TERMINAL_LAUNCHER], [REQ:TERMINAL_PORTABILITY], [REQ:TERMINAL_CWD], [REQ:MODULE_VALIDATION]
+
+## 23. Event Loop Shutdown Controller [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+
+### Decision: Add explicit stop control to the `app.Goful` event poller so goroutines exit immediately when the UI shuts down.
+**Rationale:**
+- Current implementations defer to process exit; embedded workflows keep the process alive, so leaked poller goroutines chew CPU and keep writing to `g.event`.
+- Providing a controllable shutdown path lets us validate the poller independently and clear Debt Log item D1.
+
+### Implementation Approach:
+1. **Poller Abstraction**
+   - Introduce an interface (or pure helper) `type Poller interface { Poll(stop <-chan struct{}, out chan<- tcell.Event) }` that wraps `widget.PollEvent` and listens for a stop channel.
+   - Use `tcell.Screen` mocks in tests to simulate events and blocked reads.
+
+2. **Shutdown Controller**
+   - Extend `app.Goful` with a `pollStop chan struct{}` and `sync.WaitGroup` to track poller goroutines.
+   - When `Run` exits (or when a fatal error occurs), close `pollStop`, wait for the poller to return with a timeout, then close `g.event`.
+   - Emit `DEBUG: [IMPL:EVENT_LOOP_SHUTDOWN] stop signal sent/received` logs gated by `GOFUL_DEBUG_EVENTLOOP` (new env var) for troubleshooting.
+
+3. **Timeout & Error Handling**
+   - If the poller fails to stop within the timeout, log `message.Errorf` with instructions to file a bug referencing `[REQ:EVENT_LOOP_SHUTDOWN]` and continue teardown safely.
+   - Ensure repeated shutdown attempts are idempotent (closing an already-closed channel must not panic).
+
+4. **Integration with Existing Flow**
+   - Wire the poller start/stop into existing `Run` lifecycle, ensuring other modules (cmdline, filer) still receive events while the UI is running.
+   - Update debt log entry D1 to reflect mitigation once manual validation is recorded.
+
+**Code Markers**:
+- `app/goful.go`, any new helper file, and associated tests include `[IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]` comments.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Tests named `TestEventPollerStops_REQ_EVENT_LOOP_SHUTDOWN` (unit) and `TestRunStopsPoller_REQ_EVENT_LOOP_SHUTDOWN` (integration) prove both modules.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]` (to be captured when implementation lands):
+- `go test ./app` covering poller + shutdown controller unit tests.
+- `./scripts/validate_tokens.sh` updated counts recorded in `stdd/tasks.md` and this section once work completes.
+
+**Cross-References**: [ARCH:EVENT_LOOP_SHUTDOWN], [REQ:EVENT_LOOP_SHUTDOWN], [REQ:MODULE_VALIDATION]
+
 

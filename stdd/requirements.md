@@ -301,23 +301,51 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: Operators must be able to customize the `external-command` menu keys, labels, and shell payloads by editing a configuration file (flag/env/default path) instead of recompiling goful. The feature preserves platform-specific defaults (Windows vs. POSIX) but allows overrides, per-platform filtering, offsets, and disable switches in the file, whether the file is expressed in JSON or YAML.
-- **Rationale**: The current hard-coded menu makes it impossible to keep personal automation or team-standard tooling in sync without editing Go sources. Moving the definitions into a JSON or YAML file unblocks scripted provisioning, keeps `%D@`-style macros discoverable, and allows secure environments to remove dangerous defaults.
+- **Description**: Operators must be able to customize the `external-command` menu keys, labels, and shell payloads by editing a configuration file (flag/env/default path) instead of recompiling goful. File-provided commands are **prepended** ahead of the compiled Windows/POSIX defaults by default so custom shortcuts appear at the top of the menu while legacy entries remain available, and the file may optionally opt out of inheritance when operators need a clean slate.
+- **Rationale**: The current hard-coded menu makes it impossible to keep personal automation or team-standard tooling in sync without editing Go sources. Moving the definitions into a JSON or YAML file unblocks scripted provisioning, keeps `%D@`-style macros discoverable, allows secure environments to remove dangerous defaults, and preserves historical ergonomics by inheriting built-in commands unless explicitly disabled.
 - **Satisfaction Criteria**:
   - CLI flag `-commands` overrides the configuration path; environment variable `GOFUL_COMMANDS_FILE` is honored when the flag is unset, and defaults fall back to `~/.goful/external_commands.yaml`.
-- The loader falls back to shipped defaults (POSIX/Windows) when the config file is missing or invalid so first-run behavior matches the legacy menu.
-- Each command entry supports `menu`, `key`, `label`, and either a shell `command` string or a `runMenu` target, plus optional `offset`, optional `platforms` (GOOS list), and a `disabled` flag.
-  - Duplicate `menu/key` combinations, missing required fields, or unsupported platforms are rejected with `message.Errorf`, and diagnostics mention `[IMPL:EXTERNAL_COMMAND_LOADER]`.
-  - Menu binding reuses resolved entries and exposes the same `g.Shell` offsets so caret placement matches historical commands.
+  - When a configuration file is present, the loader prepends its entries before the compiled defaults so customized commands appear first while legacy shortcuts remain unless the file explicitly signals “replace defaults” (e.g., `inheritDefaults: false`).
+  - The inheritance option defaults to “prepend defaults after custom entries” and can be toggled per file to drop the compiled defaults entirely for locked-down environments.
+  - The loader falls back to shipped defaults (POSIX/Windows) when the config file is missing or invalid so first-run behavior matches the legacy menu.
+  - Each command entry supports `menu`, `key`, `label`, and either a shell `command` string or a `runMenu` target, plus optional `offset`, optional `platforms` (GOOS list), and a `disabled` flag.
+    - Duplicate `menu/key` combinations, missing required fields, or unsupported platforms are rejected with `message.Errorf`, and diagnostics mention `[IMPL:EXTERNAL_COMMAND_LOADER]`.
+    - Menu binding reuses resolved entries and exposes the same `g.Shell` offsets so caret placement matches historical commands.
 - **Validation Criteria**:
   - Unit tests cover path precedence for the config file (flag/env/default) and emit `[REQ:MODULE_VALIDATION]` evidence for the resolver.
-- Loader tests cover JSON/YAML decoding, default fallback, duplicate/invalid entry rejection, platform filtering, disabled entries, and `DEBUG:` logging.
+  - Loader tests cover JSON/YAML decoding, default fallback, duplicate/invalid entry rejection, platform filtering, disabled entries, **and the default prepend vs. optional replace behavior**.
   - Binder tests prove menu arguments are generated deterministically and cursor offsets reach `g.Shell` correctly.
-  - README/CONTRIBUTING describe the file format, macros, and override steps with `[ARCH:EXTERNAL_COMMAND_REGISTRY]` references.
+  - README/CONTRIBUTING describe the file format, macros, prepend-by-default behavior, and override steps with `[ARCH:EXTERNAL_COMMAND_REGISTRY]` references.
 - **Architecture**: See `architecture-decisions.md` § External Command Registry [ARCH:EXTERNAL_COMMAND_REGISTRY]
 - **Implementation**: See `implementation-decisions.md` § External Command Loader/Binding [IMPL:EXTERNAL_COMMAND_LOADER], [IMPL:EXTERNAL_COMMAND_BINDER]
 
 **Status**: ⏳ Planned
+
+### [REQ:TERMINAL_PORTABILITY] Cross-Platform Terminal Launcher
+
+**Priority: P0 (Critical)**
+
+- **Description**: Goful must launch foreground commands in an OS-appropriate terminal so macOS, Linux desktops, and tmux users all see a usable window without editing Go code. The launcher must expose an override hook (`GOFUL_TERMINAL_CMD`) and retain the historical pause tail so commands remain visible until acknowledged.
+- **Rationale**: Recent dependency upgrades broke macOS Terminal invocation entirely, and Linux users increasingly prefer alternate emulators. Centralizing selection logic keeps behaviour testable and prevents regressions when upstream terminals change.
+- **Satisfaction Criteria**:
+  - `tmux`/`screen` sessions always use `tmux new-window -n <cmd>` regardless of OS.
+  - macOS launches via AppleScript, reusing the historical payload plus pause tail while injecting the focused directory ahead of the command.
+  - Linux desktops default to gnome-terminal with the legacy title escape, and overrides (e.g., `GOFUL_TERMINAL_CMD="alacritty -e"`) insert before the `bash -c` payload.
+  - `GOFUL_DEBUG_TERMINAL=1` emits `DEBUG: [IMPL:TERMINAL_ADAPTER]` logs describing the branch taken.
+  - README and CONTRIBUTING include guidance for macOS behaviour, overrides, and troubleshooting, all tagged with `[REQ:TERMINAL_PORTABILITY]`.
+- **Validation Criteria**:
+  - Unit tests cover override parsing plus Linux, macOS, and tmux branches with `[REQ:TERMINAL_PORTABILITY]` suffixes.
+  - `terminalcmd.Apply` tests prove `g.ConfigTerminal` receives the expected command slices and re-reads the focused directory each time.
+  - Manual verification follows `[PROC:TERMINAL_VALIDATION]` on real macOS Terminal.app, Linux desktops, and tmux sessions.
+  - README/CONTRIBUTING references are updated whenever behaviour changes.
+- **Architecture**: See `architecture-decisions.md` § Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER]
+- **Implementation**: See `implementation-decisions.md` § Terminal Adapter Module [IMPL:TERMINAL_ADAPTER]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-04)**:
+- `go test ./terminalcmd` (darwin/arm64, Go 1.24.3) covering `TestCommandFactory*`, `TestParseOverride`, and `TestApply*` for all selection branches.
+- Manual checklist documented via `[PROC:TERMINAL_VALIDATION]` (macOS Terminal, Linux desktop, and tmux) referenced from `stdd/tasks.md` for operator execution.
 
 ### [REQ:TERMINAL_CWD] macOS Terminal Working Directory
 
@@ -338,7 +366,11 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER]
 - **Implementation**: See `implementation-decisions.md` § Terminal Adapter Module [IMPL:TERMINAL_ADAPTER]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-04)**:
+- `TestCommandFactoryDarwin_REQ_TERMINAL_PORTABILITY` and `TestApplyDarwinCwd_REQ_TERMINAL_CWD` (`terminalcmd/factory_test.go`) confirm the `cd` preamble is injected and re-computed per invocation.
+- Manual checklist `[PROC:TERMINAL_VALIDATION]` documents macOS Terminal steps (outside and inside tmux) so operators can confirm the working-directory guarantee on physical hardware.
 
 ### [REQ:ARCH_DOCUMENTATION] Architecture Guide
 
@@ -431,6 +463,26 @@ Each requirement includes:
   - Token audit confirms references in code/docs.
 - **Architecture**: See `architecture-decisions.md` § Debt Management [ARCH:DEBT_MANAGEMENT]
 - **Implementation**: See `implementation-decisions.md` § Debt Tracking [IMPL:DEBT_TRACKING]
+
+**Status**: ⏳ Planned
+
+### [REQ:EVENT_LOOP_SHUTDOWN] Event Poller Shutdown Control
+
+**Priority: P0 (Critical)**
+
+- **Description**: Ensure the UI event poller terminates cleanly whenever `app.Goful.Run` exits so goroutines and channels are not left running after the UI closes.
+- **Rationale**: The current poller spins forever (`widget.PollEvent` loop) and continues sending to `g.event` even after shutdown, leaking goroutines and wasting CPU; long-running sessions eventually stall or panic.
+- **Satisfaction Criteria**:
+  - The event loop observes an explicit stop signal (context cancellation or quit channel) and terminates within a bounded timeout when `Run` exits.
+  - Pending events are drained or discarded safely without writing to closed channels.
+  - Shutdown emits `DEBUG: [IMPL:EVENT_LOOP_SHUTDOWN]` traces so operators can confirm the branch executed.
+  - Manual flows described in `[PROC:TERMINAL_VALIDATION]` remain unaffected—the poller shutdown must not regress terminal launching behavior.
+- **Validation Criteria**:
+  - Unit tests cover the poller with a fake `widget.Poller` to assert it stops when signaled and does not panic when events arrive after stop.
+  - Integration-style tests simulate `g.Run` start/stop and verify no goroutines/leaked channels remain (using `testing`'s goroutine leak detection or instrumentation hooks).
+  - Debt log item D1 is updated with mitigation notes referencing this requirement once validation passes.
+- **Architecture**: See `architecture-decisions.md` § Event Loop Shutdown [ARCH:EVENT_LOOP_SHUTDOWN]
+- **Implementation**: See `implementation-decisions.md` § Event Loop Shutdown Controller [IMPL:EVENT_LOOP_SHUTDOWN]
 
 **Status**: ⏳ Planned
 

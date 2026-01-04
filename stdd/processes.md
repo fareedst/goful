@@ -125,3 +125,30 @@ Use the structure below for every process you document. Each entry should be kep
 #### Artifacts & Metrics
 - **Artifacts** — Script output recorded in tasks and implementation decisions, CI job logs referencing `[PROC:TOKEN_VALIDATION]`.
 - **Success Metrics** — Latest run shows zero missing tokens; CI fails fast if drift occurs; every completed task links to a successful validation run.
+
+### `[PROC:TERMINAL_VALIDATION]`
+- **Purpose** — Provide a reproducible manual checklist that proves `[REQ:TERMINAL_PORTABILITY]` and `[REQ:TERMINAL_CWD]` remain satisfied after adapter changes.
+- **Scope** — Applies to macOS Terminal.app, Linux desktop sessions (gnome-terminal or equivalent), and tmux environments touched by `[ARCH:TERMINAL_LAUNCHER]` and `[IMPL:TERMINAL_ADAPTER]`.
+- **Token references** — `[REQ:TERMINAL_PORTABILITY]`, `[REQ:TERMINAL_CWD]`, `[ARCH:TERMINAL_LAUNCHER]`, `[IMPL:TERMINAL_ADAPTER]`.
+- **Status** — Active.
+
+#### Core Activities
+1. **Prepare Environment**
+   - Build or install the current goful binary and ensure `GOFUL_DEBUG_TERMINAL=1` so `DEBUG: [IMPL:TERMINAL_ADAPTER]` logs record branch decisions.
+   - Stage a workspace directory whose path contains spaces (e.g., `~/Projects/Terminal Demo`) to verify quoting behaviour.
+2. **macOS Terminal.app Validation**
+   - Launch goful outside tmux/screen, focus the staged directory, press `:` to open the shell prompt, and enter `echo mac`.
+   - Expect Terminal.app to open a new tab/window, log the AppleScript branch, run `cd "<focused dir>"; echo mac;read -p "HIT ENTER KEY"`, and keep the window open until Enter is pressed, after which it exits cleanly.
+   - Repeat inside a tmux session; tmux should take precedence and open a new window without invoking Terminal.app.
+3. **Linux Desktop Validation**
+   - On a Linux desktop (no tmux), repeat the shell prompt action and confirm gnome-terminal launches with the title escape (`echo -n '\033]0;cmd\007'`) before running the payload and pause prompt.
+   - Set `GOFUL_TERMINAL_CMD="alacritty -e"`, rerun the step, and confirm the override command receives the payload and pause tail while inheriting the focused-directory working dir when GOOS=darwin.
+4. **tmux-only Validation**
+   - With `TERM`/`TERM_PROGRAM` indicating tmux or screen, trigger the terminal command and confirm `tmux new-window -n <cmd>` is used regardless of OS.
+5. **Documentation & Stewardship**
+   - Record observed behaviour, attached logs, and any discrepancies inside `stdd/tasks.md` under the active terminal launcher task.
+   - Update `[REQ:TERMINAL_PORTABILITY]`/`[REQ:TERMINAL_CWD]` validation evidence if regressions or new findings surface.
+
+#### Artifacts & Metrics
+- **Artifacts** — Saved `DEBUG: [IMPL:TERMINAL_ADAPTER]` logs from macOS/Linux runs, operator notes linked in `stdd/tasks.md`.
+- **Success Metrics** — macOS Terminal opens in the focused directory with the pause tail, Linux overrides behave predictably, and tmux detection always routes through `tmux new-window` when active.

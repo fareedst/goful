@@ -394,9 +394,50 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [x] Token audit/validation logs updated with the latest run (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 245 token references across 52 files.`).
 
 **Priority Rationale**: P1 because it materially improves automation ergonomics without blocking core navigation workflows.
+
+## P1: External Command Requirement Update [REQ:EXTERNAL_COMMAND_CONFIG] [ARCH:EXTERNAL_COMMAND_REGISTRY] [IMPL:EXTERNAL_COMMAND_LOADER] [IMPL:EXTERNAL_COMMAND_BINDER]
+
+**Status**: ✅ Complete
+
+**Description**: Clarify that file-based external command definitions **prepend** to the built-in defaults by default, with an option to replace or suppress defaults, so requirements stay aligned with loader behavior.
+
+**Dependencies**: [REQ:MODULE_VALIDATION] (documentation change only, but still references loader/binder modules)
+
+**Subtasks**:
+- [x] Update `[REQ:EXTERNAL_COMMAND_CONFIG]` in `stdd/requirements.md` to describe prepend semantics and optional override switch. [REQ:EXTERNAL_COMMAND_CONFIG]
+- [x] Verify architecture/implementation decisions remain accurate (prepend behavior already covered) or note follow-up edits if discrepancies remain. [ARCH:EXTERNAL_COMMAND_REGISTRY] [IMPL:EXTERNAL_COMMAND_LOADER]
+- [x] `[PROC:TOKEN_AUDIT]` note: Documentation-only change; ensure semantic tokens already exist and no registry updates required.
+
+**Completion Criteria**:
+- [x] Requirement text published with prepend default + optional override description.
+- [x] Cross-references reviewed; action items noted if further edits needed.
+- [x] Task log updated with results (`DIAGNOSTIC: requirement update complete`).
+
+**Priority Rationale**: P1 to keep documentation accurate for automation workflows relying on external command registries.
+
+## P1: External Command Append Semantics [REQ:EXTERNAL_COMMAND_CONFIG] [ARCH:EXTERNAL_COMMAND_REGISTRY] [IMPL:EXTERNAL_COMMAND_APPEND]
+
+**Status**: ✅ Complete
+
+**Description**: Implement the prepend-by-default behavior (with optional replacement) in code, tests, and docs while introducing dedicated semantic tokens so inheritance is auditable beyond requirements text.
+
+**Dependencies**: [REQ:MODULE_VALIDATION] (loader/binder modules already validated; change reuses same seams)
+
+**Subtasks**:
+- [x] Update architecture/implementation docs, README, and `stdd/semantic-tokens.md` with `[IMPL:EXTERNAL_COMMAND_APPEND]` covering the inheritance toggle (prepends by default). [REQ:EXTERNAL_COMMAND_CONFIG]
+- [x] Teach `externalcmd.Load` to parse `inheritDefaults` (JSON/YAML) and prepend defaults unless explicitly disabled, with inline tokens/comments. [IMPL:EXTERNAL_COMMAND_APPEND]
+- [x] Add tests proving prepend vs. replace behavior, tagged with the new token. [REQ:EXTERNAL_COMMAND_CONFIG]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` and paste diagnostic output here. (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 254 token references across 55 files.`)
+
+**Completion Criteria**:
+- [x] Docs + registry publish the new token and describe prepend vs. replace flows.
+- [x] Code prepends defaults when `inheritDefaults` is omitted/true and replaces them when false, with regression tests covering both cases.
+- [x] Token audit + validation logged with the latest script output.
+
+**Priority Rationale**: P1 because automation workflows rely on defaults staying available; implementation and tokens must match the documented contract.
 ## P0: Cross-Platform Terminal Launcher [REQ:TERMINAL_PORTABILITY] [ARCH:TERMINAL_LAUNCHER] [IMPL:TERMINAL_ADAPTER]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Provide a portable terminal launcher so executing commands from goful works on macOS (Terminal.app), Linux desktops, and tmux/screen sessions without editing source. Centralize OS detection and overrides in a testable module that feeds `g.ConfigTerminal`.
 
@@ -416,16 +457,47 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [x] Update README/CONTRIBUTING with macOS guidance and override instructions [REQ:TERMINAL_PORTABILITY]
 - [x] Inject `%D` working directory into every macOS Terminal launch (docs + tests) [REQ:TERMINAL_CWD]
 - [x] Replace mac login shell flags with non-login `bash -c` to avoid hangs [REQ:TERMINAL_PORTABILITY] [IMPL:TERMINAL_ADAPTER]
-- [ ] Manual validation checklist for macOS Terminal + Linux desktop runs [REQ:TERMINAL_PORTABILITY]
+- [x] Manual validation checklist for macOS Terminal + Linux desktop runs [REQ:TERMINAL_PORTABILITY] — documented in `stdd/processes.md` as `[PROC:TERMINAL_VALIDATION]`; operators should run the checklist on physical macOS/Linux hardware before releases.
 - [x] `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) recorded after code/tests land (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 185 token references across 46 files.` on 2026-01-02)
 
 **Completion Criteria**:
-- [ ] Factory + configurator modules validated independently before integration
-- [ ] `main.go` uses the new adapter; legacy gnome-terminal call removed
-- [ ] Tests cover selection matrix and keep-open tail behavior
-- [ ] Documentation updated with macOS instructions and overrides
-- [ ] `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]` logs captured
+- [x] Factory + configurator modules validated independently before integration (`go test ./terminalcmd` on 2026-01-04).
+- [x] `main.go` uses the new adapter; legacy gnome-terminal-only wiring is replaced by `terminalcmd.Apply`.
+- [x] Tests cover selection matrix and keep-open tail behavior (`TestCommandFactory*`, `TestApply*`).
+- [x] Documentation updated with macOS instructions and override guidance (README/CONTRIBUTING sections tagged with `[REQ:TERMINAL_PORTABILITY]`).
+- [x] `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]` logs captured (`./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 245 token references across 52 files.` on 2026-01-04).
 
 **Priority Rationale**: P0 because macOS users currently cannot execute external commands in a terminal, blocking a core workflow.
+
+## P0: Event Loop Shutdown [REQ:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [IMPL:EVENT_LOOP_SHUTDOWN]
+
+**Status**: ⏳ Pending
+
+**Description**: Stop leaking goroutines by giving `app.Goful`’s event poller an explicit shutdown path that observes application exit, drains pending events safely, and closes channels without writing after close.
+
+**Dependencies**: [REQ:MODULE_VALIDATION], [REQ:DEBT_TRIAGE]
+
+**Module Boundaries**:
+- `PollerAdapter` – wraps `widget.PollEvent` to accept a `stop <-chan struct{}` and forward events into `g.event`.
+- `ShutdownController` – coordinates stop-signal fan-out, wait groups/timeouts, and channel closure when `Run` is exiting.
+- `Diagnostics` – debug logging + counters for leak detection, tied to `DEBUG: [IMPL:EVENT_LOOP_SHUTDOWN]` output.
+
+**Subtasks**:
+- [x] Publish requirement + architecture/implementation decisions and register semantic tokens [REQ:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [IMPL:EVENT_LOOP_SHUTDOWN]
+- [ ] Extract/implement `PollerAdapter` with stop signal handling [REQ:EVENT_LOOP_SHUTDOWN]
+- [ ] Add unit tests for the adapter using fake poll sources (module validation) [REQ:MODULE_VALIDATION]
+- [ ] Implement `ShutdownController` in `app/goful.go` with timeout + logging [IMPL:EVENT_LOOP_SHUTDOWN]
+- [ ] Add integration tests proving `Run` stops the poller and no events fire post-shutdown [REQ:EVENT_LOOP_SHUTDOWN]
+- [ ] Update `stdd/debt-log.md` D1 entry with mitigation notes once validation passes [REQ:DEBT_TRIAGE]
+- [ ] Run `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) after code/tests land
+
+**Completion Criteria**:
+- [ ] Poller and shutdown modules validated independently before integration (unit tests pass).
+- [ ] Integration coverage ensures no writes occur after `g.event` closes and goroutine count returns to baseline.
+- [ ] Debug logging documents shutdown start/stop (+ timeout) for operators.
+- [ ] Debt item D1 updated with resolved status referencing this requirement.
+- [ ] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` logs captured with new token references.
+
+**Priority Rationale**: P0 because the leaking poller burns CPU and risks crashes for every exit, making the UI unreliable.
 
 
