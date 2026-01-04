@@ -326,14 +326,18 @@ function testIntegrationScenario_REQ_EXAMPLE_FEATURE() {
 - Enforces consistency and prevents regressions on PRs.
 
 ### Implementation Approach:
-- Add `.github/workflows/ci.yml` with steps: checkout, setup-go, cache, `go fmt`/`gofmt -w`, `go vet`, `go test ./...`.
-- Include `DEBUG:`/`DIAGNOSTIC:` logs for key steps.
+- Added `.github/workflows/ci.yml` with a `format-vet-test` job that:
+  - Checks out the repo, sets up Go `1.24.3` via `actions/setup-go@v5`, and caches modules (`go.sum`).
+  - Runs `gofmt -w $(git ls-files '*.go')` followed by `git status --short` and `git diff --exit-code` to enforce formatting.
+  - Executes `go vet ./...` and `go test ./...` for regression coverage.
+  - Runs `./scripts/validate_tokens.sh` so every CI pass records `[PROC:TOKEN_VALIDATION]`.
+- Each shell block embeds `[IMPL:CI_WORKFLOW] [ARCH:CI_PIPELINE] [REQ:CI_PIPELINE_CORE]` (or the token validation equivalents) to keep traceability in the workflow itself.
 
 **Code Markers**:
 - Workflow file comments with `[IMPL:CI_WORKFLOW] [ARCH:CI_PIPELINE] [REQ:CI_PIPELINE_CORE]`.
 
 **Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
-- Link to latest passing CI run and token validation output.
+- `2026-01-01`: `./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 19 token references across 36 files.`
 
 **Cross-References**: [ARCH:CI_PIPELINE], [REQ:CI_PIPELINE_CORE]
 
@@ -344,8 +348,10 @@ function testIntegrationScenario_REQ_EXAMPLE_FEATURE() {
 - Surface correctness issues early.
 
 ### Implementation Approach:
-- Add workflow job invoking staticcheck (and golangci-lint if configured).
-- Provide config file if needed with minimal excludes.
+- Added `staticcheck` job to `.github/workflows/ci.yml` that:
+  - Reuses the Go `1.24.3` toolchain setup with cached modules.
+  - Installs `staticcheck` via `go install honnef.co/go/tools/cmd/staticcheck@latest`.
+  - Runs `staticcheck ./...` with `[IMPL:STATICCHECK_SETUP] [ARCH:STATIC_ANALYSIS_POLICY] [REQ:STATIC_ANALYSIS]` inline comments.
 
 **Code Markers**:
 - Workflow job comments carry `[IMPL:STATICCHECK_SETUP] [ARCH:STATIC_ANALYSIS_POLICY] [REQ:STATIC_ANALYSIS]`.
@@ -359,7 +365,9 @@ function testIntegrationScenario_REQ_EXAMPLE_FEATURE() {
 - Detects concurrency issues without impacting main job runtime.
 
 ### Implementation Approach:
-- Add CI job running `go test -race ./...` with appropriate timeouts and cache.
+- Added `race-tests` job to `.github/workflows/ci.yml` that:
+  - Sets up Go `1.24.3` with caching and reuses the module cache.
+  - Executes `go test -race ./...` so concurrency regressions fail CI early.
 
 **Code Markers**:
 - Workflow job comments carry `[IMPL:RACE_JOB] [ARCH:RACE_TESTING_PIPELINE] [REQ:RACE_TESTING]`.
