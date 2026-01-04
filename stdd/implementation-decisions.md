@@ -74,24 +74,39 @@ type Config struct {
 
 **Cross-References**: [ARCH:STDD_STRUCTURE], [REQ:STDD_SETUP]
 
-## 2. Core Implementation [IMPL:EXAMPLE_IMPLEMENTATION] [ARCH:EXAMPLE_DECISION] [REQ:EXAMPLE_FEATURE]
+## 2. State Path Resolver [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
 
-### Data Structure
-```[your-language]
-type ExampleStruct struct {
-    Field1 string
-    Field2 int
-}
-```
+### Decision: Provide a pure resolver plus bootstrap glue for persistence paths
+**Rationale:**
+- Implements the precedence + debug contract from [ARCH:STATE_PATH_SELECTION] without tying tests to global process state.
+- Makes it trivial to inject fake environments for module validation required by [REQ:MODULE_VALIDATION].
 
-### Implementation Approach
-- Approach description
-- Key algorithms
-- Performance considerations
+### Implementation Approach:
+- Add package `configpaths` with:
+  - `const DefaultState = "~/.goful/state.json"` / `DefaultHistory = "~/.goful/history/shell"`.
+  - `const EnvStateKey = "GOFUL_STATE_PATH"` / `EnvHistoryKey = "GOFUL_HISTORY_PATH"`.
+  - `type Paths struct { State, History, StateSource, HistorySource string }`.
+  - `type Resolver struct { LookupEnv func(string) (string, bool) }` with method `Resolve(flagState, flagHistory string) Paths`.
+  - Resolver order: CLI flag → env var → default. All outputs pass through `util.ExpandPath`.
+  - `func EnsureParent(path string) error` helper to call `os.MkdirAll(filepath.Dir(path), 0o755)` before state/history saves.
+- Add `BootstrapPaths` helper (same package or `main.go`) that:
+  - Parses CLI flags (`-state`, `-history`).
+  - Calls resolver and logs `DEBUG: [IMPL:STATE_PATH_RESOLVER] ...` lines when `GOFUL_DEBUG_PATHS=1`.
+  - Applies resolved paths to `app.NewGoful`, `cmdline.LoadHistory`, and the corresponding save paths when exiting.
+- Update `filer.SaveState` to create parent directories before writing to satisfy the requirement.
 
-### Platform-Specific Considerations
-- Platform 1: Specific considerations
-- Platform 2: Specific considerations
+**Code Markers**:
+- Resolver + helper functions carry `[IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]` comments.
+- `main.go` flag definitions include inline references to the same tokens.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Touched files: `configpaths/*.go`, `configpaths/*._test.go`, `main.go`, `filer/filer.go`, `README.md`.
+- Tests named `TestResolvePaths_REQ_CONFIGURABLE_STATE_PATHS` prove module validation.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `2026-01-01`: `./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 70 token references across 40 files.`
+
+**Cross-References**: [ARCH:STATE_PATH_SELECTION], [REQ:CONFIGURABLE_STATE_PATHS]
 
 ## 3. Error Handling Implementation [IMPL:ERROR_HANDLING] [ARCH:ERROR_HANDLING] [REQ:ERROR_HANDLING]
 
@@ -126,8 +141,8 @@ type ExampleStruct struct {
 ```[your-language]
 // Unit test structure for your language
 // Example pattern:
-function testExampleFeature_REQ_EXAMPLE_FEATURE() {
-    // [REQ:EXAMPLE_FEATURE] Validates expected behavior
+function testResolvePaths_REQ_CONFIGURABLE_STATE_PATHS() {
+    // [REQ:CONFIGURABLE_STATE_PATHS] Validates configurable persistence behavior
     testCases = [
         {
             name: "test case 1",
@@ -148,8 +163,8 @@ function testExampleFeature_REQ_EXAMPLE_FEATURE() {
 ### Integration Test Structure
 ```[your-language]
 // Integration test structure for your language
-function testIntegrationScenario_REQ_EXAMPLE_FEATURE() {
-    // [REQ:EXAMPLE_FEATURE] End-to-end validation comment
+function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
+    // [REQ:CONFIGURABLE_STATE_PATHS] End-to-end validation comment
     // Setup: Prepare test environment
     // Execute: Run integration scenario
     // Verify: Assert expected outcomes

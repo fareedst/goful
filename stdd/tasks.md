@@ -113,31 +113,34 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 ## Phase 2: Core Components
 
-### Task 2.1: Core Feature Implementation
-**Status:** ⏳ Pending  
+### Task 2.1: Configurable State & History Paths
+**Status:** ✅ Complete  
 **Priority:** P0 (Critical)  
-**Semantic Tokens:** `[REQ:EXAMPLE_FEATURE]`, `[ARCH:EXAMPLE_DECISION]`, `[IMPL:EXAMPLE_IMPLEMENTATION]`
+**Semantic Tokens:** `[REQ:CONFIGURABLE_STATE_PATHS]`, `[ARCH:STATE_PATH_SELECTION]`, `[IMPL:STATE_PATH_RESOLVER]`
 
-**Description**: Implement the core feature according to requirements and architecture.
+**Description**: Allow goful to honor CLI flags and environment overrides for the persisted state (`state.json`) and shell history so multiple instances or sandboxes do not clobber the default `~/.goful` files. This task wires the resolver into startup, documents the behavior, and proves it via unit + integration tests.
+
+**Dependencies**: [ARCH:MODULE_VALIDATION], [REQ:MODULE_VALIDATION]
 
 **Subtasks**:
-- [ ] Identify logical modules and document module boundaries [REQ:MODULE_VALIDATION]
-- [ ] Define module interfaces and validation criteria [REQ:MODULE_VALIDATION]
-- [ ] Develop Module 1 independently
-- [ ] Validate Module 1 independently (unit tests, contract tests, edge cases, error handling) [REQ:MODULE_VALIDATION]
-- [ ] Develop Module 2 independently
-- [ ] Validate Module 2 independently (unit tests, contract tests, edge cases, error handling) [REQ:MODULE_VALIDATION]
-- [ ] Integrate validated modules [REQ:MODULE_VALIDATION]
-- [ ] Write integration tests for combined behavior
-- [ ] Write end-to-end tests [REQ:EXAMPLE_FEATURE]
-- [ ] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` and record outcomes [PROC:TOKEN_VALIDATION]
+- [x] Expand requirement + architecture + implementation docs with the new tokens before coding [REQ:CONFIGURABLE_STATE_PATHS]
+- [x] Identify and document module boundaries (`PathResolver`, `BootstrapPaths`) plus validation criteria [REQ:MODULE_VALIDATION]
+- [x] Develop Module 1 `PathResolver` (pure precedence logic) independently [IMPL:STATE_PATH_RESOLVER]
+- [x] Validate Module 1 with unit tests covering flag/env/default precedence + edge cases [REQ:MODULE_VALIDATION]
+- [x] Develop Module 2 `BootstrapPaths` (flag parsing + env wiring into goful startup) independently
+- [x] Validate Module 2 with integration-style tests exercising combined struct behavior [REQ:MODULE_VALIDATION]
+- [x] Integrate validated modules into `main.go`, update README, and ensure debug output references the new tokens
+- [x] Write end-to-end verification (resolver + bootstrap) to assert both paths flow into filer/cmdline entry points [REQ:CONFIGURABLE_STATE_PATHS]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` and record outcomes (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 70 token references across 40 files.`) [PROC:TOKEN_VALIDATION]
 
 **Completion Criteria**:
-- [ ] All modules identified and documented
-- [ ] All modules validated independently before integration
-- [ ] Integration tests pass
-- [ ] All documentation updated
-- [ ] Token audit + validation logged
+- [x] Modules documented with interfaces + validation evidence
+- [x] Module 1 & 2 validation suites pass independently before integration
+- [x] Integration wiring + documentation merged with semantic tokens
+- [x] README and developer docs describe flags/env overrides
+- [x] Token audit + validation logged with command output
+
+**Priority Rationale**: P0 because without configurable paths, multi-instance workflows overwrite global files and block tests/sandboxes that must isolate state.
 
 ## P0: Modernize Toolchain and Dependencies [REQ:GO_TOOLCHAIN_LTS] [REQ:DEPENDENCY_REFRESH] [ARCH:GO_RUNTIME_STRATEGY] [ARCH:DEPENDENCY_POLICY] [IMPL:GO_MOD_UPDATE] [IMPL:DEP_BUMP]
 

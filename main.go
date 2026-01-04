@@ -1,12 +1,15 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
 
 	"github.com/anmitsu/goful/app"
 	"github.com/anmitsu/goful/cmdline"
+	"github.com/anmitsu/goful/configpaths"
 	"github.com/anmitsu/goful/filer"
 	"github.com/anmitsu/goful/look"
 	"github.com/anmitsu/goful/menu"
@@ -15,7 +18,26 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+var (
+	stateFlag = flag.String(
+		"state",
+		"",
+		"Override path to state.json (default "+configpaths.DefaultStatePath+" or "+configpaths.EnvStateKey+")",
+	)
+	historyFlag = flag.String(
+		"history",
+		"",
+		"Override path to cmdline history (default "+configpaths.DefaultHistoryPath+" or "+configpaths.EnvHistoryKey+")",
+	)
+)
+
 func main() {
+	flag.Parse()
+
+	pathsResolver := configpaths.Resolver{}
+	runtimePaths := pathsResolver.Resolve(*stateFlag, *historyFlag)
+	emitPathDebug(runtimePaths)
+
 	is_tmux := false
 	widget.Init()
 	defer widget.Fini()
@@ -32,17 +54,14 @@ func main() {
 		os.Stdout.WriteString("\033]0;goful\007") // for otherwise
 	}
 
-	const state = "~/.goful/state.json"
-	const history = "~/.goful/history/shell"
-
-	goful := app.NewGoful(state)
+	goful := app.NewGoful(runtimePaths.State)
 	config(goful, is_tmux)
-	_ = cmdline.LoadHistory(history)
+	_ = cmdline.LoadHistory(runtimePaths.History)
 
 	goful.Run()
 
-	_ = goful.SaveState(state)
-	_ = cmdline.SaveHistory(history)
+	_ = goful.SaveState(runtimePaths.State)
+	_ = cmdline.SaveHistory(runtimePaths.History)
 }
 
 func config(g *app.Goful, is_tmux bool) {
@@ -335,6 +354,20 @@ func config(g *app.Goful, is_tmux bool) {
 		"C-m": associate,
 		"o":   associate,
 	})
+}
+
+func emitPathDebug(paths configpaths.Paths) {
+	if os.Getenv("GOFUL_DEBUG_PATHS") == "" {
+		return
+	}
+	fmt.Fprintf(
+		os.Stderr,
+		"DEBUG: [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS] state=%s (%s) history=%s (%s)\n",
+		paths.State,
+		paths.StateSource,
+		paths.History,
+		paths.HistorySource,
+	)
 }
 
 // Widget keymap functions.

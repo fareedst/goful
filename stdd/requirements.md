@@ -239,6 +239,26 @@ Each requirement includes:
 
 **Status**: ⏳ Planned
 
+### [REQ:CONFIGURABLE_STATE_PATHS] Configurable State & History Persistence
+
+**Priority: P0 (Critical)**
+
+- **Description**: Goful must allow operators to redirect the persisted state (`state.json`) and cmdline history files through CLI flags or environment variables so multiple instances (CI, sandboxes, shared machines) can run without clobbering the default `~/.goful` data.
+- **Rationale**: Hard-coded persistence paths prevent isolated test runs and multi-instance workflows; providing overrides enables deterministic automation and safer experimentation.
+- **Satisfaction Criteria**:
+  - CLI flags (e.g., `-state`, `-history`) override all other sources for the respective files.
+  - Environment variables (e.g., `GOFUL_STATE_PATH`, `GOFUL_HISTORY_PATH`) are honored when flags are unset.
+  - Default paths remain `~/.goful/state.json` and `~/.goful/history/shell` when neither flags nor environment overrides are provided.
+  - Override values expand `~`, create necessary directories on first save, and are logged with `DEBUG:` output referencing `[IMPL:STATE_PATH_RESOLVER]`.
+- **Validation Criteria**:
+  - Unit tests exercise flag/env/default precedence plus path expansion edge cases.
+  - Integration tests verify resolved paths are passed to `filer.NewFromState`, `filer.SaveState`, `cmdline.LoadHistory`, and `cmdline.SaveHistory`.
+  - README and developer docs describe the flags and environment variables with their precedence order.
+- **Architecture**: See `architecture-decisions.md` § State Path Selection [ARCH:STATE_PATH_SELECTION]
+- **Implementation**: See `implementation-decisions.md` § State Path Resolver [IMPL:STATE_PATH_RESOLVER]
+
+**Status**: ⏳ Planned
+
 ### [REQ:ARCH_DOCUMENTATION] Architecture Guide
 
 **Priority: P1 (Important)**

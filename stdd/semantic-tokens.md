@@ -93,7 +93,7 @@ Before marking features complete:
 When referencing other tokens:
 
 ```markdown
-[IMPL:EXAMPLE] Description [ARCH:DESIGN] [REQ:REQUIREMENT]
+[IMPL:STATE_PATH_RESOLVER] Description [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
 ```
 
 ## Requirements Tokens Registry
@@ -105,7 +105,7 @@ When referencing other tokens:
 ### Core Functional Requirements
 - `[REQ:STDD_SETUP]` - STDD methodology setup
 - `[REQ:MODULE_VALIDATION]` - Independent module validation before integration
-- `[REQ:EXAMPLE_FEATURE]` - Example feature requirement
+- `[REQ:CONFIGURABLE_STATE_PATHS]` - Configurable state/history persistence
 - `[REQ:GO_TOOLCHAIN_LTS]` - Go toolchain tracks current LTS baseline
 - `[REQ:DEPENDENCY_REFRESH]` - Dependencies refreshed for security and compatibility
 - `[REQ:CI_PIPELINE_CORE]` - CI pipeline runs fmt/vet/tests on every change
@@ -135,7 +135,7 @@ When referencing other tokens:
 - `[ARCH:PROJECT_STRUCTURE]` - Project structure decision
 - `[ARCH:STDD_STRUCTURE]` - STDD project structure [REQ:STDD_SETUP]
 - `[ARCH:MODULE_VALIDATION]` - Module validation strategy [REQ:MODULE_VALIDATION]
-- `[ARCH:EXAMPLE_DECISION]` - Example architecture decision [REQ:EXAMPLE_FEATURE]
+- `[ARCH:STATE_PATH_SELECTION]` - Path precedence for persistence [REQ:CONFIGURABLE_STATE_PATHS]
 - `[ARCH:GO_RUNTIME_STRATEGY]` - Go LTS/toolchain policy [REQ:GO_TOOLCHAIN_LTS]
 - `[ARCH:DEPENDENCY_POLICY]` - Dependency refresh and security approach [REQ:DEPENDENCY_REFRESH]
 - `[ARCH:CI_PIPELINE]` - CI workflow design for fmt/vet/tests [REQ:CI_PIPELINE_CORE]
@@ -159,7 +159,7 @@ When referencing other tokens:
 - `[IMPL:CONFIG_STRUCT]` - Configuration structure implementation [ARCH:CONFIG_STRUCTURE] [REQ:CONFIGURATION]
 - `[IMPL:STDD_FILES]` - STDD file creation [ARCH:STDD_STRUCTURE] [REQ:STDD_SETUP]
 - `[IMPL:MODULE_VALIDATION]` - Module validation implementation [ARCH:MODULE_VALIDATION] [REQ:MODULE_VALIDATION]
-- `[IMPL:EXAMPLE_IMPLEMENTATION]` - Example implementation [ARCH:EXAMPLE_DECISION] [REQ:EXAMPLE_FEATURE]
+- `[IMPL:STATE_PATH_RESOLVER]` - Resolver + bootstrap wiring [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
 - `[IMPL:GO_MOD_UPDATE]` - Go version/toolchain update [ARCH:GO_RUNTIME_STRATEGY] [REQ:GO_TOOLCHAIN_LTS]
 - `[IMPL:DEP_BUMP]` - Dependency refresh and tidy [ARCH:DEPENDENCY_POLICY] [REQ:DEPENDENCY_REFRESH]
 - `[IMPL:CI_WORKFLOW]` - GitHub Actions workflow for fmt/vet/tests [ARCH:CI_PIPELINE] [REQ:CI_PIPELINE_CORE]
@@ -203,8 +203,8 @@ When referencing other tokens:
 
 ### In Code Comments
 ```[your-language]
-// [REQ:EXAMPLE_FEATURE] Implementation of example feature
-// [IMPL:EXAMPLE_IMPLEMENTATION] [ARCH:EXAMPLE_DECISION] [REQ:EXAMPLE_FEATURE]
+// [REQ:CONFIGURABLE_STATE_PATHS] Implementation of configurable state/history paths
+// [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
 function exampleFunction() {
     // ...
 }
@@ -213,8 +213,8 @@ function exampleFunction() {
 
 ### In Tests
 ```[your-language]
-// Test validates [REQ:EXAMPLE_FEATURE] is met
-function testExampleFeature_REQ_EXAMPLE_FEATURE() {
+// Test validates [REQ:CONFIGURABLE_STATE_PATHS] is met
+function testResolvePaths_REQ_CONFIGURABLE_STATE_PATHS() {
     // Test implementation
 }
 ```

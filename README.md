@@ -233,6 +233,15 @@ Install after edit `my/goful/main.go`
 
     $ go install
 
+### Configuring State & History Paths
+
+`[REQ:CONFIGURABLE_STATE_PATHS]` and `[ARCH:STATE_PATH_SELECTION]` make it possible to redirect the persisted UI state and cmdline history without editing the source:
+
+- Defaults remain `~/.goful/state.json` and `~/.goful/history/shell`.
+- Set `GOFUL_STATE_PATH` or `GOFUL_HISTORY_PATH` to override the defaults for a shell/session.
+- Pass `-state /tmp/state.json` or `-history /tmp/history` on the command line to override everything else (flags win over environment variables).
+- Export `GOFUL_DEBUG_PATHS=1` to log which source produced each path (`DEBUG: [IMPL:STATE_PATH_RESOLVER] ...`) for troubleshooting sandboxes and CI jobs.
+
 ## Contributing
 
 [Contributing Guide](.github/CONTRIBUTING.md)

@@ -64,25 +64,26 @@ When documenting architecture decisions, use this format:
 
 **Cross-References**: [REQ:STDD_SETUP]
 
-## 3. Core Architecture Decision [ARCH:EXAMPLE_DECISION] [REQ:EXAMPLE_FEATURE]
+## 3. State Path Selection [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
 
-### Decision: [Your Architecture Choice]
+### Decision: Deterministic path precedence for state/history persistence
 **Rationale:**
-- Matches requirement [REQ:EXAMPLE_FEATURE]
-- Provides benefits X, Y, Z
-- Simpler implementation
+- Satisfies [REQ:CONFIGURABLE_STATE_PATHS] by letting operators override persistence files without editing source.
+- Supports hermetic tests and sandboxes that must run multiple goful instances simultaneously.
+- Keeps behavior explicit: CLI flags override environment settings, environment overrides defaults, and defaults remain backwards compatible.
 
 **Alternatives Considered:**
-- Alternative approach: More complex, less maintainable
+- **Environment-only overrides**: rejected because CI and scripted invocations need per-run control without mutating process-wide env.
+- **Config file**: rejected for this iteration; adds file parsing complexity without immediate requirement coverage.
 
 **Implementation:**
-- High-level approach
-- Key components
-- Integration points
+- Introduce `configpaths.Resolver` (Module 1) that accepts CLI flag inputs + `LookupEnv` hook and returns expanded paths plus provenance metadata.
+- Provide `BootstrapPaths` helper (Module 2) that applies the resolved paths to `app.NewGoful`, `filer.SaveState`, `cmdline.LoadHistory`, and `cmdline.SaveHistory`, emitting `DEBUG:` lines tagged with `[IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]`.
+- Surface CLI flags `-state` and `-history`, along with environment variables `GOFUL_STATE_PATH`/`GOFUL_HISTORY_PATH`, to feed the resolver.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
-- Code: Annotate entry points with `[IMPL:EXAMPLE_IMPLEMENTATION] [ARCH:EXAMPLE_DECISION] [REQ:EXAMPLE_FEATURE]`.
-- Tests: `testCoreFeature_REQ_EXAMPLE_FEATURE` plus inline `[REQ:EXAMPLE_FEATURE]` comments validate behavior.
+- Code: Annotate resolver and bootstrap helpers with `[IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]`.
+- Tests: `TestResolvePaths_REQ_CONFIGURABLE_STATE_PATHS` style names validate precedence logic and module validation evidence.
 
 ## 4. Data Management [ARCH:DATA_MANAGEMENT] [REQ:DATA_REQUIREMENT]
 

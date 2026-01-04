@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"unicode/utf8"
 
 	"github.com/anmitsu/goful/look"
@@ -101,7 +102,7 @@ func (f *Filer) SaveState(path string) error {
 		return err
 	}
 
-	file, err := os.Create(util.ExpandPath(path))
+	file, err := createStateFile(path)
 	if err != nil {
 		return err
 	}
@@ -111,6 +112,17 @@ func (f *Filer) SaveState(path string) error {
 		return err
 	}
 	return nil
+}
+
+func createStateFile(path string) (*os.File, error) {
+	statePath := util.ExpandPath(path)
+	stateDir := filepath.Dir(statePath)
+	// [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
+	// Ensure overrides work even when parent directories do not yet exist.
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
+		return nil, err
+	}
+	return os.Create(statePath)
 }
 
 // CreateWorkspace creates and adds a workspace to the end.
