@@ -178,9 +178,11 @@ func (g *Goful) expandMacro(cmd string) (result string, background bool) {
 						src = g.Workspace().NextDir().Path
 						macrolen++
 					case macroAllOtherDirs:
+						// Always quote `%D@` / `%~D@` entries so multi-window commands remain shell safe.
+						// [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
 						src = formatDirListForMacro(
 							otherWindowDirPaths(g.Workspace()),
-							!nonQuote,
+							true,
 						)
 						macrolen++
 						quotedList = true

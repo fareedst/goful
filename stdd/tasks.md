@@ -325,6 +325,28 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 **Validation Evidence**: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 154 token references across 44 files.`
 
 **Priority Rationale**: P1 because cross-window automation is a frequently requested workflow improvement, but it does not block basic navigation.
+
+## P1: `%~D@` Escaping Regression [REQ:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [IMPL:WINDOW_MACRO_ENUMERATION]
+
+**Status**: ✅ Complete
+
+**Description**: Ensure `%~D@` emits shell-escaped directory paths so multi-window commands remain safe even when the non-quote modifier is used. Aligns `%~D@` behavior with `%D` escaping rules to prevent spaces from splitting arguments.
+
+**Dependencies**: [REQ:WINDOW_MACRO_ENUMERATION], [REQ:MODULE_VALIDATION]
+
+**Subtasks**:
+- [x] Update requirements + architecture + implementation docs to describe the escaped `%~D@` contract [REQ:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [IMPL:WINDOW_MACRO_ENUMERATION]
+- [x] Adjust `app/spawn.go` enumeration helpers to quote `%~D@` outputs and add diagnostics if needed [REQ:WINDOW_MACRO_ENUMERATION] [IMPL:WINDOW_MACRO_ENUMERATION]
+- [x] Refresh unit/integration tests covering `%~D@` to assert escaped results [REQ:WINDOW_MACRO_ENUMERATION] [IMPL:WINDOW_MACRO_ENUMERATION]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` and log outcomes (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 185 token references across 46 files.`) [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] Documentation updated with the escaped `%~D@` expectation
+- [x] `%~D@` emits individually quoted paths in all workspaces
+- [x] Tests cover the new escaping guarantee
+- [x] Token audit + validation recorded
+
+**Priority Rationale**: P1 because broken escaping corrupts automation workflows but does not stop the application from launching.
 ## P0: Cross-Platform Terminal Launcher [REQ:TERMINAL_PORTABILITY] [ARCH:TERMINAL_LAUNCHER] [IMPL:TERMINAL_ADAPTER]
 
 **Status**: ⏳ Pending
@@ -346,8 +368,9 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [x] Add integration tests or fakes proving `g.ConfigTerminal` receives the correct command slices [REQ:TERMINAL_PORTABILITY]
 - [x] Update README/CONTRIBUTING with macOS guidance and override instructions [REQ:TERMINAL_PORTABILITY]
 - [x] Inject `%D` working directory into every macOS Terminal launch (docs + tests) [REQ:TERMINAL_CWD]
+- [x] Replace mac login shell flags with non-login `bash -c` to avoid hangs [REQ:TERMINAL_PORTABILITY] [IMPL:TERMINAL_ADAPTER]
 - [ ] Manual validation checklist for macOS Terminal + Linux desktop runs [REQ:TERMINAL_PORTABILITY]
-- [x] `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) recorded after code/tests land (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 182 token references across 46 files.`)
+- [x] `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) recorded after code/tests land (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 185 token references across 46 files.` on 2026-01-02)
 
 **Completion Criteria**:
 - [ ] Factory + configurator modules validated independently before integration

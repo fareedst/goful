@@ -208,14 +208,14 @@ macro        | expanded string
 `%m` `%M`   | Marked file names/paths joined by spaces
 `%d` `%D`   | Directory name/path on cursor
 `%d2` `%D2` | Neighbor directory name/path
-`%D@` `%~D@` | `[REQ:WINDOW_MACRO_ENUMERATION]` Current window stays `%D`; `%D@` appends the other directory paths (quoted vs. raw) in display order so `echo %D %D@` lists every window.
+`%D@` `%~D@` | `[REQ:WINDOW_MACRO_ENUMERATION]` Current window stays `%D`; both macros append the other directory paths (individually quoted for shell safety) in display order so `echo %D %D@` lists every window. `%~D@` keeps the tilde modifier for parity with other macros but still escapes each entry.
 `%~f` ...   | Expand by non quote
 `%&`        | Flag to run command in background
 
 The macro is useful if do not want to specify a file name when run the shell.
 
 Macros starts with `%` are expanded surrounded by quote, and those starts with
-`%~` are expanded by non quote.  The `%~` mainly uses to for cmd.exe.
+`%~` are expanded by non quote (except `%~D@`, which still quotes each path so multi-directory expansions remain safe).  The `%~` mainly uses to for cmd.exe.
 
 Use `%&` when background execute the shell such as GUI apps launching.
 

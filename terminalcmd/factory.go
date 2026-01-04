@@ -104,7 +104,7 @@ func linuxTitle(cmd string) string {
 }
 
 func buildAppleScriptCommand(payload string) []string {
-	shellLine := fmt.Sprintf("bash -lc %s; exit", strconv.Quote(payload))
+	shellLine := fmt.Sprintf("bash -c %s; exit", strconv.Quote(payload))
 	escaped := appleScriptEscape(shellLine)
 	run := fmt.Sprintf("tell application \"Terminal\" to do script \"%s\"", escaped)
 	return []string{

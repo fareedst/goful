@@ -147,8 +147,9 @@ func TestExpandMacroWindowEnumeration_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T)
 	}
 
 	raw, _ := g.expandMacro("echo %~D@")
-	if raw != "echo /gamma /alpha" {
-		t.Fatalf("expected raw list, got %q", raw)
+	wantRaw := fmt.Sprintf("echo %s %s", util.Quote("/gamma"), util.Quote("/alpha"))
+	if raw != wantRaw {
+		t.Fatalf("expected escaped list %q, got %q", wantRaw, raw)
 	}
 
 	ws.Dirs = ws.Dirs[:1]

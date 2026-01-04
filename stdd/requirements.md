@@ -280,17 +280,17 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: External command macros must expose the full set of visible directories so operators can pass every window to shell scripts. `%D@` appends the other window paths (relative order starting from the next window and wrapping), while `%~D@` emits the same list without quoting. `echo %D %D@` therefore prints all window directories with the focused window first.
+- **Description**: External command macros must expose the full set of visible directories so operators can pass every window to shell scripts. `%D@` appends the other window paths (relative order starting from the next window and wrapping). `%~D@` accepts the historical “non-quote” modifier for symmetry with other macros but each path is still escaped so multi-word directories remain safe when injected into the target command line. `echo %D %D@` therefore prints all window directories with the focused window first.
 - **Rationale**: Bulk copy/move workflows depend on knowing all workspace paths. Today `%D2` exposes only the next window, so automation that needs >2 windows requires manual re-entry. Enumerating the remaining windows keeps macros self-contained and removes repetitive typing.
 - **Satisfaction Criteria**:
   - `%D@` expands to a space-separated list of every other directory path in deterministic order (start with next window, then wrap through the rest). When only one window is open, the expansion is empty.
-  - `%~D@` emits the same ordering without quoting or shell escaping. The quoted form (`%D@`) individually quotes each path so directories with spaces remain safe.
+  - `%~D@` emits the same ordering and, despite the `~` modifier, individually quotes each path just like `%D@` so directories with spaces remain safe.
   - `%D@` respects the same macro parser features as `%D` (supports escaping, `%~~` safeguards, etc.) and can be combined with other text inside commands.
   - Both the requirement and the README document the new placeholder so `external-command` users can discover it.
   - A regression test proves `expandMacro("echo %D %D@")` covers all window paths with the focused directory appearing only once at the beginning.
 - **Validation Criteria**:
   - Pure helper tests validate that the path enumeration logic handles 1–4 windows, wrapping order, and quoting rules.
-  - `app/spawn_test.go` exercises `%D@` and `%~D@` end-to-end, including escaping/quoting scenarios.
+  - `app/spawn_test.go` exercises `%D@` and `%~D@` end-to-end, including escaping/quoting scenarios that prove every path is shell-safe.
   - Token validation confirms `[REQ:WINDOW_MACRO_ENUMERATION]`, `[ARCH:WINDOW_MACRO_ENUMERATION]`, and `[IMPL:WINDOW_MACRO_ENUMERATION]` references exist across docs, code, and tests.
 - **Architecture**: See `architecture-decisions.md` § Window Macro Enumeration [ARCH:WINDOW_MACRO_ENUMERATION]
 - **Implementation**: See `implementation-decisions.md` § Window Macro Enumeration [IMPL:WINDOW_MACRO_ENUMERATION]

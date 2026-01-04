@@ -582,7 +582,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 ### Implementation Approach:
 - Added `otherWindowDirPaths(ws *filer.Workspace) []string` (Module 1 `WindowSequenceBuilder`) that iterates from `Focus+1` through all directories, wrapping via modulo arithmetic. Returns an empty slice if there is only one directory.
-- Added `formatDirListForMacro(paths []string, quote bool) string` (Module 2 `MacroListFormatter`) that applies `util.Quote` per entry when `quote=true`, leaves entries untouched when `quote=false`, and joins with single spaces. Returns an empty string when no paths are provided.
+- Added `formatDirListForMacro(paths []string, quote bool) string` (Module 2 `MacroListFormatter`) that applies `util.Quote` per entry when `quote=true`, leaves entries untouched when `quote=false`, and joins with single spaces. `%D@` and `%~D@` both invoke the quoted branch so each path is escaped even if the tilde modifier is present. Returns an empty string when no paths are provided.
 - Updated `expandMacro` to detect `%D@` and `%~D@` by looking ahead for the new `macroAllOtherDirs` sentinel (`'@'`). The branch calls both helpers instead of reusing the single-path logic so quoting rules stay localized.
 - Ensured the `%D2` code path remains unchanged by handling `'2'` before `'@'`, and kept `macrolen` accounting accurate so escape handling still works.
 
@@ -593,7 +593,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 ### Validation Evidence `[REQ:MODULE_VALIDATION]`:
 - `TestOtherWindowDirPaths_REQ_WINDOW_MACRO_ENUMERATION` (new helper test) covers 1–4 directory workspaces, wrap-around behavior, and focus movement.
 - `TestMacroListFormatting_REQ_WINDOW_MACRO_ENUMERATION` confirms quoting vs. raw output and empty inputs.
-- `TestExpandMacro` gained `%D@`/`%~D@` cases so the integration path is covered with real macro parsing.
+- `TestExpandMacro` gained `%D@`/`%~D@` cases so the integration path is covered with real macro parsing, asserting that `%~D@` is still escaped for shell safety.
 - `./scripts/validate_tokens.sh` re-run after implementation to ensure the new tokens exist in the registry (captured in task log).
 
 **Cross-References**: [ARCH:WINDOW_MACRO_ENUMERATION], [REQ:WINDOW_MACRO_ENUMERATION], [REQ:MODULE_VALIDATION]
@@ -691,6 +691,9 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - **Environment & Overrides**
   - Parse `GOFUL_TERMINAL_CMD` (string) or `-terminal` flag (future) into the override slice.
   - Document how to supply fallback commands (e.g., `iTerm2`).
+- **macOS Shell Invocation Safeguard**
+  - [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] Switching the AppleScript payload from `bash -lc` to `bash -c` prevents login-shell initialization from hanging Terminal windows that source interactive profiles.  
+  - [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] The payload is still quoted via `strconv.Quote` so `bash -c` receives the entire `cd "<cwd>"; <cmd><tail>` sequence intact while avoiding `.bash_profile` prompts.
 
 **Code Markers**:
 - `terminalcmd/*.go` and `main.go` wiring include `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]`.

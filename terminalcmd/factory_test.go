@@ -37,7 +37,7 @@ func TestCommandFactoryDarwin_REQ_TERMINAL_PORTABILITY(t *testing.T) {
 	got := factory.CommandWithCwd("echo hi", "/tmp/demo")
 	want := []string{
 		"osascript",
-		"-e", `tell application "Terminal" to do script "bash -lc \"cd \\\"/tmp/demo\\\"; echo hi;read -p \\\"HIT ENTER KEY\\\"\"; exit"`,
+		"-e", `tell application "Terminal" to do script "bash -c \"cd \\\"/tmp/demo\\\"; echo hi;read -p \\\"HIT ENTER KEY\\\"\"; exit"`,
 		"-e", `tell application "Terminal" to activate`,
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -116,7 +116,7 @@ func TestApplyDarwinCwd_REQ_TERMINAL_CWD(t *testing.T) {
 	Apply(cfg, factory, func() string { return "/tmp/demo" })
 	want := []string{
 		"osascript",
-		"-e", `tell application "Terminal" to do script "bash -lc \"cd \\\"/tmp/demo\\\"; echo hi;read -p \\\"HIT ENTER KEY\\\"\"; exit"`,
+		"-e", `tell application "Terminal" to do script "bash -c \"cd \\\"/tmp/demo\\\"; echo hi;read -p \\\"HIT ENTER KEY\\\"\"; exit"`,
 		"-e", `tell application "Terminal" to activate`,
 	}
 	if !reflect.DeepEqual(cfg.last, want) {
