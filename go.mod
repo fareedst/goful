@@ -11,6 +11,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.13.5
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/mattn/go-runewidth v0.0.19
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 // [IMPL:DEP_BUMP] [ARCH:DEPENDENCY_POLICY] [REQ:DEPENDENCY_REFRESH]

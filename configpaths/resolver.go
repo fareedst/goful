@@ -11,23 +11,30 @@ const (
 	DefaultStatePath = "~/.goful/state.json"
 	// DefaultHistoryPath is the legacy location for cmdline history.
 	DefaultHistoryPath = "~/.goful/history/shell"
+	// DefaultCommandsPath is the default location for external command configs.
+	DefaultCommandsPath = "~/.goful/external_commands.yaml"
 
 	// EnvStateKey configures the state path when flags are not provided.
 	EnvStateKey = "GOFUL_STATE_PATH"
 	// EnvHistoryKey configures the history path when flags are not provided.
 	EnvHistoryKey = "GOFUL_HISTORY_PATH"
+	// EnvCommandsKey configures the external command config path.
+	EnvCommandsKey = "GOFUL_COMMANDS_FILE"
 
-	flagStateSourceLabel   = "flag:-state"
-	flagHistorySourceLabel = "flag:-history"
-	defaultSourceLabel     = "default"
+	flagStateSourceLabel    = "flag:-state"
+	flagHistorySourceLabel  = "flag:-history"
+	flagCommandsSourceLabel = "flag:-commands"
+	defaultSourceLabel      = "default"
 )
 
 // Paths captures the resolved persistence locations plus their provenance.
 type Paths struct {
-	State         string
-	History       string
-	StateSource   string
-	HistorySource string
+	State          string
+	History        string
+	Commands       string
+	StateSource    string
+	HistorySource  string
+	CommandsSource string
 }
 
 // Resolver enforces the [REQ:CONFIGURABLE_STATE_PATHS] precedence contract:
@@ -37,16 +44,20 @@ type Resolver struct {
 	LookupEnv func(string) (string, bool)
 }
 
-// Resolve returns the final state/history paths plus provenance metadata.
-func (r Resolver) Resolve(flagState, flagHistory string) Paths {
+// Resolve returns the final state/history/commands paths plus provenance metadata.
+// [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS] [REQ:EXTERNAL_COMMAND_CONFIG]
+func (r Resolver) Resolve(flagState, flagHistory, flagCommands string) Paths {
 	state, stateSource := r.resolveOne(flagState, EnvStateKey, DefaultStatePath, flagStateSourceLabel)
 	history, historySource := r.resolveOne(flagHistory, EnvHistoryKey, DefaultHistoryPath, flagHistorySourceLabel)
+	commands, commandsSource := r.resolveOne(flagCommands, EnvCommandsKey, DefaultCommandsPath, flagCommandsSourceLabel)
 
 	return Paths{
-		State:         state,
-		History:       history,
-		StateSource:   stateSource,
-		HistorySource: historySource,
+		State:          state,
+		History:        history,
+		Commands:       commands,
+		StateSource:    stateSource,
+		HistorySource:  historySource,
+		CommandsSource: commandsSource,
 	}
 }
 

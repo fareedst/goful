@@ -39,11 +39,12 @@ main.go
 - Finder, completion, menus, and cmdline each expose `widget.Keymap` factories so they can be configured centrally in `config()`. This keeps the bindings declarative, enabling the baseline tests outlined in `[ARCH:BASELINE_CAPTURE]`.
 - Resizing cascades through `Goful.Resize`, calling `Widget.Resize` on active components plus `progress`, `message`, and `info` footers.
 
-## Persistence & Configuration [REQ:CONFIGURABLE_STATE_PATHS] [ARCH:STATE_PATH_SELECTION]
+## Persistence & Configuration [REQ:CONFIGURABLE_STATE_PATHS] [REQ:EXTERNAL_COMMAND_CONFIG] [ARCH:STATE_PATH_SELECTION] [ARCH:EXTERNAL_COMMAND_REGISTRY]
 
-- `configpaths.Resolver` enforces precedence: CLI flag → environment variable (`GOFUL_STATE_PATH`, `GOFUL_HISTORY_PATH`) → default (`~/.goful/...`).  
-- `main.emitPathDebug` logs provenance when `GOFUL_DEBUG_PATHS=1` so operators can confirm overrides without modifying code.
-- `filer.SaveState` + `cmdline.{Load,Save}History` receive the resolved paths and are invoked before exit, ensuring state/history remain in sync with overrides.
+- `configpaths.Resolver` enforces precedence for state/history/commands: CLI flag (`-state`, `-history`, `-commands`) → environment (`GOFUL_STATE_PATH`, `GOFUL_HISTORY_PATH`, `GOFUL_COMMANDS_FILE`) → defaults (`~/.goful/...`).  
+- `main.emitPathDebug` logs provenance for all three paths when `GOFUL_DEBUG_PATHS=1` so operators can confirm overrides without editing code.
+- `externalcmd.Load` consumes the resolved commands path, parses either JSON or YAML, and falls back to baked-in defaults while logging `[IMPL:EXTERNAL_COMMAND_LOADER]` diagnostics when configs are missing or filtered.
+- `filer.SaveState` + `cmdline.{Load,Save}History` receive the resolved paths and are invoked before exit, ensuring persistence remains in sync with overrides, while `registerExternalCommands` wires loader output into the runtime menu.
 
 ## Menus, Keymaps, and Associations [REQ:BEHAVIOR_BASELINE] [ARCH:BASELINE_CAPTURE]
 

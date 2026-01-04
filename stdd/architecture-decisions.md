@@ -85,6 +85,33 @@ When documenting architecture decisions, use this format:
 - Code: Annotate resolver and bootstrap helpers with `[IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]`.
 - Tests: `TestResolvePaths_REQ_CONFIGURABLE_STATE_PATHS` style names validate precedence logic and module validation evidence.
 
+## 3b. External Command Registry [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+
+### Decision: External command bindings load from a JSON or YAML registry with flag/env/default path precedence and deterministic menu wiring.
+**Rationale:**
+- Removes the need to patch `main.go` to customize the `external-command` menu; teams can distribute curated configs per environment.
+- Mirrors the existing precedence contract so `-commands` (CLI) overrides `GOFUL_COMMANDS_FILE`, which overrides the default `~/.goful/external_commands.yaml`.
+- Preserves current behavior (Windows vs. POSIX defaults, cursor offsets, macros) when no file is present or parsing fails, reducing regression risk.
+- Surfaces `DEBUG:` diagnostics and `message.Errorf` warnings when entries are skipped (duplicate keys, missing fields, unsupported platforms).
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `CommandConfigPathResolver` extends `configpaths.Resolver` with `Commands` + provenance metadata and emits `[IMPL:STATE_PATH_RESOLVER]` debug output alongside state/history.
+- `externalcmd.Loader` (`[IMPL:EXTERNAL_COMMAND_LOADER]`) expands `~`, reads JSON or YAML, validates schema, enforces unique `menu/key`, filters by GOOS, honors `disabled`, and falls back to embedded defaults packaged per platform.
+- `externalcmd.Defaults` enumerates the historical Windows/POSIX menus so regression tests can compare lists directly.
+- `main.registerExternalCommandMenu` (`[IMPL:EXTERNAL_COMMAND_BINDER]`) converts validated entries into `menu.Add` triplets, captures cursor offsets when invoking `g.Shell`, and injects a placeholder item if configuration disables every command to keep `X` from erroring.
+
+**Alternatives Considered:**
+- **Ad-hoc parsing inside `main.go`:** rejected to keep loader logic testable and aligned with `[REQ:MODULE_VALIDATION]`.
+- **Environment-only overrides:** rejected; operators asked for file-based registries they can check into dotfile repos.
+- **TOML-only support:** rejected; JSON+YAML cover the main ecosystems with a single extra dependency (`gopkg.in/yaml.v3`).
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `configpaths/resolver.go` comments mention `[IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]` plus the new commands path metadata.
+- `externalcmd/loader.go` and tests include `[IMPL:EXTERNAL_COMMAND_LOADER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]`.
+- `main_external_commands.go` helper + tests include `[IMPL:EXTERNAL_COMMAND_BINDER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]`.
+
+**Cross-References**: [REQ:EXTERNAL_COMMAND_CONFIG], [IMPL:EXTERNAL_COMMAND_LOADER], [IMPL:EXTERNAL_COMMAND_BINDER]
+
 ## 4. Data Management [ARCH:DATA_MANAGEMENT] [REQ:DATA_REQUIREMENT]
 
 ### Decision: [Your Data Management Approach]

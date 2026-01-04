@@ -297,6 +297,28 @@ Each requirement includes:
 
 **Status**: ⏳ Planned
 
+### [REQ:EXTERNAL_COMMAND_CONFIG] Configurable External Commands
+
+**Priority: P1 (Important)**
+
+- **Description**: Operators must be able to customize the `external-command` menu keys, labels, and shell payloads by editing a configuration file (flag/env/default path) instead of recompiling goful. The feature preserves platform-specific defaults (Windows vs. POSIX) but allows overrides, per-platform filtering, offsets, and disable switches in the file, whether the file is expressed in JSON or YAML.
+- **Rationale**: The current hard-coded menu makes it impossible to keep personal automation or team-standard tooling in sync without editing Go sources. Moving the definitions into a JSON or YAML file unblocks scripted provisioning, keeps `%D@`-style macros discoverable, and allows secure environments to remove dangerous defaults.
+- **Satisfaction Criteria**:
+  - CLI flag `-commands` overrides the configuration path; environment variable `GOFUL_COMMANDS_FILE` is honored when the flag is unset, and defaults fall back to `~/.goful/external_commands.yaml`.
+- The loader falls back to shipped defaults (POSIX/Windows) when the config file is missing or invalid so first-run behavior matches the legacy menu.
+- Each command entry supports `menu`, `key`, `label`, and either a shell `command` string or a `runMenu` target, plus optional `offset`, optional `platforms` (GOOS list), and a `disabled` flag.
+  - Duplicate `menu/key` combinations, missing required fields, or unsupported platforms are rejected with `message.Errorf`, and diagnostics mention `[IMPL:EXTERNAL_COMMAND_LOADER]`.
+  - Menu binding reuses resolved entries and exposes the same `g.Shell` offsets so caret placement matches historical commands.
+- **Validation Criteria**:
+  - Unit tests cover path precedence for the config file (flag/env/default) and emit `[REQ:MODULE_VALIDATION]` evidence for the resolver.
+- Loader tests cover JSON/YAML decoding, default fallback, duplicate/invalid entry rejection, platform filtering, disabled entries, and `DEBUG:` logging.
+  - Binder tests prove menu arguments are generated deterministically and cursor offsets reach `g.Shell` correctly.
+  - README/CONTRIBUTING describe the file format, macros, and override steps with `[ARCH:EXTERNAL_COMMAND_REGISTRY]` references.
+- **Architecture**: See `architecture-decisions.md` § External Command Registry [ARCH:EXTERNAL_COMMAND_REGISTRY]
+- **Implementation**: See `implementation-decisions.md` § External Command Loader/Binding [IMPL:EXTERNAL_COMMAND_LOADER], [IMPL:EXTERNAL_COMMAND_BINDER]
+
+**Status**: ⏳ Planned
+
 ### [REQ:TERMINAL_CWD] macOS Terminal Working Directory
 
 **Priority: P0 (Critical)**

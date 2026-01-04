@@ -347,6 +347,53 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [x] Token audit + validation recorded
 
 **Priority Rationale**: P1 because broken escaping corrupts automation workflows but does not stop the application from launching.
+
+## P1: External Command Configuration [REQ:EXTERNAL_COMMAND_CONFIG] [ARCH:EXTERNAL_COMMAND_REGISTRY] [IMPL:EXTERNAL_COMMAND_LOADER] [IMPL:EXTERNAL_COMMAND_BINDER]
+
+**Status**: ✅ Complete
+
+**Description**: Load `external-command` menu entries from a JSON config (flag/env/default) so operators can customize bindings without editing Go code while retaining historical defaults per platform.
+
+**Dependencies**: [REQ:MODULE_VALIDATION], [ARCH:STATE_PATH_SELECTION]
+
+**Subtasks**:
+- [x] Update requirements + docs with `[REQ:EXTERNAL_COMMAND_CONFIG]`, `[ARCH:EXTERNAL_COMMAND_REGISTRY]`, `[IMPL:EXTERNAL_COMMAND_LOADER]`, `[IMPL:EXTERNAL_COMMAND_BINDER]`.
+- [x] Extend `configpaths.Resolver` with commands path + provenance debug output.
+- [x] Implement `externalcmd.Defaults/Load` with schema validation, GOOS filters, disabled entries, and fallback behavior.
+- [x] Add loader unit tests covering precedence, invalid files, duplicate keys, platform gating, and disabled entries. [REQ:MODULE_VALIDATION]
+- [x] Extract binder helper in `main` + binder unit tests to prove menu args + placeholder behavior. [REQ:MODULE_VALIDATION]
+- [x] Wire `main.go` to new loader/binder, replace hard-coded menu, and document file format in README.
+- [x] Token audit & validation logs (`./scripts/validate_tokens.sh`). [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] Requirement/architecture/implementation docs updated with cross-references.
+- [x] Loader + binder modules validated independently.
+- [x] `main.go` uses loader output; defaults preserved for Windows/POSIX.
+- [x] README/CONTRIBUTING describe usage + overrides.
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` results recorded (`./scripts/validate_tokens.sh` output pasted into implementation decisions on 2026-01-02).
+
+**Priority Rationale**: P1 because customization improves automation workflows and unblocks secure environments, but it does not block baseline navigation.
+
+## P1: External Command YAML Support [REQ:EXTERNAL_COMMAND_CONFIG] [ARCH:EXTERNAL_COMMAND_REGISTRY] [IMPL:EXTERNAL_COMMAND_LOADER]
+
+**Status**: ✅ Complete
+
+**Description**: Teach the loader/binder stack to accept YAML configs in addition to JSON so teams with existing YAML workflows can manage the `external-command` menu without format conversions.
+
+**Dependencies**: [REQ:MODULE_VALIDATION]
+
+**Subtasks**:
+- [x] Add `gopkg.in/yaml.v3` dependency and extend `externalcmd.Entry` tags for YAML decoding.
+- [x] Update `externalcmd.Load` to parse JSON or YAML arrays/wrapper objects plus new unit tests. [REQ:MODULE_VALIDATION]
+- [x] Refresh docs (`README.md`, `stdd/*.md`, `ARCHITECTURE.md`) to describe JSON/YAML support and record the change in `tasks.md`.
+- [x] Run `go test ./...` and `./scripts/validate_tokens.sh` to capture the latest `[PROC:TOKEN_VALIDATION]` evidence.
+
+**Completion Criteria**:
+- [x] Loader parses YAML files (array + `commands:`) and falls back to defaults on errors.
+- [x] Documentation + requirements mention JSON/YAML parity.
+- [x] Token audit/validation logs updated with the latest run (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 245 token references across 52 files.`).
+
+**Priority Rationale**: P1 because it materially improves automation ergonomics without blocking core navigation workflows.
 ## P0: Cross-Platform Terminal Launcher [REQ:TERMINAL_PORTABILITY] [ARCH:TERMINAL_LAUNCHER] [IMPL:TERMINAL_ADAPTER]
 
 **Status**: ⏳ Pending

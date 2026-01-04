@@ -108,6 +108,64 @@ type Config struct {
 
 **Cross-References**: [ARCH:STATE_PATH_SELECTION], [REQ:CONFIGURABLE_STATE_PATHS]
 
+## 2b. External Command Loader [IMPL:EXTERNAL_COMMAND_LOADER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+
+### Decision: Provide a dedicated loader that resolves the config file path (flag/env/default), parses JSON or YAML, validates schema, filters by platform, and falls back to embedded defaults.
+**Rationale:**
+- Keeps customization outside of `main.go`, enabling dotfile repos or tooling scripts to ship command sets without recompiling.
+- Ensures `[REQ:MODULE_VALIDATION]` can be satisfied with pure unit tests (no widget/app dependencies).
+- Preserves historic behavior (platform-specific defaults, cursor offsets) whenever the config file is absent or invalid.
+
+### Implementation Approach:
+- Extend `configpaths.Paths` with `Commands` + `CommandsSource` so `emitPathDebug` reports all three precedence outcomes. CLI flag `-commands` and env var `GOFUL_COMMANDS_FILE` feed the resolver.
+- New package `externalcmd` exposes:
+  - `type Entry` with `Menu`, `Key`, `Label`, `Command`, `Offset`, `Platforms`, `Disabled`.
+  - `func Defaults(goos string) []Entry` returning the old hard-coded Windows/POSIX menus expressed with `%` macros instead of inline `g.File()` references (e.g., rename defaults to `mv -vi %f %~f`).
+  - `func Load(Options) ([]Entry, error)` where `Options` carries `Path`, `GOOS`, `ReadFile`, `Debug`. Loader expands `~`, reads JSON or YAML (supporting raw arrays or `{ commands: [] }`), validates unique `menu/key`, enforces required fields, filters by `Platforms`, skips disabled entries, and logs diagnostics tagged with `[IMPL:EXTERNAL_COMMAND_LOADER]`.
+- Errors reading/parsing the config file bubble up so callers can emit `message.Errorf` but still fall back to defaults.
+- Dependency note: Introduced `gopkg.in/yaml.v3` to parse YAML files without writing a bespoke parser; the package is already widely used and compatible with Go 1.24.
+
+**Code Markers**:
+- `externalcmd/defaults.go` & `externalcmd/loader.go` include `[IMPL:EXTERNAL_COMMAND_LOADER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]`.
+- `configpaths/resolver.go` references `[IMPL:STATE_PATH_RESOLVER]` while documenting the new `Commands` path fields.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Tests in `externalcmd/loader_test.go` named `TestLoadCommands_REQ_EXTERNAL_COMMAND_CONFIG` and friends ensure schema validation, platform filtering, duplicate detection, and fallback behavior.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./externalcmd` (darwin/arm64, Go 1.24.3) covers the loader in isolation, including JSON and YAML fixtures.
+- `./scripts/validate_tokens.sh` (2026-01-02) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 245 token references across 52 files.`
+
+**Cross-References**: [ARCH:EXTERNAL_COMMAND_REGISTRY], [REQ:EXTERNAL_COMMAND_CONFIG], [REQ:MODULE_VALIDATION]
+
+## 2c. External Command Binder [IMPL:EXTERNAL_COMMAND_BINDER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+
+### Decision: Extract a pure helper that converts loader entries into `menu.Add` triplets with closures that call `g.Shell`, preserving cursor offsets and surfacing placeholder entries when configs are empty.
+**Rationale:**
+- Keeps `main.go` readable and makes binder behavior testable without spinning up the widget stack.
+- Guarantees deterministic registration order (file order) and simple hooks for future menu destinations beyond `external-command`.
+- Provides user-facing feedback when no commands remain (placeholder entry says “no commands configured” and logs a `DEBUG:` line).
+
+### Implementation Approach:
+- New file `main_external_commands.go` in package `main` defines:
+  - `type shellInvoker func(cmd string, offset ...int)` to abstract `g.Shell`.
+  - `func buildExternalMenuSpecs(entries []externalcmd.Entry) []menuSpec` which normalizes menu names, drops entries missing required fields (defensive), and ensures file order is preserved.
+  - `func registerExternalCommandMenu(g *app.Goful, entries []externalcmd.Entry)` which calls `buildExternalMenuSpecs`, adds a placeholder entry if specs are empty, and feeds `menu.Add` arguments with closures capturing the right offset.
+  - Placeholder callbacks call `message.Info` so pressing `X` explains that no commands are configured instead of crashing.
+- Tests in `main_external_commands_test.go` inject fake `shellInvoker` functions and assert commands/offsets propagate correctly and placeholder behavior triggers when expected.
+
+**Code Markers**:
+- `main_external_commands.go` and its tests include `[IMPL:EXTERNAL_COMMAND_BINDER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]`.
+- `main.go` references `[IMPL:EXTERNAL_COMMAND_BINDER]` when wiring the menu after loading definitions.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Tests named `TestBuildExternalMenuSpecs_REQ_EXTERNAL_COMMAND_CONFIG` and `TestRegisterExternalCommandsPlaceholder_REQ_EXTERNAL_COMMAND_CONFIG` cover success and edge cases.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./...` after integration covers binder tests; `./scripts/validate_tokens.sh` ensures the new tokens are registered.
+
+**Cross-References**: [ARCH:EXTERNAL_COMMAND_REGISTRY], [REQ:EXTERNAL_COMMAND_CONFIG], [REQ:MODULE_VALIDATION]
+
 ## 3. Error Handling Implementation [IMPL:ERROR_HANDLING] [ARCH:ERROR_HANDLING] [REQ:ERROR_HANDLING]
 
 ### Error Types

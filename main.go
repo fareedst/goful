@@ -10,7 +10,9 @@ import (
 	"github.com/anmitsu/goful/app"
 	"github.com/anmitsu/goful/cmdline"
 	"github.com/anmitsu/goful/configpaths"
+	"github.com/anmitsu/goful/externalcmd"
 	"github.com/anmitsu/goful/filer"
+	"github.com/anmitsu/goful/internal/externalmenu"
 	"github.com/anmitsu/goful/look"
 	"github.com/anmitsu/goful/menu"
 	"github.com/anmitsu/goful/message"
@@ -30,13 +32,18 @@ var (
 		"",
 		"Override path to cmdline history (default "+configpaths.DefaultHistoryPath+" or "+configpaths.EnvHistoryKey+")",
 	)
+	commandsFlag = flag.String(
+		"commands",
+		"",
+		"Override path to external-command config (default "+configpaths.DefaultCommandsPath+" or "+configpaths.EnvCommandsKey+")",
+	)
 )
 
 func main() {
 	flag.Parse()
 
 	pathsResolver := configpaths.Resolver{}
-	runtimePaths := pathsResolver.Resolve(*stateFlag, *historyFlag)
+	runtimePaths := pathsResolver.Resolve(*stateFlag, *historyFlag, *commandsFlag)
 	emitPathDebug(runtimePaths)
 
 	is_tmux := false
@@ -56,7 +63,7 @@ func main() {
 	}
 
 	goful := app.NewGoful(runtimePaths.State)
-	config(goful, is_tmux)
+	config(goful, is_tmux, runtimePaths)
 	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
 	// plumb LoadHistory errors (distinguish first-run missing files vs actual IO failures) so we can alert users instead of
 	// silently discarding history and ingest errors.
@@ -70,7 +77,7 @@ func main() {
 	_ = cmdline.SaveHistory(runtimePaths.History)
 }
 
-func config(g *app.Goful, is_tmux bool) {
+func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 	look.Set("default") // default, midnight, black, white
 
 	if runewidth.EastAsianWidth {
@@ -222,33 +229,20 @@ func config(g *app.Goful, is_tmux bool) {
 	)
 	g.AddKeymap("x", func() { g.Menu("command") })
 
-	if runtime.GOOS == "windows" {
-		menu.Add("external-command",
-			"c", "copy %~f to %~D2 ", func() { g.Shell("robocopy /e %~f %~D2") },
-			"m", "move %~f to %~D2 ", func() { g.Shell("move /-y %~f %~D2") },
-			"d", "del /s %~m       ", func() { g.Shell("del /s %~m") },
-			"D", "rd /s /q %~m     ", func() { g.Shell("rd /s /q %~m") },
-			"k", "make directory   ", func() { g.Shell("mkdir ") },
-			"n", "create newfile   ", func() { g.Shell("copy nul ") },
-			"r", "move (rename) %f ", func() { g.Shell("move /-y %~f ./") },
-			"w", "where . *        ", func() { g.Shell("where . *") },
-		)
-	} else {
-		menu.Add("external-command",
-			"c", "copy %m to %D2    ", func() { g.Shell("cp -vai %m %D2") },
-			"m", "move %m to %D2    ", func() { g.Shell("mv -vi %m %D2") },
-			"D", "remove %m files   ", func() { g.Shell("rm -vR %m") },
-			"k", "make directory    ", func() { g.Shell("mkdir -vp ./") },
-			"n", "create newfile    ", func() { g.Shell("touch ./") },
-			"T", "time copy %f to %m", func() { g.Shell("touch -r %f %m") },
-			"M", "change mode %m    ", func() { g.Shell("chmod 644 %m", -3) },
-			"r", "move (rename) %f  ", func() { g.Shell("mv -vi %f " + g.File().Name()) },
-			"R", "bulk rename %m    ", func() { g.Shell(`rename -v "s///" %m`, -6) },
-			"f", "find . -name      ", func() { g.Shell(`find . -name "*"`, -1) },
-			"A", "archives menu     ", func() { g.Menu("archive") },
-		)
+	// [IMPL:EXTERNAL_COMMAND_LOADER] [IMPL:EXTERNAL_COMMAND_BINDER] [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+	commandEntries, loadErr := externalcmd.Load(externalcmd.Options{
+		Path:  paths.Commands,
+		GOOS:  runtime.GOOS,
+		Debug: os.Getenv(externalcmd.EnvDebugCommands) != "",
+		Logf: func(format string, args ...interface{}) {
+			message.Infof("DEBUG: [IMPL:EXTERNAL_COMMAND_LOADER] "+format, args...)
+		},
+	})
+	if loadErr != nil {
+		message.Errorf("[REQ:EXTERNAL_COMMAND_CONFIG] failed to load %s: %v", paths.Commands, loadErr)
 	}
-	g.AddKeymap("X", func() { g.Menu("external-command") })
+	externalmenu.Register(g, commandEntries)
+	g.AddKeymap("X", func() { g.Menu(externalcmd.MenuName) })
 
 	menu.Add("archive",
 		"z", "zip     ", func() { g.Shell(`zip -roD %x.zip %m`, -7) },
@@ -372,11 +366,13 @@ func emitPathDebug(paths configpaths.Paths) {
 	}
 	fmt.Fprintf(
 		os.Stderr,
-		"DEBUG: [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS] state=%s (%s) history=%s (%s)\n",
+		"DEBUG: [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS] [REQ:EXTERNAL_COMMAND_CONFIG] state=%s (%s) history=%s (%s) commands=%s (%s)\n",
 		paths.State,
 		paths.StateSource,
 		paths.History,
 		paths.HistorySource,
+		paths.Commands,
+		paths.CommandsSource,
 	)
 }
 

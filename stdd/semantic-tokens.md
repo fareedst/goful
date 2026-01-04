@@ -106,6 +106,7 @@ When referencing other tokens:
 - `[REQ:STDD_SETUP]` - STDD methodology setup
 - `[REQ:MODULE_VALIDATION]` - Independent module validation before integration
 - `[REQ:CONFIGURABLE_STATE_PATHS]` - Configurable state/history persistence
+- `[REQ:EXTERNAL_COMMAND_CONFIG]` - External command menu definitions are configurable via files/overrides
 - `[REQ:WINDOW_MACRO_ENUMERATION]` - `%D@` enumerates other workspace directories for external commands
 - `[REQ:GO_TOOLCHAIN_LTS]` - Go toolchain tracks current LTS baseline
 - `[REQ:DEPENDENCY_REFRESH]` - Dependencies refreshed for security and compatibility
@@ -139,6 +140,7 @@ When referencing other tokens:
 - `[ARCH:STDD_STRUCTURE]` - STDD project structure [REQ:STDD_SETUP]
 - `[ARCH:MODULE_VALIDATION]` - Module validation strategy [REQ:MODULE_VALIDATION]
 - `[ARCH:STATE_PATH_SELECTION]` - Path precedence for persistence [REQ:CONFIGURABLE_STATE_PATHS]
+- `[ARCH:EXTERNAL_COMMAND_REGISTRY]` - External command config resolution/binding [REQ:EXTERNAL_COMMAND_CONFIG]
 - `[ARCH:WINDOW_MACRO_ENUMERATION]` - Workspace directory enumeration for `%D@` [REQ:WINDOW_MACRO_ENUMERATION]
 - `[ARCH:GO_RUNTIME_STRATEGY]` - Go LTS/toolchain policy [REQ:GO_TOOLCHAIN_LTS]
 - `[ARCH:DEPENDENCY_POLICY]` - Dependency refresh and security approach [REQ:DEPENDENCY_REFRESH]
@@ -166,6 +168,8 @@ When referencing other tokens:
 - `[IMPL:STDD_FILES]` - STDD file creation [ARCH:STDD_STRUCTURE] [REQ:STDD_SETUP]
 - `[IMPL:MODULE_VALIDATION]` - Module validation implementation [ARCH:MODULE_VALIDATION] [REQ:MODULE_VALIDATION]
 - `[IMPL:STATE_PATH_RESOLVER]` - Resolver + bootstrap wiring [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
+- `[IMPL:EXTERNAL_COMMAND_LOADER]` - External command config loader/defaults [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+- `[IMPL:EXTERNAL_COMMAND_BINDER]` - Menu binding helpers for commands [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
 - `[IMPL:WINDOW_MACRO_ENUMERATION]` - `%D@` macro helpers [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
 - `[IMPL:GO_MOD_UPDATE]` - Go version/toolchain update [ARCH:GO_RUNTIME_STRATEGY] [REQ:GO_TOOLCHAIN_LTS]
 - `[IMPL:DEP_BUMP]` - Dependency refresh and tidy [ARCH:DEPENDENCY_POLICY] [REQ:DEPENDENCY_REFRESH]

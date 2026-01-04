@@ -225,7 +225,7 @@ Use `%&` when background execute the shell such as GUI apps launching.
 
 ## Customize
 
-Goful don't have a config file, instead you can customize by edit `main.go`.
+Most of goful is still customized by editing `main.go`, but `[REQ:EXTERNAL_COMMAND_CONFIG]` now provides a JSON or YAML file for the `external-command` menu so you can ship your own automation without rebuilding the binary.
 
 Examples of customizing:
 
@@ -250,6 +250,52 @@ Copy original `main.go` to `my/goful` directory
 Install after edit `my/goful/main.go`
 
     $ go install
+
+### External Command Config (`external-command` menu)
+
+`[REQ:EXTERNAL_COMMAND_CONFIG]` and `[ARCH:EXTERNAL_COMMAND_REGISTRY]` move the `external-command` menu definitions into a JSON **or** YAML file so you can add/edit/remove shell helpers without touching Go code:
+
+- Flag `-commands /path/to/external_commands.yaml` overrides everything.
+- Environment variable `GOFUL_COMMANDS_FILE` applies when the CLI flag is unset.
+- Defaults fall back to `~/.goful/external_commands.yaml`, with the historical POSIX/Windows bindings baked in if the file does not exist yet.
+- Set `GOFUL_DEBUG_COMMANDS=1` to log loader diagnostics (`DEBUG: [IMPL:EXTERNAL_COMMAND_LOADER] ...`).
+
+Each entry accepts (shown in JSON, but the same fields work in YAML):
+
+```jsonc
+[
+  {
+    "menu": "external-command", // optional; defaults to external-command
+    "key": "c",
+    "label": "copy %m to %D2    ",
+    "command": "cp -vai %m %D2",
+    "offset": -2,               // optional cursor offset for g.Shell
+    "platforms": ["linux"],     // optional GOOS filter (case-insensitive)
+    "disabled": false
+  },
+  {
+    "key": "A",
+    "label": "archives menu     ",
+    "runMenu": "archive"        // optional: jump into another goful menu instead of running a shell command
+  }
+]
+```
+
+YAML example:
+
+```yaml
+- key: c
+  label: "copy %m to %D2    "
+  command: "cp -vai %m %D2"
+  offset: -2
+- key: A
+  label: "archives menu     "
+  runMenu: "archive"
+```
+
+- Use goful macros (`%f`, `%D@`, `%~m`, etc.) inside `command` strings the same way the legacy `main.go` menu did.
+- Entries are applied in file order, and duplicate `menu/key` combinations are rejected with a descriptive error surfaced via `message.Errorf`.
+- If the file disables every entry, the `external-command` menu still appears and displays a placeholder that explains how to re-enable commands.
 
 ### Configuring State & History Paths
 
