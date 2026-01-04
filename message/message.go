@@ -127,7 +127,9 @@ func (m *message) log(path, s string) error {
 		return err
 	}
 	defer file.Close()
-	_, err = fmt.Fprintf(file, fmt.Sprintf("%s %s\n", logtime, s))
+	// [IMPL:GO_MOD_UPDATE] [ARCH:GO_RUNTIME_STRATEGY] [REQ:GO_TOOLCHAIN_LTS]
+	// Use constant format string so Go 1.24 vet passes.
+	_, err = fmt.Fprintf(file, "%s %s\n", logtime, s)
 	if err != nil {
 		return err
 	}
