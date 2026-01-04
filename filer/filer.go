@@ -204,6 +204,8 @@ func (f *Filer) AddExtmap(a ...interface{}) {
 		panic("items must be a multiple of 3")
 	}
 
+	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
+	// allocate the inner map before writing to f.extmap[key][ext] to avoid panics when third-party integrations call AddExtmap directly.
 	for i := 0; i < len(a); i += 3 {
 		key := a[i].(string)
 		ext := a[i+1].(string)

@@ -56,11 +56,16 @@ func main() {
 
 	goful := app.NewGoful(runtimePaths.State)
 	config(goful, is_tmux)
+	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
+	// plumb LoadHistory errors (distinguish first-run missing files vs actual IO failures) so we can alert users instead of
+	// silently discarding history and ingest errors.
 	_ = cmdline.LoadHistory(runtimePaths.History)
 
 	goful.Run()
 
 	_ = goful.SaveState(runtimePaths.State)
+	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
+	// surface SaveHistory failures (permissions/full disk) via message logging instead of quietly ignoring write errors.
 	_ = cmdline.SaveHistory(runtimePaths.History)
 }
 

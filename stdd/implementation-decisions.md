@@ -577,13 +577,19 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 ### Decision: Track debt via issues and TODO annotations
 **Rationale:**
 - Makes risk visible and assignable.
+- Keeps inline breadcrumbs synchronized with the central backlog so `[PROC:TOKEN_AUDIT]` can verify coverage.
 
 ### Implementation Approach:
-- Create issue list for known pain points; annotate code with TODO + owner.
-- Link debt items into documentation and tasks.
+- Capture the backlog in `stdd/debt-log.md` (D1–D4 for the initial pass) with owner, risk, TODO reference, and next action columns.
+- Annotate each hotspot (`app/goful.go`, `main.go`, `cmdline/cmdline.go`, `filer/filer.go`) with `TODO(goful-maintainers)` comments that describe the risk and include `[IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]`.
+- Update `stdd/tasks.md` to link the P1 debt triage task back to the backlog and record `[PROC:TOKEN_VALIDATION]` output after audits.
 
 **Code Markers**:
 - TODOs carry `[IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]`.
+- Documentation links refer to the backlog file so future contributors know where to extend the list.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `2026-01-01`: `./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 148 token references across 44 files.`
 
 **Cross-References**: [ARCH:DEBT_MANAGEMENT], [REQ:DEBT_TRIAGE]
 

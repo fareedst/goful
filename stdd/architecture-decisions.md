@@ -436,9 +436,17 @@ When documenting architecture decisions, use this format:
 ### Decision: Systematically log and annotate risky areas
 **Rationale:**
 - Makes hidden risks visible for scheduling and refactors.
+- Ensures inline TODOs, backlog entries, and STDD docs share the same semantic tokens for auditability.
+- Provides owners plus next steps so the debt backlog can be triaged like any other requirement-driven artifact.
+
+**Structure:**
+- `stdd/debt-log.md` is the canonical backlog that maps each risk (D1, D2, …) to owners, affected files, and mitigation plans with `[REQ:DEBT_TRIAGE] [IMPL:DEBT_TRACKING]` breadcrumbs.
+- Runtime hotspots are annotated with `TODO(goful-maintainers)` comments that repeat `[IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]`.
+- `stdd/tasks.md` links back to the backlog so completion criteria reference concrete evidence.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
 - Issues/TODOs carry `[IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]`.
+- Backlog doc references `[ARCH:DEBT_MANAGEMENT]` and links to specific files (e.g., `app/goful.go`, `cmdline/cmdline.go`) for each item.
 
 **Cross-References**: [REQ:DEBT_TRIAGE], [IMPL:DEBT_TRACKING]
 

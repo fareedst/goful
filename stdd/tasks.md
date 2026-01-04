@@ -266,17 +266,17 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 ## P1: Debt Triage [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:DEBT_TRACKING]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
-**Description**: Log known pain points (error handling, cross-platform quirks) and annotate risky areas with TODOs/owners.
+**Description**: Log known pain points (error handling, cross-platform quirks) and annotate risky areas with TODOs/owners. Snapshot recorded in `stdd/debt-log.md`.
 
 **Dependencies**: None
 
 **Subtasks**:
-- [ ] Create issue list/backlog of known risks [REQ:DEBT_TRIAGE] [IMPL:DEBT_TRACKING]
-- [ ] Add TODOs with owners in hotspot files [REQ:DEBT_TRIAGE] [IMPL:DEBT_TRACKING]
-- [ ] Link debt list into docs/tasks [REQ:DEBT_TRIAGE]
-- [ ] Run `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]`
+- [x] Create issue list/backlog of known risks (see `stdd/debt-log.md`) [REQ:DEBT_TRIAGE] [IMPL:DEBT_TRACKING]
+- [x] Add TODOs with owners in hotspot files [REQ:DEBT_TRIAGE] [IMPL:DEBT_TRACKING]
+- [x] Link debt list into docs/tasks (`architecture-decisions.md`, `implementation-decisions.md`) [REQ:DEBT_TRIAGE]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]` (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 148 token references across 44 files.`)
 
 **Completion Criteria**:
 - [ ] Debt backlog documented and linked

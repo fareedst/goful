@@ -158,6 +158,8 @@ func (c *Cmdline) Run() {
 	c.mode.Run(c)
 }
 
+// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
+// bound historyMap by a configurable size per mode so long-running sessions do not retain unbounded command history in memory.
 var historyMap = map[string][]string{}
 
 // LoadHistory loads from a path and append to history maps of a key as the file name.
@@ -165,6 +167,8 @@ func LoadHistory(path string) error {
 	path = util.ExpandPath(path)
 	file, err := os.Open(path)
 	if err != nil {
+		// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
+		// treat os.ErrNotExist as success and surface other IO failures via message logging instead of returning opaque errors.
 		return err
 	}
 	defer file.Close()

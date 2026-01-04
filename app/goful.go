@@ -111,6 +111,9 @@ func (g *Goful) Run() {
 	message.Info("Welcome to goful")
 	g.Workspace().ReloadAll()
 
+	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
+	// add cancellation so the poller goroutine stops pushing into g.event after the UI exits;
+	// the current infinite loop keeps running after Run returns, leaking a goroutine and busy-waiting on the channel.
 	go func() {
 		for {
 			g.event <- widget.PollEvent()
