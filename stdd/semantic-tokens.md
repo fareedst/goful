@@ -176,6 +176,10 @@ When referencing other tokens:
 - `[IMPL:TOKEN_VALIDATION_SCRIPT]` - Shell script enforcing token registry [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
 - Add your implementation tokens here
 
+## Test Tokens Registry
+
+- `[TEST:KEYMAP_BASELINE]` - Captures canonical keybindings for filer/cmdline/finder/completion/menu (`main_keymap_test.go`) ensuring `[REQ:BEHAVIOR_BASELINE]` remains satisfied via `[IMPL:BASELINE_SNAPSHOTS]`.
+
 ## Token Relationships
 
 ### Hierarchical Relationships

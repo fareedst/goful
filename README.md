@@ -242,6 +242,12 @@ Install after edit `my/goful/main.go`
 - Pass `-state /tmp/state.json` or `-history /tmp/history` on the command line to override everything else (flags win over environment variables).
 - Export `GOFUL_DEBUG_PATHS=1` to log which source produced each path (`DEBUG: [IMPL:STATE_PATH_RESOLVER] ...`) for troubleshooting sandboxes and CI jobs.
 
+## Documentation
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) – `[REQ:ARCH_DOCUMENTATION]` package/data-flow overview plus module validation map.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) – `[REQ:CONTRIBUTING_GUIDE]` workflow, semantic token, and module-validation requirements.
+- `stdd/` directory – STDD requirements, architecture decisions, implementation decisions, semantic token registry, and task tracker.
+
 ## Contributing
 
-[Contributing Guide](.github/CONTRIBUTING.md)
+Read the [Contributing Guide](CONTRIBUTING.md) before opening a PR so you follow the STDD workflow, semantic token discipline, and module validation rules.

@@ -470,30 +470,50 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 ### Decision: Write `ARCHITECTURE.md`
 **Rationale:**
 - Provides concise understanding of packages and data flow.
+- Establishes a stable "map" before larger refactors touch keymap/menu wiring.
 
 ### Implementation Approach:
-- Summarize UI widgets, file ops, app/mode pipeline, and data flow diagrams/text.
-- Cross-link tokens and modules.
+- Structure the document into:
+  1. **Overview & Goals** referencing `[REQ:ARCH_DOCUMENTATION]`.
+  2. **Runtime Flow** describing `main` → `configpaths.Resolver` → `app.Goful` event loop.
+  3. **Module Deep Dives** (`app`, `filer`, `widget`, `cmdline`, `menu`, `look/message/info/progress`, `configpaths`, `util`).
+  4. **Validation & Testing Surfaces** listing module-level tests (widgets, cmdline, integration flows, keymap baselines).
+- Embed ASCII-style flow diagrams or bullet chains to highlight dependencies.
+- Cross-link to requirements/architecture/implementation tokens inline to preserve STDD traceability.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- Document review ensures every section references at least one `[REQ:*]` token and the doc is linked from `README.md`.
 
 **Code Markers**:
-- Document contains `[IMPL:DOC_ARCH_GUIDE] [ARCH:DOCS_STRUCTURE] [REQ:ARCH_DOCUMENTATION]`.
+- Document contains `[IMPL:DOC_ARCH_GUIDE] [ARCH:DOCS_STRUCTURE] [REQ:ARCH_DOCUMENTATION]` plus relevant cross-references for each section (e.g., `[REQ:CONFIGURABLE_STATE_PATHS]`, `[ARCH:STATE_PATH_SELECTION]`).
 
-**Cross-References**: [ARCH:DOCS_STRUCTURE], [REQ:ARCH_DOCUMENTATION]
+**Cross-References**: [ARCH:DOCS_STRUCTURE], [REQ:ARCH_DOCUMENTATION], [REQ:MODULE_VALIDATION]
 
 ## 16. CONTRIBUTING Guide [IMPL:DOC_CONTRIBUTING] [ARCH:CONTRIBUTION_PROCESS] [REQ:CONTRIBUTING_GUIDE]
 
 ### Decision: Add contributor standards document
 **Rationale:**
 - Aligns development workflow and review expectations.
+- Documents Go / Makefile targets, CI steps, and STDD-specific requirements (semantic tokens, module validation, debug logging).
 
 ### Implementation Approach:
-- Cover coding standards, branching, review flow, token usage, required checks.
-- Link to Makefile/CI targets.
+- Sections:
+  - **Tooling & Setup** (Go LTS, `make` targets, local environment variables).
+  - **Workflow Checklist** enumerating fmt → vet → test → race/staticcheck (via CI) plus manual `./scripts/validate_tokens.sh`.
+  - **Semantic Token Discipline** linking to registry updates and `[PROC:TOKEN_AUDIT]`.
+  - **Module Validation Expectations** referencing `[REQ:MODULE_VALIDATION]` and `KeymapBaselineSuite`.
+  - **Debug Logging Policy** (retain `DEBUG:`/`DIAGNOSTIC:` outputs).
+  - **Review Gate** referencing required doc/test updates before opening PRs.
+- Provide copy/paste friendly command blocks (e.g., `make fmt`, `go test ./...`).
+- Link to `ARCHITECTURE.md`, `README.md`, and STDD docs for quick navigation.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- Document is cross-linked from README and includes instructions to run the validation script before requesting review.
 
 **Code Markers**:
-- `CONTRIBUTING.md` includes `[IMPL:DOC_CONTRIBUTING] [ARCH:CONTRIBUTION_PROCESS] [REQ:CONTRIBUTING_GUIDE]`.
+- `CONTRIBUTING.md` includes `[IMPL:DOC_CONTRIBUTING] [ARCH:CONTRIBUTION_PROCESS] [REQ:CONTRIBUTING_GUIDE] [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION] [REQ:MODULE_VALIDATION]`.
 
-**Cross-References**: [ARCH:CONTRIBUTION_PROCESS], [REQ:CONTRIBUTING_GUIDE]
+**Cross-References**: [ARCH:CONTRIBUTION_PROCESS], [REQ:CONTRIBUTING_GUIDE], [REQ:MODULE_VALIDATION]
 
 ## 17. Release Targets [IMPL:MAKE_RELEASE_TARGETS] [ARCH:BUILD_MATRIX] [REQ:RELEASE_BUILD_MATRIX]
 
@@ -515,15 +535,25 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 ### Decision: Capture current keybindings/modes as automated baselines
 **Rationale:**
 - Preserve behavior ahead of refactors.
+- Provide guardrails for future keymap cleanups or menu consolidation work.
 
 ### Implementation Approach:
-- Add tests or scripts that exercise key flows and record expected outputs.
-- Store fixtures for comparison.
+- Implement `KeymapBaselineSuite` unit tests under `main_keymap_test.go` that:
+  - Instantiate maps via `filerKeymap(nil)`, `finderKeymap(nil)`, `cmdlineKeymap(new(cmdline.Cmdline))`, `completionKeymap(new(cmdline.Completion))`, `menuKeymap(new(menu.Menu))`.
+  - Assert presence of representative key chords for navigation, selection, shell execution, finder/completion movement, and exit behaviors.
+  - Emit `DEBUG:` logs enumerating the verified chords for traceability.
+- Introduce helper `assertKeyCoverage` to keep tests declarative and make future updates additive.
+- Tag tests with `[TEST:KEYMAP_BASELINE]` alongside `[REQ:BEHAVIOR_BASELINE]` tokens.
+- Keep suite pure (no widget initialization) so it runs instantly in CI.
+
+**Validation Evidence**:
+- `go test ./...` (module validation) covers the new baseline suite prior to integrating any runtime changes.
+- `./scripts/validate_tokens.sh` ensures `[TEST:KEYMAP_BASELINE]` and related tokens are registered.
 
 **Code Markers**:
-- Tests/scripts include `[IMPL:BASELINE_SNAPSHOTS] [ARCH:BASELINE_CAPTURE] [REQ:BEHAVIOR_BASELINE]`.
+- Tests include `[IMPL:BASELINE_SNAPSHOTS] [ARCH:BASELINE_CAPTURE] [REQ:BEHAVIOR_BASELINE] [TEST:KEYMAP_BASELINE]`.
 
-**Cross-References**: [ARCH:BASELINE_CAPTURE], [REQ:BEHAVIOR_BASELINE]
+**Cross-References**: [ARCH:BASELINE_CAPTURE], [REQ:BEHAVIOR_BASELINE], [TEST:KEYMAP_BASELINE], [REQ:MODULE_VALIDATION]
 
 ## 19. Debt Tracking [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 

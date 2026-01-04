@@ -113,7 +113,7 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Go Runtime Strategy [ARCH:GO_RUNTIME_STRATEGY]
 - **Implementation**: See `implementation-decisions.md` § Go Mod Update [IMPL:GO_MOD_UPDATE]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
 ### [REQ:DEPENDENCY_REFRESH] Secure Dependency Updates
 
@@ -132,7 +132,7 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Dependency Policy [ARCH:DEPENDENCY_POLICY]
 - **Implementation**: See `implementation-decisions.md` § Dependency Bump [IMPL:DEP_BUMP]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
 ### [REQ:CI_PIPELINE_CORE] CI Coverage for fmt/vet/tests
 
@@ -151,7 +151,7 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § CI Pipeline [ARCH:CI_PIPELINE]
 - **Implementation**: See `implementation-decisions.md` § CI Workflow [IMPL:CI_WORKFLOW]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
 ### [REQ:STATIC_ANALYSIS] Static Analysis Gate
 
@@ -268,8 +268,10 @@ Each requirement includes:
 - **Satisfaction Criteria**:
   - Document outlines package responsibilities and data flow diagrams/text.
   - Cross-references semantic tokens and key modules.
+  - `ARCHITECTURE.md` published (2026-01-01) and linked from README/CONTRIBUTING so contributors can find it quickly.
 - **Validation Criteria**:
   - Document reviewed for completeness; tokens audited.
+  - README/CONTRIBUTING cross-links verified as part of `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh`.
 - **Architecture**: See `architecture-decisions.md` § Docs Structure [ARCH:DOCS_STRUCTURE]
 - **Implementation**: See `implementation-decisions.md` § Architecture Guide [IMPL:DOC_ARCH_GUIDE]
 
@@ -284,8 +286,10 @@ Each requirement includes:
 - **Satisfaction Criteria**:
   - Document includes coding standards, branch/review flow, test/lint expectations, token guidance.
   - References CI and Makefile targets.
+  - `CONTRIBUTING.md` (2026-01-01) published with workflow checklist and debug/logging policy, and linked from README.
 - **Validation Criteria**:
   - Document linked from README and tokens audited.
+  - Maintainers can follow the checklist end-to-end (fmt → vet → test → token validation) without missing steps.
 - **Architecture**: See `architecture-decisions.md` § Contribution Process [ARCH:CONTRIBUTION_PROCESS]
 - **Implementation**: See `implementation-decisions.md` § CONTRIBUTING Guide [IMPL:DOC_CONTRIBUTING]
 
@@ -318,9 +322,11 @@ Each requirement includes:
 - **Satisfaction Criteria**:
   - Tests or scripts record current keyboard mappings/modes and expected outputs.
   - Stored fixtures serve as comparison points.
+  - `main_keymap_test.go` (`KeymapBaselineSuite`) enumerates canonical filer/cmdline/finder/completion/menu chords with `[TEST:KEYMAP_BASELINE]`.
 - **Validation Criteria**:
   - Baseline tests run in CI and gate changes.
   - Documentation lists captured interactions.
+  - `go test ./...` (2026-01-01) proves the baseline suite passes before integration.
 - **Architecture**: See `architecture-decisions.md` § Baseline Capture [ARCH:BASELINE_CAPTURE]
 - **Implementation**: See `implementation-decisions.md` § Baseline Snapshots [IMPL:BASELINE_SNAPSHOTS]
 

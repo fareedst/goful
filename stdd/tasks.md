@@ -214,22 +214,27 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 ## P1: Docs & Baselines [REQ:ARCH_DOCUMENTATION] [REQ:CONTRIBUTING_GUIDE] [REQ:BEHAVIOR_BASELINE] [ARCH:DOCS_STRUCTURE] [ARCH:CONTRIBUTION_PROCESS] [ARCH:BASELINE_CAPTURE] [IMPL:DOC_ARCH_GUIDE] [IMPL:DOC_CONTRIBUTING] [IMPL:BASELINE_SNAPSHOTS]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Write `ARCHITECTURE.md`, `CONTRIBUTING.md`, and capture baseline keybindings/modes.
 
 **Dependencies**: CI & Static Analysis Foundation
 
+**Module Boundaries**:
+- `DocArchitecture` – curates package/data-flow overview before code changes; validated by doc review + cross-references. [REQ:ARCH_DOCUMENTATION] [REQ:MODULE_VALIDATION]
+- `DocContributing` – contributor workflow contract describing tooling, semantic tokens, and debug policy. [REQ:CONTRIBUTING_GUIDE] [REQ:MODULE_VALIDATION]
+- `KeymapBaselineSuite` – pure Go tests snapshotting filer/cmdline/finder/menu/completion bindings without touching terminal IO. [REQ:BEHAVIOR_BASELINE] [ARCH:BASELINE_CAPTURE] [IMPL:BASELINE_SNAPSHOTS] [REQ:MODULE_VALIDATION]
+
 **Subtasks**:
-- [ ] Draft architecture overview with package/data flow [REQ:ARCH_DOCUMENTATION] [IMPL:DOC_ARCH_GUIDE]
-- [ ] Draft contributing guide with standards/review expectations [REQ:CONTRIBUTING_GUIDE] [IMPL:DOC_CONTRIBUTING]
-- [ ] Capture baseline interactions/keymaps in tests/scripts [REQ:BEHAVIOR_BASELINE] [IMPL:BASELINE_SNAPSHOTS]
-- [ ] Run `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]`
+- [x] Draft architecture overview with package/data flow [REQ:ARCH_DOCUMENTATION] [IMPL:DOC_ARCH_GUIDE]
+- [x] Draft contributing guide with standards/review expectations [REQ:CONTRIBUTING_GUIDE] [IMPL:DOC_CONTRIBUTING]
+- [x] Capture baseline interactions/keymaps in tests/scripts [REQ:BEHAVIOR_BASELINE] [IMPL:BASELINE_SNAPSHOTS]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]` (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 89 token references across 43 files.`)
 
 **Completion Criteria**:
-- [ ] Docs published and cross-linked
-- [ ] Baseline tests run in CI
-- [ ] Token audit + validation recorded
+- [x] Docs published and cross-linked
+- [x] Baseline tests run in CI
+- [x] Token audit + validation recorded
 
 **Priority Rationale**: P1 to enable contributors and guard behavior.
 

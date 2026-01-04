@@ -333,25 +333,50 @@ When documenting architecture decisions, use this format:
 
 ## 19. Docs Structure [ARCH:DOCS_STRUCTURE] [REQ:ARCH_DOCUMENTATION]
 
-### Decision: Add `ARCHITECTURE.md` describing packages and data flow
+### Decision: Add `ARCHITECTURE.md` describing packages, event flow, and validation seams
 **Rationale:**
 - Provides concise onboarding and change impact map.
+- Captures how `main` → `config` → `app.Goful` compose widgets so refactors can reason about ripple effects.
+- Documents validation seams per [REQ:MODULE_VALIDATION] so test authors know which modules can be mocked.
+
+**Structure & Scope:**
+- **Overview** outlines user-facing goals and the relationship between CLI shells, filer panes, and widgets.  
+- **Runtime Flow** traces `main.go` flag parsing, `configpaths.Resolver`, and the event loop between `widget.PollEvent`, `app.Goful`, and subordinate widgets.  
+- **Module Deep Dives** cover `app`, `filer`, `widget`, `cmdline`, `menu`, `configpaths`, `message/info/progress`, and persistence helpers with inter-module contracts.  
+- **Validation Hooks** cite existing test suites (`widget`, `cmdline`, `filer`, keymap baselines) and note extension points for future modules.
+
+**Validation Plan**:
+- `DocArchitecture` module is validated via doc review checklist ensuring every section links `[REQ:*] → [ARCH:*] → [IMPL:*]`.
+- Cross-links in README + CONTRIBUTING confirm discoverability.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
-- Document includes `[IMPL:DOC_ARCH_GUIDE] [ARCH:DOCS_STRUCTURE] [REQ:ARCH_DOCUMENTATION]`.
+- Document includes `[IMPL:DOC_ARCH_GUIDE] [ARCH:DOCS_STRUCTURE] [REQ:ARCH_DOCUMENTATION]` plus backlinks to related tokens (`[REQ:CONFIGURABLE_STATE_PATHS]`, `[ARCH:STATE_PATH_SELECTION]`, etc.).
 
-**Cross-References**: [REQ:ARCH_DOCUMENTATION], [IMPL:DOC_ARCH_GUIDE]
+**Cross-References**: [REQ:ARCH_DOCUMENTATION], [IMPL:DOC_ARCH_GUIDE], [REQ:MODULE_VALIDATION]
 
 ## 20. Contribution Process [ARCH:CONTRIBUTION_PROCESS] [REQ:CONTRIBUTING_GUIDE]
 
 ### Decision: Contributor guide with coding standards and review flow
 **Rationale:**
 - Aligns expectations on formatting, testing, and tokens.
+- Documents the enforced debug/logging policy so contributors do not strip diagnostic output required by STDD.
+- Highlights module-validation steps per [REQ:MODULE_VALIDATION] to keep integration safe.
+
+**Structure & Scope:**
+- **Environment & Tooling** (Go 1.24.x, `make fmt/test`, scripts).
+- **Workflow Checklist** (format → lint → test → `./scripts/validate_tokens.sh` with `[PROC:TOKEN_AUDIT]` references).
+- **Semantic Token Discipline** (how to register new `[REQ:*]/[ARCH:*]/[IMPL:*]/[TEST:*]` entries).
+- **Module Validation + Debug Expectations** spanning unit, integration, and baseline tests along with required `DEBUG:`/`DIAGNOSTIC:` prefixes.
+- **Review Readiness** signals (CI, token validation logs, documentation cross-links).
+
+**Validation Plan**:
+- `DocContributing` module validated via doc review + cross-check with README/CI instructions.
+- Test section references `KeymapBaselineSuite` + other modules to prove coverage mapping.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
-- `CONTRIBUTING.md` carries `[IMPL:DOC_CONTRIBUTING] [ARCH:CONTRIBUTION_PROCESS] [REQ:CONTRIBUTING_GUIDE]`.
+- `CONTRIBUTING.md` carries `[IMPL:DOC_CONTRIBUTING] [ARCH:CONTRIBUTION_PROCESS] [REQ:CONTRIBUTING_GUIDE]` plus `[PROC:TOKEN_AUDIT]`, `[PROC:TOKEN_VALIDATION]`, `[REQ:MODULE_VALIDATION]` references.
 
-**Cross-References**: [REQ:CONTRIBUTING_GUIDE], [IMPL:DOC_CONTRIBUTING]
+**Cross-References**: [REQ:CONTRIBUTING_GUIDE], [IMPL:DOC_CONTRIBUTING], [REQ:MODULE_VALIDATION]
 
 ## 21. Build Matrix [ARCH:BUILD_MATRIX] [REQ:RELEASE_BUILD_MATRIX]
 
@@ -369,11 +394,25 @@ When documenting architecture decisions, use this format:
 ### Decision: Capture key interactions/keymaps as executable baselines
 **Rationale:**
 - Protects current behavior before refactors.
+- Provides changelog-friendly evidence whenever a keybinding or mode is re-mapped.
+- Supports `[REQ:MODULE_VALIDATION]` by giving pure tests that fail fast before wiring into terminal I/O.
+
+**Module Boundaries & Coverage:**
+- `KeymapBaselineSuite` (tests) snapshots default bindings for:
+  - `filerKeymap` navigation/selection/command chords (`j/k`, `space`, `q/Q`, `:`, menu launches, etc.).
+  - `cmdlineKeymap` editing, history, run/exit commands.
+  - `finderKeymap`, `completionKeymap`, and `menuKeymap` cursor + exit bindings.
+- Suite references `[TEST:KEYMAP_BASELINE]` plus `[REQ:BEHAVIOR_BASELINE]` to keep traceability.
+- Baselines are intentionally pure (no widget drawing) so they run in CI without tcell initialization.
+
+**Validation Plan:**
+- Table-driven tests confirm required key strings exist in returned `widget.Keymap` maps and emit `DEBUG:` logs enumerating coverage.
+- Future modules can extend baseline coverage by appending more required chords without touching runtime logic.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
-- Baseline tests/scripts include `[IMPL:BASELINE_SNAPSHOTS] [ARCH:BASELINE_CAPTURE] [REQ:BEHAVIOR_BASELINE]`.
+- Baseline tests/scripts include `[IMPL:BASELINE_SNAPSHOTS] [ARCH:BASELINE_CAPTURE] [REQ:BEHAVIOR_BASELINE] [TEST:KEYMAP_BASELINE]`.
 
-**Cross-References**: [REQ:BEHAVIOR_BASELINE], [IMPL:BASELINE_SNAPSHOTS]
+**Cross-References**: [REQ:BEHAVIOR_BASELINE], [IMPL:BASELINE_SNAPSHOTS], [TEST:KEYMAP_BASELINE], [REQ:MODULE_VALIDATION]
 
 ## 23. Debt Management [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 
