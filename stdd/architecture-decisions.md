@@ -468,3 +468,25 @@ When documenting architecture decisions, use this format:
 
 **Cross-References**: [REQ:STDD_SETUP], [IMPL:TOKEN_VALIDATION_SCRIPT], [PROC:TOKEN_VALIDATION]
 
+## 25. Quit Dialog Key Translation [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
+
+### Decision: Normalize Return/Enter events to the historical `C-m` submission path
+**Rationale:**
+- Recent tcell upgrades emit `KeyEnter` instead of `KeyCtrlM`, which broke the implicit default-confirm behavior in the quit dialog.
+- Mapping Return/Enter to the same symbol used by the cmdline keymap keeps behavior stable without duplicating key bindings.
+- Centralizing the mapping in `widget.EventToString` ensures every cmdline-based mode benefits, not just quit.
+
+**Alternatives Considered:**
+- Update every cmdline keymap to handle a new `enter` symbol: rejected because it is error-prone and duplicates logic across widgets.
+- Special-case quit mode to detect empty text before submission: rejected because it bypasses the shared cmdline infrastructure and would not fix other dialogs.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Code: `widget/widget.go` `EventToString` includes comments `// [IMPL:QUIT_DIALOG_ENTER] [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]`.
+- Tests: `widget/widget_test.go` adds `TestEventToStringReturnKey_REQ_QUIT_DIALOG_DEFAULT` (or equivalent) covering both `KeyEnter` and `KeyCtrlM`.
+
+**Module Boundaries & Validation `[REQ:MODULE_VALIDATION]`:**
+- `InputEventTranslator` module (`widget.EventToString`) translates tcell events → semantic strings; validated via new unit test.
+- `CmdlineSubmit` module (`cmdline.Keymap` handlers for Run) already validated; integration relies on translator emitting `C-m`.
+
+**Cross-References**: [REQ:QUIT_DIALOG_DEFAULT], [IMPL:QUIT_DIALOG_ENTER]
+

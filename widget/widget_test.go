@@ -3,6 +3,8 @@ package widget
 import (
 	"bytes"
 	"testing"
+
+	"github.com/gdamore/tcell/v2"
 )
 
 func TestInsertBytes(t *testing.T) {
@@ -68,5 +70,24 @@ func TestDeleteBytes(t *testing.T) {
 		if !bytes.Equal(s, d.result) {
 			t.Errorf("DeleteBytes(%q, %q, %q)=%q, want %q", d.s, d.offset, d.length, s, d.result)
 		}
+	}
+}
+
+func TestEventToStringReturnKey_REQ_QUIT_DIALOG_DEFAULT(t *testing.T) {
+	t.Helper()
+	// [IMPL:QUIT_DIALOG_ENTER] [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
+	for _, tc := range []struct {
+		name string
+		key  tcell.Key
+	}{
+		{name: "enter", key: tcell.KeyEnter},
+		{name: "ctrl-m", key: tcell.KeyCtrlM},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ev := tcell.NewEventKey(tc.key, 0, tcell.ModNone)
+			if got := EventToString(ev); got != "C-m" {
+				t.Fatalf("EventToString(%s)=%q, want %q", tc.name, got, "C-m")
+			}
+		})
 	}
 }

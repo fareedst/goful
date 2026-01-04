@@ -614,3 +614,28 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:TOKEN_VALIDATION_AUTOMATION], [REQ:STDD_SETUP], [PROC:TOKEN_VALIDATION]
 
+## 21. Quit Dialog Return Handling [IMPL:QUIT_DIALOG_ENTER] [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
+
+### Decision: Map `tcell.KeyEnter` → `C-m` and guard with regression tests
+**Rationale:**
+- Keeps the cmdline submission shortcut stable even when upstream terminal libraries change raw key codes.
+- Fixes the regression where Return no longer exited the quit dialog after dependency upgrades.
+
+### Implementation Approach:
+- Extend `keyToSting` (sic) in `widget.EventToString` to treat `tcell.KeyEnter` identically to `tcell.KeyCtrlM`.
+- Add focused unit tests in `widget/widget_test.go` asserting both `KeyEnter` and `KeyCtrlM` emit the canonical `C-m` string.
+- Annotate the mapping and tests with `[IMPL:QUIT_DIALOG_ENTER] [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]` comments for traceability.
+
+**Code Markers**:
+- `widget/widget.go` mapping comment at the new dictionary entry.
+- `widget/widget_test.go` test names/comments referencing `[REQ:QUIT_DIALOG_DEFAULT]`.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Requires verifying the translator module and accompanying tests include the `[IMPL:QUIT_DIALOG_ENTER] [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]` markers.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `2026-01-02`: `go test ./...` (darwin/arm64, Go 1.24.3 toolchain) exercising `widget` translator tests.
+- `2026-01-02`: `./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 25 token references across 36 files.`
+
+**Cross-References**: [ARCH:QUIT_DIALOG_KEYS], [REQ:QUIT_DIALOG_DEFAULT]
+

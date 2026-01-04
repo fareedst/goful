@@ -95,6 +95,24 @@ Each requirement includes:
 
 **Status**: ✅ Implemented
 
+### [REQ:QUIT_DIALOG_DEFAULT] Quit Dialog Default Confirmation
+
+**Priority: P0 (Critical)**
+
+- **Description**: The quit confirmation dialog must accept the Return/Enter key with no additional input to select the default affirmative option so users can exit quickly without typing.
+- **Rationale**: Terminal users expect Return to submit dialogs; regressions break muscle memory and can trap the user in the application.
+- **Satisfaction Criteria**:
+  - Pressing Return while the quit dialog is focused and empty exits the application immediately.
+  - The key translation layer produces the same command invocation for Return as for `Ctrl-M` so existing keymaps remain valid.
+  - Behavior is consistent across platforms supported by tcell.
+- **Validation Criteria**:
+  - Automated tests cover the key translation path to ensure Return continues to map to the command execution trigger.
+  - Manual verification confirms the quit dialog exits when Return is pressed without entering text.
+- **Architecture**: See `architecture-decisions.md` § Quit Dialog Key Translation [ARCH:QUIT_DIALOG_KEYS]
+- **Implementation**: See `implementation-decisions.md` § Quit Dialog Return Handling [IMPL:QUIT_DIALOG_ENTER]
+
+**Status**: ✅ Implemented
+
 ### [REQ:GO_TOOLCHAIN_LTS] Modern Go Toolchain Baseline
 
 **Priority: P0 (Critical)**

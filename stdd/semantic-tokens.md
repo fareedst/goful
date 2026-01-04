@@ -150,6 +150,7 @@ When referencing other tokens:
 - `[ARCH:BASELINE_CAPTURE]` - Baseline behavior and keymap capture [REQ:BEHAVIOR_BASELINE]
 - `[ARCH:DEBT_MANAGEMENT]` - Debt triage and TODO/issue tracking [REQ:DEBT_TRIAGE]
 - `[ARCH:TOKEN_VALIDATION_AUTOMATION]` - Token validation helper automation [REQ:STDD_SETUP]
+- `[ARCH:QUIT_DIALOG_KEYS]` - Quit dialog key translation guarantees [REQ:QUIT_DIALOG_DEFAULT]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -174,6 +175,7 @@ When referencing other tokens:
 - `[IMPL:BASELINE_SNAPSHOTS]` - Baseline behavior capture/tests [ARCH:BASELINE_CAPTURE] [REQ:BEHAVIOR_BASELINE]
 - `[IMPL:DEBT_TRACKING]` - Debt triage annotations/issues [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 - `[IMPL:TOKEN_VALIDATION_SCRIPT]` - Shell script enforcing token registry [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
+- `[IMPL:QUIT_DIALOG_ENTER]` - Return/Enter mapping for quit dialog default [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

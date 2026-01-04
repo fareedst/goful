@@ -201,6 +201,7 @@ var keyToSting = map[tcell.Key]string{
 	tcell.KeyCtrlK:          "C-k",
 	tcell.KeyCtrlL:          "C-l",
 	tcell.KeyCtrlM:          "C-m",
+	tcell.KeyEnter:          "C-m", // [IMPL:QUIT_DIALOG_ENTER] [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
 	tcell.KeyCtrlN:          "C-n",
 	tcell.KeyCtrlO:          "C-o",
 	tcell.KeyCtrlP:          "C-p",

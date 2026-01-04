@@ -166,6 +166,30 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P0 to unblock all downstream CI/tests and security fixes.
 
+## P0: Restore Quit Dialog Return Behavior [REQ:QUIT_DIALOG_DEFAULT] [ARCH:QUIT_DIALOG_KEYS] [IMPL:QUIT_DIALOG_ENTER]
+
+**Status**: ✅ Complete
+
+**Description**: Ensure the quit dialog (and other cmdline modes) accept the Return/Enter key as the default confirmation after recent tcell changes.
+
+**Dependencies**: None (regression fix, but ties into `[REQ:MODULE_VALIDATION]` for translator module)
+
+**Subtasks**:
+- [x] Identify affected modules and document translator contract [REQ:QUIT_DIALOG_DEFAULT] [REQ:MODULE_VALIDATION]
+- [x] Update `widget.EventToString` mapping for Return/Enter [ARCH:QUIT_DIALOG_KEYS] [IMPL:QUIT_DIALOG_ENTER]
+- [x] Add regression tests for `EventToString` handling [REQ:QUIT_DIALOG_DEFAULT] [IMPL:QUIT_DIALOG_ENTER]
+- [x] Document manual Return-validation guidance for operators (interactive TUI verification required on a real terminal) [REQ:QUIT_DIALOG_DEFAULT]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` and record outcome [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] Translator + cmdline modules validated independently
+- [x] Tests cover Return → `C-m` mapping
+- [x] Manual verification guidance logged (operator to confirm on-device)
+- [x] Documentation and tokens updated end-to-end
+- [x] `[PROC:TOKEN_AUDIT]` / `[PROC:TOKEN_VALIDATION]` recorded
+
+**Priority Rationale**: P0 because users cannot exit the application using standard key flow, effectively trapping sessions.
+
 ## P0: CI & Static Analysis Foundation [REQ:CI_PIPELINE_CORE] [REQ:STATIC_ANALYSIS] [REQ:RACE_TESTING] [ARCH:CI_PIPELINE] [ARCH:STATIC_ANALYSIS_POLICY] [ARCH:RACE_TESTING_PIPELINE] [IMPL:CI_WORKFLOW] [IMPL:STATICCHECK_SETUP] [IMPL:RACE_JOB]
 
 **Status**: ✅ Complete
