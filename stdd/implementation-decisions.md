@@ -665,7 +665,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:QUIT_DIALOG_KEYS], [REQ:QUIT_DIALOG_DEFAULT]
 
-## 22. Terminal Adapter Module [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
+## 22. Terminal Adapter Module [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
 
 ### Decision: Implement a `terminalcmd` package that encapsulates platform-aware terminal command creation plus the glue that registers it with `g.ConfigTerminal`.
 **Rationale:**
@@ -676,24 +676,24 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - **Module 1: `CommandFactory`**
   - Signature: `func NewFactory(opts Options) Factory`.
   - `Options` include `GOOS`, `HasTmux`, `TerminalOverride []string`, and `Tail string`.
-  - `Factory.Command(cmd string) []string` returns:
-    - Override path: `TerminalOverride + []string{"bash", "-c", cmd + tail}` (or use override verbatim depending on user input semantics).
+  - `Factory.CommandWithCwd(cmd string, cwd string) []string` returns:
+    - Override path: `TerminalOverride + []string{"bash", "-c", payload}` where `payload` already prefixes macOS commands with `cd "<cwd>";` to satisfy `[REQ:TERMINAL_CWD]`.
     - Tmux path: `[]string{"tmux", "new-window", "-n", title(cmd), cmd + tail}`.
-    - macOS path: `[]string{"osascript", "-e", fmt.Sprintf("tell application \\"Terminal\\" to do script \\"%s\\" & activate", script)}` where `script` embeds the title escape plus command + tail.
+    - macOS path: `[]string{"osascript", "-e", fmt.Sprintf("tell application \\"Terminal\\" to do script \\"%s\\" & activate", script)}` where `script` embeds the title escape plus the same `cd "<cwd>"; <cmd + tail>` payload.
     - Linux default: maintain current gnome-terminal invocation with title-setting escape.
   - Emits `DEBUG: [IMPL:TERMINAL_ADAPTER] ...` logs describing the branch taken and any overrides, guarded by `GOFUL_DEBUG_TERMINAL=1`.
 
 - **Module 2: `Configurator`**
   - Accepts a `Factory` and returns the closure passed to `g.ConfigTerminal`.
-  - Responsible for injecting the “HIT ENTER KEY” tail, escaping titles, and ensuring `bash -c` semantics remain unchanged.
-  - Surface helper `ApplyTo(g *app.Goful, factory Factory)` that wires both shell and terminal commands where appropriate.
+  - Responsible for injecting the “HIT ENTER KEY” tail, escaping titles, ensuring `bash -c` semantics remain unchanged, and providing a live `cwd` callback so macOS launches always reflect the focused directory.
+  - Surface helper `Apply(cfg Configurator, factory Factory, cwd func() string)` that wires both shell and terminal commands where appropriate.
 
 - **Environment & Overrides**
   - Parse `GOFUL_TERMINAL_CMD` (string) or `-terminal` flag (future) into the override slice.
   - Document how to supply fallback commands (e.g., `iTerm2`).
 
 **Code Markers**:
-- `terminalcmd/*.go` and `main.go` wiring include `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]`.
+- `terminalcmd/*.go` and `main.go` wiring include `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]`.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
 - Tests named `TestCommandFactoryDarwin_REQ_TERMINAL_PORTABILITY`, etc., assert branch outputs.
@@ -702,5 +702,5 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 **Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
 - Record `./scripts/validate_tokens.sh` and `go test ./terminalcmd` outputs once implementation lands.
 
-**Cross-References**: [ARCH:TERMINAL_LAUNCHER], [REQ:TERMINAL_PORTABILITY], [REQ:MODULE_VALIDATION]
+**Cross-References**: [ARCH:TERMINAL_LAUNCHER], [REQ:TERMINAL_PORTABILITY], [REQ:TERMINAL_CWD], [REQ:MODULE_VALIDATION]
 

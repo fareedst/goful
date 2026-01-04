@@ -121,6 +121,7 @@ When referencing other tokens:
 - `[REQ:BEHAVIOR_BASELINE]` - Baseline interactions and key mappings are captured in automation/docs
 - `[REQ:DEBT_TRIAGE]` - Technical debt and risky areas are triaged with TODOs/issues
 - `[REQ:TERMINAL_PORTABILITY]` - Terminal launcher works across Linux, macOS, and tmux contexts
+- `[REQ:TERMINAL_CWD]` - macOS terminal sessions start in the active directory
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -181,7 +182,7 @@ When referencing other tokens:
 - `[IMPL:DEBT_TRACKING]` - Debt triage annotations/issues [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 - `[IMPL:TOKEN_VALIDATION_SCRIPT]` - Shell script enforcing token registry [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
 - `[IMPL:QUIT_DIALOG_ENTER]` - Return/Enter mapping for quit dialog default [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
-- `[IMPL:TERMINAL_ADAPTER]` - Platform-aware terminal command adapter [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
+- `[IMPL:TERMINAL_ADAPTER]` - Platform-aware terminal command adapter [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

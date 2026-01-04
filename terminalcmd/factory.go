@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/anmitsu/goful/util"
 	"github.com/google/shlex"
 )
 
@@ -44,7 +45,13 @@ func NewFactory(opts Options) Factory {
 // Command returns the command/args slice to launch the requested shell command.
 // [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
 func (f Factory) Command(cmd string) []string {
-	payload := cmd + f.opts.Tail
+	return f.CommandWithCwd(cmd, "")
+}
+
+// CommandWithCwd allows callers to supply the focused directory, ensuring macOS sessions cd first.
+// [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
+func (f Factory) CommandWithCwd(cmd string, cwd string) []string {
+	payload := f.buildPayload(cmd, cwd)
 
 	switch {
 	case len(f.opts.Override) > 0:
@@ -63,6 +70,14 @@ func (f Factory) Command(cmd string) []string {
 	f.log("default gnome-terminal branch selected")
 	title := linuxTitle(cmd)
 	return []string{"gnome-terminal", "--", "bash", "-c", title + payload}
+}
+
+func (f Factory) buildPayload(cmd string, cwd string) string {
+	payload := cmd + f.opts.Tail
+	if cwd != "" && strings.EqualFold(f.opts.GOOS, "darwin") {
+		payload = fmt.Sprintf("cd %s; %s", util.Quote(cwd), payload)
+	}
+	return payload
 }
 
 // ParseOverride converts an override string (e.g., EnvTerminalCommand) into args.
@@ -89,7 +104,7 @@ func linuxTitle(cmd string) string {
 }
 
 func buildAppleScriptCommand(payload string) []string {
-	shellLine := fmt.Sprintf("bash -lc %s", strconv.Quote(payload))
+	shellLine := fmt.Sprintf("bash -lc %s; exit", strconv.Quote(payload))
 	escaped := appleScriptEscape(shellLine)
 	run := fmt.Sprintf("tell application \"Terminal\" to do script \"%s\"", escaped)
 	return []string{
@@ -115,8 +130,8 @@ type Configurator interface {
 
 // Apply wires the factory into the provided configurator.
 // [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
-func Apply(cfg Configurator, factory Factory) {
+func Apply(cfg Configurator, factory Factory, cwd func() string) {
 	cfg.ConfigTerminal(func(cmd string) []string {
-		return factory.Command(cmd)
+		return factory.CommandWithCwd(cmd, cwd())
 	})
 }

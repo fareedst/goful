@@ -152,8 +152,10 @@ func config(g *app.Goful, is_tmux bool) {
 			Tail:     terminalcmd.KeepOpenTail,
 			Debug:    os.Getenv(terminalcmd.EnvDebugTerminal) != "",
 		})
-		// [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
-		terminalcmd.Apply(g, factory)
+		// [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
+		terminalcmd.Apply(g, factory, func() string {
+			return g.Dir().Path
+		})
 	}
 
 	// Setup menus and add to keymap.

@@ -297,6 +297,27 @@ Each requirement includes:
 
 **Status**: ⏳ Planned
 
+### [REQ:TERMINAL_CWD] macOS Terminal Working Directory
+
+**Priority: P0 (Critical)**
+
+- **Description**: When goful opens macOS Terminal.app for a foreground command, the launched session must start inside the focused filer directory (the `%D` macro) so relative commands align with the window the user targeted, without needing an explicit `cd`.
+- **Rationale**: `%D` already represents “the current window path” during macro expansion, but Terminal.app historically opened in `$HOME`, forcing users to prepend `cd %D`. Automating the `cd` step preserves intent, reduces mistakes, and keeps macOS parity with Linux terminals that inherit the current process directory.
+- **Satisfaction Criteria**:
+  - The Terminal adapter injects `cd <focusedDir>;` ahead of every macOS foreground command, with paths safely quoted (spaces, unicode).
+  - Overrides via `GOFUL_TERMINAL_CMD` retain the same preamble so alternative macOS terminals behave consistently.
+  - Behavior is transparent—users can still override by issuing their own `cd`, but the default always matches `%D`.
+  - README/CONTRIBUTING describe the macOS working-directory guarantee.
+- **Validation Criteria**:
+  - Unit tests assert macOS command payloads include the `cd` preamble while Linux/tmux branches remain unchanged.
+  - Configurator/integration tests prove the adapter re-evaluates the focused directory each time `g.ConfigTerminal` closure runs.
+  - Manual validation confirms Terminal.app opens in the correct directory for different panes.
+  - Token validation shows `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_CWD]` across code/docs/tests.
+- **Architecture**: See `architecture-decisions.md` § Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER]
+- **Implementation**: See `implementation-decisions.md` § Terminal Adapter Module [IMPL:TERMINAL_ADAPTER]
+
+**Status**: ⏳ Planned
+
 ### [REQ:ARCH_DOCUMENTATION] Architecture Guide
 
 **Priority: P1 (Important)**

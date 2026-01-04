@@ -186,11 +186,15 @@ If goful is running in tmux, it creates a new window and executes the command.
 terminal emulators:
 
 - On macOS, goful now opens Terminal.app via `osascript` so commands run in a new
-  tab/window without editing `main.go`. The command stays visible until you hit
-  enter because the historical `read -p "HIT ENTER KEY"` tail is still appended.
+  tab/window without editing `main.go`. The adapter automatically runs
+  `cd "%D";` before your command so relative paths match the focused window, and
+  the command stays visible until you hit enter because the historical
+  `read -p "HIT ENTER KEY"` prompt remains—after acknowledging it, the adapter
+  issues `exit` so the temporary window closes cleanly.
 - Set `GOFUL_TERMINAL_CMD="alacritty -e"` (or another emulator) to override the
   launcher on Linux/BSD. The override is inserted before the usual `bash -c`
-  invocation, so your configured terminal still receives the expanded command.
+  invocation, so your configured terminal still receives the expanded command
+  and inherits the macOS working-directory preamble when applicable.
 - Export `GOFUL_DEBUG_TERMINAL=1` to print `DEBUG: [IMPL:TERMINAL_ADAPTER]`
   messages describing which branch was selected if you need to troubleshoot
   environment detection.

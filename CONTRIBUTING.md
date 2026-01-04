@@ -79,7 +79,8 @@ Following this checklist keeps `[REQ:CONTRIBUTING_GUIDE]` satisfied and accelera
 ## Terminal Launcher Overrides [REQ:TERMINAL_PORTABILITY]
 
 - macOS: no manual edits are required—`[IMPL:TERMINAL_ADAPTER]` opens Terminal.app via
-  `osascript` and runs the same `bash -c "<command>;read -p \"HIT ENTER KEY\""` flow that
+  `osascript`, automatically runs `cd "%D";` (focused directory), and runs the same
+  `bash -c "<command>;read -p \"HIT ENTER KEY\""` flow that
   Linux users see.
 - Linux/BSD: set `GOFUL_TERMINAL_CMD="alacritty -e"` (or similar) to replace the default
   `gnome-terminal -- bash -c ...` invocation. The adapter appends the command and

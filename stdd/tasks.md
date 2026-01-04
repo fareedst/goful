@@ -345,8 +345,9 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [x] Implement `Configurator` glue + logging, and wire it into `g.ConfigTerminal` [IMPL:TERMINAL_ADAPTER]
 - [x] Add integration tests or fakes proving `g.ConfigTerminal` receives the correct command slices [REQ:TERMINAL_PORTABILITY]
 - [x] Update README/CONTRIBUTING with macOS guidance and override instructions [REQ:TERMINAL_PORTABILITY]
+- [x] Inject `%D` working directory into every macOS Terminal launch (docs + tests) [REQ:TERMINAL_CWD]
 - [ ] Manual validation checklist for macOS Terminal + Linux desktop runs [REQ:TERMINAL_PORTABILITY]
-- [x] `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) recorded after code/tests land (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 158 token references across 44 files.`)
+- [x] `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) recorded after code/tests land (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 182 token references across 46 files.`)
 
 **Completion Criteria**:
 - [ ] Factory + configurator modules validated independently before integration

@@ -538,7 +538,7 @@ func formatDirs(paths []string, quote bool) string {
 
 **Cross-References**: [REQ:QUIT_DIALOG_DEFAULT], [IMPL:QUIT_DIALOG_ENTER]
 
-## 26. Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
+## 26. Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
 
 ### Decision: Create a dedicated terminal launcher module that selects the correct command sequence for tmux, Linux desktops, and macOS Terminal.
 **Rationale:**
@@ -549,11 +549,11 @@ func formatDirs(paths []string, quote bool) string {
 **Architecture Outline:**
 - Introduce package `terminalcmd` with two modules:
   1. `CommandFactory` (pure) returns the `[]string` invocation for the active environment. Inputs: requested shell command, detected tmux/screen, runtime GOOS, optional `GOFUL_TERMINAL_CMD` override.
-  2. `Configurator` wires the factory into `g.ConfigTerminal`, logs `DEBUG: [IMPL:TERMINAL_ADAPTER] ...` selections, and applies the existing “HIT ENTER KEY” tail.
+  2. `Configurator` wires the factory into `g.ConfigTerminal`, logs `DEBUG: [IMPL:TERMINAL_ADAPTER] ...` selections, applies the existing “HIT ENTER KEY” tail, and injects a working-directory provider so macOS launches can `cd` into `%D` before running the command.
 - Selection order:
   - If `GOFUL_TERMINAL_CMD` (or config flag) is set, split and use it verbatim.
   - Else if `is_tmux`, run `tmux new-window -n <title> <cmd+tail>`.
-  - Else if `runtime.GOOS == "darwin"`, run `osascript -e 'tell application "Terminal"' ... 'do script "<title && command && tail>"'`.
+  - Else if `runtime.GOOS == "darwin"`, run `osascript -e 'tell application "Terminal"' ... 'do script "<cd %D; title && command && tail>"'` so Terminal.app begins inside the focused directory.
   - Else default to current Linux behavior: gnome-terminal (with title escape) running bash.
 - Provide extension points for future emulators by returning structured data rather than building strings inline.
 
@@ -570,5 +570,5 @@ func formatDirs(paths []string, quote bool) string {
 - `terminalcmd/factory.go`, `terminalcmd/factory_test.go`, and `main.go` wiring must include `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]`.
 - README/CONTRIBUTING updates describe overrides and reference `[REQ:TERMINAL_PORTABILITY]`.
 
-**Cross-References**: [REQ:TERMINAL_PORTABILITY], [IMPL:TERMINAL_ADAPTER], [REQ:MODULE_VALIDATION]
+**Cross-References**: [REQ:TERMINAL_PORTABILITY], [REQ:TERMINAL_CWD], [IMPL:TERMINAL_ADAPTER], [REQ:MODULE_VALIDATION]
 

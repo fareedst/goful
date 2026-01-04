@@ -34,14 +34,27 @@ func TestCommandFactoryDarwin_REQ_TERMINAL_PORTABILITY(t *testing.T) {
 	factory := NewFactory(Options{
 		GOOS: "darwin",
 	})
-	got := factory.Command("echo hi")
+	got := factory.CommandWithCwd("echo hi", "/tmp/demo")
 	want := []string{
 		"osascript",
-		"-e", `tell application "Terminal" to do script "bash -lc \"echo hi;read -p \\\"HIT ENTER KEY\\\"\""`,
+		"-e", `tell application "Terminal" to do script "bash -lc \"cd \\\"/tmp/demo\\\"; echo hi;read -p \\\"HIT ENTER KEY\\\"\"; exit"`,
 		"-e", `tell application "Terminal" to activate`,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("darwin command mismatch\nwant: %v\ngot:  %v", want, got)
+	}
+}
+
+func TestCommandFactoryOverrideDarwin_REQ_TERMINAL_CWD(t *testing.T) {
+	// [REQ:TERMINAL_CWD] overrides still inherit the auto-cd preamble.
+	factory := NewFactory(Options{
+		GOOS:     "darwin",
+		Override: []string{"iTerm2", "-e"},
+	})
+	got := factory.CommandWithCwd("echo hi", "/tmp/demo")
+	want := []string{"iTerm2", "-e", "bash", "-c", `cd "/tmp/demo"; echo hi` + KeepOpenTail}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("darwin override mismatch\nwant: %v\ngot:  %v", want, got)
 	}
 }
 
@@ -90,9 +103,23 @@ func (s *stubConfigurator) ConfigTerminal(fn func(string) []string) {
 func TestApply_REQ_TERMINAL_PORTABILITY(t *testing.T) {
 	cfg := &stubConfigurator{}
 	factory := NewFactory(Options{GOOS: "linux"})
-	Apply(cfg, factory)
+	Apply(cfg, factory, func() string { return "/tmp/demo" })
 	want := []string{"gnome-terminal", "--", "bash", "-c", "echo -n '\\033]0;echo hi\\007';echo hi" + KeepOpenTail}
 	if !reflect.DeepEqual(cfg.last, want) {
 		t.Fatalf("apply produced unexpected command\nwant: %v\ngot:  %v", want, cfg.last)
+	}
+}
+
+func TestApplyDarwinCwd_REQ_TERMINAL_CWD(t *testing.T) {
+	cfg := &stubConfigurator{}
+	factory := NewFactory(Options{GOOS: "darwin"})
+	Apply(cfg, factory, func() string { return "/tmp/demo" })
+	want := []string{
+		"osascript",
+		"-e", `tell application "Terminal" to do script "bash -lc \"cd \\\"/tmp/demo\\\"; echo hi;read -p \\\"HIT ENTER KEY\\\"\"; exit"`,
+		"-e", `tell application "Terminal" to activate`,
+	}
+	if !reflect.DeepEqual(cfg.last, want) {
+		t.Fatalf("apply darwin mismatch\nwant: %v\ngot:  %v", want, cfg.last)
 	}
 }
