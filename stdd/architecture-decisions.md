@@ -380,14 +380,31 @@ When documenting architecture decisions, use this format:
 
 ## 21. Build Matrix [ARCH:BUILD_MATRIX] [REQ:RELEASE_BUILD_MATRIX]
 
-### Decision: Makefile + CI matrix for GOOS/GOARCH static builds
+### Decision: Makefile + CI/release matrix for reproducible CGO-disabled builds
 **Rationale:**
-- Ensures reproducible release artifacts across platforms.
+- Ensures deterministically named binaries (goful_${GOOS}_${GOARCH}) plus SHA256 digests for linux/amd64, linux/arm64, and darwin/arm64 – the primary release targets today.
+- Keeps the release process scriptable (single `make release` locally, `release-matrix` job in CI) so artifacts are identical regardless of where they are produced.
+- Provides auditable logs (`DIAGNOSTIC: [IMPL:MAKE_RELEASE_TARGETS] ...`) that capture which platform was built and which checksum was emitted.
+
+**Structure:**
+- **Makefile** adds reusable targets (`lint`, `test`, `release`, `clean-release`) inside module `MakeReleaseTargets`. The release target loops over `RELEASE_PLATFORMS` or a supplied `PLATFORM`, sets `GOOS/GOARCH`, enforces `CGO_ENABLED=0`, uses `-trimpath -ldflags "-s -w"`, writes binaries to `dist/`, and immediately generates `.sha256` files.  
+- **GitHub Actions CI** contains job `release-matrix` (module `ReleaseMatrixWorkflow`) with strategy include set:
+  - linux/amd64
+  - linux/arm64
+  - darwin/arm64
+  The job runs `make release PLATFORM=${{matrix.goos}}/${{matrix.goarch}}`, emits the checksum to logs, and uploads the binary + digest as artifacts.
+- **Release workflow** (`.github/workflows/release.yml`) reuses the same matrix + Makefile target when tags `v*` are pushed, then aggregates the uploaded artifacts and publishes them to GitHub Releases via `softprops/action-gh-release`, guaranteeing the downloadable assets match CI output.
+- **Artifact verification** (`ArtifactDeterminismAudit`) is satisfied by having Makefile, CI, and release workflows regenerate digests straight from the compiled binary so humans can diff `.sha256` outputs (and rerun `make release` to reproduce).
+
+**Validation Plan [REQ:MODULE_VALIDATION]:**
+- `MakeReleaseTargets` validated locally by running `make release PLATFORM=$(go env GOOS)/$(go env GOARCH)` and confirming `dist/` only contains the expected files plus `.sha256`.
+- `ReleaseMatrixWorkflow` validation occurs through CI: matrix job must succeed and upload all artifacts; failure indicates platform-specific regression.
+- `ArtifactDeterminismAudit` validation is the SHA output diff – rerunning `make release` should yield identical digests (documented when recording release notes).
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
-- Makefile targets and workflow jobs annotated with `[IMPL:MAKE_RELEASE_TARGETS] [ARCH:BUILD_MATRIX] [REQ:RELEASE_BUILD_MATRIX]`.
+- Makefile targets, CI job shell blocks, and README/CONTRIBUTING references include `[IMPL:MAKE_RELEASE_TARGETS] [ARCH:BUILD_MATRIX] [REQ:RELEASE_BUILD_MATRIX]`.
 
-**Cross-References**: [REQ:RELEASE_BUILD_MATRIX], [IMPL:MAKE_RELEASE_TARGETS]
+**Cross-References**: [REQ:RELEASE_BUILD_MATRIX], [IMPL:MAKE_RELEASE_TARGETS], [REQ:MODULE_VALIDATION]
 
 ## 22. Baseline Capture [ARCH:BASELINE_CAPTURE] [REQ:BEHAVIOR_BASELINE]
 

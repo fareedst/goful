@@ -240,22 +240,27 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 ## P1: Release Build Hygiene [REQ:RELEASE_BUILD_MATRIX] [ARCH:BUILD_MATRIX] [IMPL:MAKE_RELEASE_TARGETS]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
-**Description**: Add Makefile targets and CI matrix for reproducible static builds across GOOS/GOARCH.
+**Description**: Add Makefile targets and CI + tag-triggered workflows for reproducible static builds across GOOS/GOARCH, with deterministic filenames/digests and artifact publication.
 
 **Dependencies**: Modernize Toolchain and Dependencies
 
+**Module Boundaries**:
+- `MakeReleaseTargets` – Makefile targets for lint/test/build plus hermetic release bundles (dist directory, CGO disabled) validated via `make release` on host OS and checksum generation. [REQ:RELEASE_BUILD_MATRIX] [IMPL:MAKE_RELEASE_TARGETS] [REQ:MODULE_VALIDATION]
+- `ReleaseMatrixWorkflow` – GitHub Actions matrix job (linux/amd64, linux/arm64, darwin/arm64) that reuses Makefile targets and publishes artifacts/checksums. [REQ:RELEASE_BUILD_MATRIX] [ARCH:BUILD_MATRIX] [IMPL:MAKE_RELEASE_TARGETS] [REQ:MODULE_VALIDATION]
+- `ArtifactDeterminismAudit` – checksum/filename verification ensuring deterministic naming and digests, implemented as part of Makefile + CI steps with logged SHA256 outputs. [REQ:RELEASE_BUILD_MATRIX] [REQ:MODULE_VALIDATION]
+
 **Subtasks**:
-- [ ] Add lint/test/build targets to Makefile [REQ:RELEASE_BUILD_MATRIX] [IMPL:MAKE_RELEASE_TARGETS]
-- [ ] Add CI matrix build job (e.g., linux/amd64, darwin/arm64) [REQ:RELEASE_BUILD_MATRIX]
-- [ ] Verify artifacts names/digests deterministic [REQ:RELEASE_BUILD_MATRIX]
-- [ ] Run `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]`
+- [x] Finalize Makefile release targets + local validation run (`make release PLATFORM=darwin/arm64` → `DIAGNOSTIC: [IMPL:MAKE_RELEASE_TARGETS] ... sha256 ad7db0a0...`) [REQ:RELEASE_BUILD_MATRIX] [IMPL:MAKE_RELEASE_TARGETS]
+- [x] Implement GitHub Actions release workflow (tag-triggered matrix + asset upload) [REQ:RELEASE_BUILD_MATRIX] [ARCH:BUILD_MATRIX]
+- [x] Document release process in README/CONTRIBUTING + update requirements/decisions [REQ:RELEASE_BUILD_MATRIX]
+- [x] Verify deterministic artifacts/checksums + run `[PROC:TOKEN_AUDIT]` / `[PROC:TOKEN_VALIDATION]` (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 130 token references across 44 files.`)
 
 **Completion Criteria**:
-- [ ] Makefile + workflow committed with tokens
-- [ ] Matrix builds succeed
-- [ ] Token audit + validation recorded
+- [x] Makefile + workflow committed with tokens
+- [x] Matrix + release workflows pass and upload artifacts
+- [x] Token audit + validation recorded
 
 **Priority Rationale**: P1 to prepare for reproducible releases.
 

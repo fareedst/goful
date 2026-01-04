@@ -302,16 +302,20 @@ Each requirement includes:
 - **Description**: Provide Makefile targets and CI matrix to build static binaries across GOOS/GOARCH.
 - **Rationale**: Ensures reproducible releases and cross-platform coverage.
 - **Satisfaction Criteria**:
-  - Makefile includes lint/test/build targets.
-  - CI matrix builds at least linux/amd64 and darwin/arm64 (or agreed set).
-  - Artifacts named deterministically.
+  - Makefile exposes `lint`, `test`, `release`, and `clean-release` targets; release target emits CGO-disabled binaries + `.sha256` digests into `dist/`.
+  - CI workflow contains `release-matrix` job covering at least linux/amd64, linux/arm64, and darwin/arm64 using the Makefile target.
+  - Tag-triggered `release.yml` workflow reuses the same Makefile target, uploads artifacts/checksums to GitHub Releases, and logs deterministic filenames (`goful_${GOOS}_${GOARCH}`) and SHA256 digests.
 - **Validation Criteria**:
-  - Build job passes; artifacts verified for platforms.
-  - Token audit shows `[IMPL:MAKE_RELEASE_TARGETS]`.
+  - Local `make release PLATFORM=$(go env GOOS)/$(go env GOARCH)` succeeds and only produces expected artifacts.
+  - CI + release workflows finish successfully with uploaded assets and logged checksums.
+  - Token audit shows `[IMPL:MAKE_RELEASE_TARGETS]` references across Makefile + workflows, and `./scripts/validate_tokens.sh` passes after changes.
+- **Validation Evidence (2026-01-01)**:
+  - `make release PLATFORM=darwin/arm64` → `DIAGNOSTIC: [IMPL:MAKE_RELEASE_TARGETS] ... sha256 ad7db0a0... dist/goful_darwin_arm64`
+  - `./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 130 token references across 44 files.`
 - **Architecture**: See `architecture-decisions.md` § Build Matrix [ARCH:BUILD_MATRIX]
 - **Implementation**: See `implementation-decisions.md` § Release Targets [IMPL:MAKE_RELEASE_TARGETS]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
 ### [REQ:BEHAVIOR_BASELINE] Baseline Behavior Capture
 

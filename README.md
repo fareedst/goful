@@ -248,6 +248,13 @@ Install after edit `my/goful/main.go`
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) – `[REQ:CONTRIBUTING_GUIDE]` workflow, semantic token, and module-validation requirements.
 - `stdd/` directory – STDD requirements, architecture decisions, implementation decisions, semantic token registry, and task tracker.
 
+## Build & Release
+
+- `make lint` / `make test` keep local runs in sync with CI’s fmt/vet/test gates.
+- `make release` (`[REQ:RELEASE_BUILD_MATRIX]` / `[IMPL:MAKE_RELEASE_TARGETS]`) produces CGO-disabled binaries plus `.sha256` digests in `dist/`. Set `PLATFORM=linux/amd64` (or `linux/arm64`, `darwin/arm64`) to build a single target; otherwise all default platforms are generated.
+- CI job `release-matrix` (in `.github/workflows/ci.yml`) reuses the same Makefile target so every PR proves artifacts remain reproducible before merge.
+- Tag pushes `v*` trigger `.github/workflows/release.yml`, which re-runs the matrix, logs deterministic filenames/checksums, and publishes the binaries + digest files to the GitHub Release via `softprops/action-gh-release`.
+
 ## Contributing
 
 Read the [Contributing Guide](CONTRIBUTING.md) before opening a PR so you follow the STDD workflow, semantic token discipline, and module validation rules.

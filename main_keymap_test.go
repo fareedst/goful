@@ -56,4 +56,3 @@ func TestAuxKeymapsBaseline_REQ_BEHAVIOR_BASELINE(t *testing.T) {
 	assertKeysPresent(t, "completion", completionKeymap((*cmdline.Completion)(nil)), completionRequired)
 	assertKeysPresent(t, "menu", menuKeymap((*menu.Menu)(nil)), menuRequired)
 }
-

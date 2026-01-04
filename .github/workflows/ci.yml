@@ -102,3 +102,48 @@ jobs:
         run: |
           # [IMPL:RACE_JOB] [ARCH:RACE_TESTING_PIPELINE] [REQ:RACE_TESTING]
           go test -race ./...
+
+  release-matrix:
+    name: Release Matrix Builds
+    runs-on: ubuntu-latest
+    needs: format-vet-test
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            go.sum
+
+      - name: Build release artifact
+        shell: bash
+        run: |
+          # [IMPL:MAKE_RELEASE_TARGETS] [ARCH:BUILD_MATRIX] [REQ:RELEASE_BUILD_MATRIX]
+          make release PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}
+
+      - name: Show checksum
+        shell: bash
+        run: |
+          # [IMPL:MAKE_RELEASE_TARGETS] [ARCH:BUILD_MATRIX] [REQ:RELEASE_BUILD_MATRIX]
+          cat dist/goful_${{ matrix.goos }}_${{ matrix.goarch }}.sha256
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: goful-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            dist/goful_${{ matrix.goos }}_${{ matrix.goarch }}
+            dist/goful_${{ matrix.goos }}_${{ matrix.goarch }}.sha256

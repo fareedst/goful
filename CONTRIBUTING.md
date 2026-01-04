@@ -13,10 +13,11 @@ Thanks for helping improve goful! This guide captures the workflow expectations 
    ```
 3. Build/Test helpers:
    ```bash
-   make fmt        # gofmt ./...
+   make lint       # gofmt + go vet
    make test       # go test ./...
    go test ./...   # preferred during development
    ./scripts/validate_tokens.sh
+   make release PLATFORM=$(go env GOOS)/$(go env GOARCH)  # optional sanity check for [REQ:RELEASE_BUILD_MATRIX]
    ```
 
 ## Development Workflow [REQ:CONTRIBUTING_GUIDE] [PROC:TOKEN_AUDIT]
@@ -33,6 +34,7 @@ Thanks for helping improve goful! This guide captures the workflow expectations 
    ./scripts/validate_tokens.sh
    ```
 4. **CI mirrors workflow**: GitHub Actions runs fmt/vet/test, staticcheck, race tests, and token validation; ensure local runs are clean first.
+5. **Release hygiene**: When tagging (`git tag vX.Y.Z && git push origin vX.Y.Z`), `.github/workflows/release.yml` rebuilds the same matrix via `make release PLATFORM=os/arch` and publishes the binaries + `.sha256` digests to the GitHub Release (`[REQ:RELEASE_BUILD_MATRIX]`). Confirm the workflow succeeds before announcing the release.
 
 ## Semantic Token Discipline [REQ:CONTRIBUTING_GUIDE] [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
 
