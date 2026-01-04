@@ -187,25 +187,25 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 ## P0: Test Coverage for UI/Commands/Flows [REQ:UI_PRIMITIVE_TESTS] [REQ:CMD_HANDLER_TESTS] [REQ:INTEGRATION_FLOWS] [ARCH:TEST_STRATEGY_UI] [ARCH:TEST_STRATEGY_CMD] [ARCH:TEST_STRATEGY_INTEGRATION] [IMPL:TEST_WIDGETS] [IMPL:TEST_CMDLINE] [IMPL:TEST_INTEGRATION_FLOWS]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Add coverage for widgets/filer, command handling, and integration flows (open/navigate/rename/delete).
 
 **Dependencies**: CI & Static Analysis Foundation
 
 **Subtasks**:
-- [ ] Identify modules and validation criteria per area [REQ:MODULE_VALIDATION]
-- [ ] Add widget/filer unit/snapshot tests [REQ:UI_PRIMITIVE_TESTS] [IMPL:TEST_WIDGETS]
-- [ ] Add command/app mode tests [REQ:CMD_HANDLER_TESTS] [IMPL:TEST_CMDLINE]
-- [ ] Add integration flow tests with fixtures [REQ:INTEGRATION_FLOWS] [IMPL:TEST_INTEGRATION_FLOWS]
-- [ ] Document validation results before integration [REQ:MODULE_VALIDATION]
-- [ ] Run `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]`
+- [x] Identify modules and validation criteria per area [REQ:MODULE_VALIDATION]
+- [x] Add widget/filer unit/snapshot tests [REQ:UI_PRIMITIVE_TESTS] [IMPL:TEST_WIDGETS]
+- [x] Add command/app mode tests [REQ:CMD_HANDLER_TESTS] [IMPL:TEST_CMDLINE]
+- [x] Add integration flow tests with fixtures [REQ:INTEGRATION_FLOWS] [IMPL:TEST_INTEGRATION_FLOWS]
+- [x] Document validation results before integration [REQ:MODULE_VALIDATION]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]`
 
 **Completion Criteria**:
-- [ ] Module validation evidence recorded
-- [ ] Tests cover listed areas with tokens
-- [ ] CI green with new coverage
-- [ ] Token audit + validation recorded
+- [x] Module validation evidence recorded
+- [x] Tests cover listed areas with tokens
+- [x] CI green with new coverage
+- [x] Token audit + validation recorded (`./scripts/validate_tokens.sh`)
 
 **Priority Rationale**: P0 to secure behavior before major refactors.
 

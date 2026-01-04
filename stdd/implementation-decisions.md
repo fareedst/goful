@@ -381,8 +381,20 @@ function testIntegrationScenario_REQ_EXAMPLE_FEATURE() {
 - Protect rendering/event handling behaviors.
 
 ### Implementation Approach:
-- Add tests under `widget/test/...` and `filer/`.
-- Use golden/snapshot helpers for rendering where applicable.
+- **Module identification [REQ:MODULE_VALIDATION]:**
+  - `widget.ListBox` (cursor + scrolling state machine)
+  - `widget.Gauge` (progress rendering & normalization)
+  - `widget.TextBox` (buffer editing helpers such as `InsertBytes`/`DeleteBytes`)
+  - Supporting `widget.Window` helpers (column calculations, offsets)
+- **Validation criteria:**
+  - Pure functions (cursor math, offset adjustments, column sizing) validated with table-driven Go tests.
+  - Rendering helpers validated indirectly by inspecting state (e.g., `ScrollRate`, `ColumnAdjustContentsWidth`) to avoid brittle terminal assertions; future work can introduce snapshot harnesses once deterministic screen fakes exist.
+- **Immediate test plan:**
+  - `TestListBoxCursorClamping_REQ_UI_PRIMITIVE_TESTS`: proves `SetCursor`, `MoveCursor`, and `SetCursorByName` respect `Lower()/Upper()` bounds and fallback semantics.  
+  - `TestListBoxScrollRate_REQ_UI_PRIMITIVE_TESTS`: verifies offset math for `ScrollRate` (“Top”/percentage/“Bot”).  
+  - `TestListBoxColumnAdjust_REQ_UI_PRIMITIVE_TESTS`: confirms column auto-fit honors widest content within available width.  
+  - Follow-on work: add gauge fill-ratio tests and textbox editing regressions; snapshot harness will cover highlight rendering once `SetCells` fakes land.
+- Tests live in `widget/*.go` so they can directly access unexported helpers while retaining `[REQ:UI_PRIMITIVE_TESTS] [ARCH:TEST_STRATEGY_UI] [IMPL:TEST_WIDGETS]` breadcrumbs for auditability.
 
 **Code Markers**:
 - Test files include `[IMPL:TEST_WIDGETS] [ARCH:TEST_STRATEGY_UI] [REQ:UI_PRIMITIVE_TESTS]`.
@@ -396,8 +408,18 @@ function testIntegrationScenario_REQ_EXAMPLE_FEATURE() {
 - Prevent regressions in command handling and state transitions.
 
 ### Implementation Approach:
-- Unit tests for `cmdline/` parsing and `app/` mode transitions.
-- Cover error paths and edge cases.
+- **Module identification [REQ:MODULE_VALIDATION]:**
+  - `cmdline.Parser` (tokenization + quoting)
+  - `cmdline.Completion` helpers (word boundary + suggestion generation)
+  - `app.Mode` transitions (normal, command, prompt)
+- **Validation criteria:**
+  - Parser tests feed representative command strings (including quoting, globbing, multi-byte) and assert resulting structs.
+  - Mode tests stimulate key-event handlers with table-driven inputs to ensure state-dependent callbacks fire.
+- **Immediate test plan:**
+  - `TestParseLine_REQ_CMD_HANDLER_TESTS`: ensures parser emits expected argv slices plus error handling for unterminated quotes.
+  - `TestApplyModeTransitions_REQ_CMD_HANDLER_TESTS`: uses lightweight fakes to confirm `mode.GoNormal()` / `mode.GoCommand()` toggles behavior.
+  - `TestCompletionFilters_REQ_CMD_HANDLER_TESTS`: validates completion filter respects prefixes + case sensitivity.
+  - Additional coverage will mock `cmdline.Extmap` to exercise edge bindings before integration tests.
 
 **Code Markers**:
 - Tests carry `[IMPL:TEST_CMDLINE] [ARCH:TEST_STRATEGY_CMD] [REQ:CMD_HANDLER_TESTS]`.
@@ -410,9 +432,18 @@ function testIntegrationScenario_REQ_EXAMPLE_FEATURE() {
 **Rationale:**
 - Validate end-to-end behavior for open/navigate/rename/delete.
 
-### Implementation Approach:
-- Use fixtures to simulate file operations and capture output snapshots.
-- Include diagnostic logging for traceability.
+- **Module identification [REQ:MODULE_VALIDATION]:**
+  - `app.App` orchestration (mode wiring + widget graph)
+  - `filer.Workspace`/`Directory` for FS mutations and navigation
+  - `widget.ListBox`/`Textbox` for active view state
+- **Validation criteria:**
+  - Integration fixtures create temporary directories to simulate “open directory, navigate, rename/delete” flows without touching user files.
+  - Tests assert against deterministic transcripts (e.g., active path, list contents, status messages).
+- **Implemented coverage:**
+  - `TestFlowOpenDirectory_REQ_INTEGRATION_FLOWS` exercises `Workspace` + `Directory` when opening a new path.
+  - `TestFlowNavigateRename_REQ_INTEGRATION_FLOWS` navigates into nested directories and validates rename propagation after reload.
+  - `TestFlowDelete_REQ_INTEGRATION_FLOWS` removes files and confirms the directory state refreshes.
+- Future enhancement: capture golden snapshots of widget buffer output once terminal fakes exist.
 
 **Code Markers**:
 - Tests annotated with `[IMPL:TEST_INTEGRATION_FLOWS] [ARCH:TEST_STRATEGY_INTEGRATION] [REQ:INTEGRATION_FLOWS]`.
