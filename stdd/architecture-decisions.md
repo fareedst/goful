@@ -406,7 +406,55 @@ When documenting architecture decisions, use this format:
 
 **Cross-References**: [REQ:RELEASE_BUILD_MATRIX], [IMPL:MAKE_RELEASE_TARGETS], [REQ:MODULE_VALIDATION]
 
-## 22. Baseline Capture [ARCH:BASELINE_CAPTURE] [REQ:BEHAVIOR_BASELINE]
+## 22. Window Macro Enumeration [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
+
+### Decision: Deterministically enumerate workspace directories for `%D@`
+**Rationale:**
+- External command macros currently expose only the focused (`%D`) and next (`%D2`) directories, forcing multi-window workflows to retype remaining paths.
+- Shell automations often move/copy between all open panes; providing a placeholder for “all other windows” lets operators script against the current workspace layout.
+- Deterministic ordering (focused window followed by the next windows wrapping around) keeps automation predictable even as panes are added or rotated.
+
+**Module Boundaries & Contracts** `[REQ:MODULE_VALIDATION]`:
+- `WindowSequenceBuilder` (Module 1) – Pure helper that inspects `filer.Workspace` state and returns the ordered list of other directory paths. The function must not mutate focus or layout and must gracefully handle 1-window workspaces by returning an empty slice.
+- `MacroListFormatter` (Module 2) – Formats the sequence for macro insertion, applying quoting rules (`util.Quote`) per entry when `quote=true`, and leaves entries untouched when `quote=false`. It joins entries with single spaces and returns an empty string for empty input.
+- Integration point: `expandMacro` routes `%D@` and `%~D@` to these modules, so existing macro parsing (escapes, `%~~` guardrails, `%&`) continues to behave identically for other placeholders.
+
+**Pseudo-Code Sketch:**
+```text
+// [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
+func otherWindowPaths(ws *filer.Workspace) []string {
+    paths := []string{}
+    for offset := 1; offset < len(ws.Dirs); offset++ {
+        idx := (ws.Focus + offset) % len(ws.Dirs)
+        paths = append(paths, ws.Dirs[idx].Path)
+    }
+    return paths
+}
+
+func formatDirs(paths []string, quote bool) string {
+    if len(paths) == 0 {
+        return ""
+    }
+    parts := make([]string, len(paths))
+    for i, p := range paths {
+        parts[i] = chooseQuote(p, quote)
+    }
+    return strings.Join(parts, " ")
+}
+```
+
+**Validation Plan:**
+- Module tests instantiate lightweight workspaces with synthetic directories to verify ordering, wrap-around, and 1-window behavior.
+- Integration tests extend `app/spawn_test.go` to assert `%D@`/`%~D@` expansions (including escaping) so regression coverage ties back to the requirement.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `app/spawn.go` comments for the new helper(s) and `%D@` branch carry `[IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]`.
+- `app/spawn_test.go` test names/comments reference `[REQ:WINDOW_MACRO_ENUMERATION]`.
+- `README.md` macro table documents `%D@` with matching tokens for discoverability.
+
+**Cross-References**: [REQ:WINDOW_MACRO_ENUMERATION], [IMPL:WINDOW_MACRO_ENUMERATION], [REQ:MODULE_VALIDATION]
+
+## 23. Baseline Capture [ARCH:BASELINE_CAPTURE] [REQ:BEHAVIOR_BASELINE]
 
 ### Decision: Capture key interactions/keymaps as executable baselines
 **Rationale:**
@@ -431,7 +479,7 @@ When documenting architecture decisions, use this format:
 
 **Cross-References**: [REQ:BEHAVIOR_BASELINE], [IMPL:BASELINE_SNAPSHOTS], [TEST:KEYMAP_BASELINE], [REQ:MODULE_VALIDATION]
 
-## 23. Debt Management [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+## 24. Debt Management [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 
 ### Decision: Systematically log and annotate risky areas
 **Rationale:**
@@ -450,7 +498,7 @@ When documenting architecture decisions, use this format:
 
 **Cross-References**: [REQ:DEBT_TRIAGE], [IMPL:DEBT_TRACKING]
 
-## 24. Token Validation Automation [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
+## 25. Token Validation Automation [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
 
 ### Decision: Provide a helper script that enforces `[PROC:TOKEN_VALIDATION]`
 **Rationale:**

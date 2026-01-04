@@ -308,7 +308,23 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [ ] Token audit + validation recorded
 
 **Priority Rationale**: P1 to surface risks before refactors.
+## P1: Window Macro Enumeration [REQ:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [IMPL:WINDOW_MACRO_ENUMERATION]
 
+**Status**: ✅ Complete
+
+**Description**: Add `%D@` / `%~D@` external-command macros so scripts can enumerate every other workspace directory with deterministic ordering and quoting rules.
+
+**Dependencies**: [REQ:MODULE_VALIDATION]
+
+**Completion Criteria**:
+- [x] `%D@` / `%~D@` helper modules implemented with deterministic ordering and quoting.
+- [x] Unit + integration tests document module validation evidence.
+- [x] README reflects the new macro.
+- [x] Tokens registered + validation logs captured.
+
+**Validation Evidence**: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 154 token references across 44 files.`
+
+**Priority Rationale**: P1 because cross-window automation is a frequently requested workflow improvement, but it does not block basic navigation.
 ## P0: Cross-Platform Terminal Launcher [REQ:TERMINAL_PORTABILITY] [ARCH:TERMINAL_LAUNCHER] [IMPL:TERMINAL_ADAPTER]
 
 **Status**: ⏳ Pending

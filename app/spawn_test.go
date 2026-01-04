@@ -5,6 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/anmitsu/goful/filer"
+	"github.com/anmitsu/goful/util"
 )
 
 func TestExpandMacro(t *testing.T) {
@@ -72,4 +75,90 @@ func TestExpandMacro(t *testing.T) {
 			t.Errorf("%s -> %s result %s\n", macro.in, macro.out, ret)
 		}
 	}
+}
+
+func TestOtherWindowDirPaths_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T) {
+	ws := &filer.Workspace{
+		Dirs: []*filer.Directory{
+			stubDirectory("/one"),
+			stubDirectory("/two"),
+			stubDirectory("/three"),
+			stubDirectory("/four"),
+		},
+		Focus: 0,
+	}
+
+	assertOrder := func(focus int, want []string) {
+		ws.Focus = focus
+		if got := otherWindowDirPaths(ws); fmt.Sprint(got) != fmt.Sprint(want) {
+			t.Fatalf("focus %d: got %v want %v", focus, got, want)
+		}
+	}
+
+	assertOrder(0, []string{"/two", "/three", "/four"})
+	assertOrder(2, []string{"/four", "/one", "/two"})
+
+	ws.Dirs = ws.Dirs[:1]
+	ws.Focus = 0
+	if got := otherWindowDirPaths(ws); len(got) != 0 {
+		t.Fatalf("expected empty slice for single window, got %v", got)
+	}
+}
+
+func TestFormatDirListForMacro_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T) {
+	paths := []string{"/one", "/path with space"}
+
+	gotQuoted := formatDirListForMacro(paths, true)
+	wantQuoted := fmt.Sprintf("%s %s", util.Quote(paths[0]), util.Quote(paths[1]))
+	if gotQuoted != wantQuoted {
+		t.Fatalf("quoted format mismatch: got %q want %q", gotQuoted, wantQuoted)
+	}
+
+	gotRaw := formatDirListForMacro(paths, false)
+	wantRaw := "/one /path with space"
+	if gotRaw != wantRaw {
+		t.Fatalf("raw format mismatch: got %q want %q", gotRaw, wantRaw)
+	}
+
+	if got := formatDirListForMacro(nil, true); got != "" {
+		t.Fatalf("expected empty string for nil input, got %q", got)
+	}
+}
+
+func TestExpandMacroWindowEnumeration_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T) {
+	g := NewGoful("")
+	ws := g.Workspace()
+	ws.Dirs = []*filer.Directory{
+		stubDirectory("/alpha"),
+		stubDirectory("/beta"),
+		stubDirectory("/gamma"),
+	}
+
+	ws.Focus = 1 // current: /beta
+
+	got, _ := g.expandMacro("echo %D %D@")
+	want := fmt.Sprintf("echo %s %s %s",
+		util.Quote("/beta"),
+		util.Quote("/gamma"),
+		util.Quote("/alpha"),
+	)
+	if got != want {
+		t.Fatalf("expected %q, got %q", want, got)
+	}
+
+	raw, _ := g.expandMacro("echo %~D@")
+	if raw != "echo /gamma /alpha" {
+		t.Fatalf("expected raw list, got %q", raw)
+	}
+
+	ws.Dirs = ws.Dirs[:1]
+	ws.Focus = 0
+	empty, _ := g.expandMacro("echo %D@")
+	if empty != "echo " {
+		t.Fatalf("expected empty expansion for single window, got %q", empty)
+	}
+}
+
+func stubDirectory(path string) *filer.Directory {
+	return &filer.Directory{Path: path}
 }

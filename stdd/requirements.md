@@ -186,7 +186,7 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Static Analysis Policy [ARCH:STATIC_ANALYSIS_POLICY]
 - **Implementation**: See `implementation-decisions.md` § Staticcheck Setup [IMPL:STATICCHECK_SETUP]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
 ### [REQ:RACE_TESTING] Race-Enabled Tests
 
@@ -276,26 +276,24 @@ Each requirement includes:
 - **Implementation**: See `implementation-decisions.md` § State Path Resolver [IMPL:STATE_PATH_RESOLVER]
 
 **Status**: ⏳ Planned
+### [REQ:WINDOW_MACRO_ENUMERATION] External Command Window Enumeration
 
-### [REQ:TERMINAL_PORTABILITY] Cross-Platform Terminal Launcher
+**Priority: P1 (Important)**
 
-**Priority: P0 (Critical)**
-
-- **Description**: Goful must launch external commands inside an interactive terminal window on every supported platform (Linux desktops, tmux/screen sessions, and macOS desktops) without forcing users to edit source files. When invoked from macOS, the launcher must open Terminal.app (or an operator-provided terminal command) via `osascript` or another native automation hook and keep the window alive long enough for users to read command output.
-- **Rationale**: The current Linux-only `gnome-terminal` assumption breaks the “execute in terminal” workflow on macOS and any Linux host that prefers a different emulator. A portable launcher improves out-of-the-box usability and unblocks mixed-environment teams.
+- **Description**: External command macros must expose the full set of visible directories so operators can pass every window to shell scripts. `%D@` appends the other window paths (relative order starting from the next window and wrapping), while `%~D@` emits the same list without quoting. `echo %D %D@` therefore prints all window directories with the focused window first.
+- **Rationale**: Bulk copy/move workflows depend on knowing all workspace paths. Today `%D2` exposes only the next window, so automation that needs >2 windows requires manual re-entry. Enumerating the remaining windows keeps macros self-contained and removes repetitive typing.
 - **Satisfaction Criteria**:
-  - Terminal invocation order follows: tmux/screen detection ➜ explicit override (e.g., `GOFUL_TERMINAL_CMD`) ➜ OS-specific defaults (`gnome-terminal` on Linux, `osascript ... Terminal.app` on macOS).
-  - macOS flow opens a new Terminal window/tab, runs the requested shell command, emits the existing “HIT ENTER KEY” tail, and leaves the window visible until the user dismisses it.
-  - Linux flow maintains existing behavior for tmux and gnome-terminal while allowing overrides for other emulators.
-  - Configuration lives in a dedicated module so tests can exercise the resolver without spawning real terminals.
-  - README/CONTRIBUTING document the new behavior, overrides, and macOS prerequisites.
+  - `%D@` expands to a space-separated list of every other directory path in deterministic order (start with next window, then wrap through the rest). When only one window is open, the expansion is empty.
+  - `%~D@` emits the same ordering without quoting or shell escaping. The quoted form (`%D@`) individually quotes each path so directories with spaces remain safe.
+  - `%D@` respects the same macro parser features as `%D` (supports escaping, `%~~` safeguards, etc.) and can be combined with other text inside commands.
+  - Both the requirement and the README document the new placeholder so `external-command` users can discover it.
+  - A regression test proves `expandMacro("echo %D %D@")` covers all window paths with the focused directory appearing only once at the beginning.
 - **Validation Criteria**:
-  - Unit tests validate the command factory for Linux, macOS, tmux, and custom overrides without invoking real terminals.
-  - Integration tests (or wiring tests) prove `g.ConfigTerminal` uses the factory output and preserves the “keep open” tail string.
-  - Manual validation checklist confirms commands run successfully on macOS Terminal and a standard Linux desktop.
-  - Token audit shows `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]` annotations across code/tests/docs.
-- **Architecture**: See `architecture-decisions.md` § Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER]
-- **Implementation**: See `implementation-decisions.md` § Terminal Adapter Module [IMPL:TERMINAL_ADAPTER]
+  - Pure helper tests validate that the path enumeration logic handles 1–4 windows, wrapping order, and quoting rules.
+  - `app/spawn_test.go` exercises `%D@` and `%~D@` end-to-end, including escaping/quoting scenarios.
+  - Token validation confirms `[REQ:WINDOW_MACRO_ENUMERATION]`, `[ARCH:WINDOW_MACRO_ENUMERATION]`, and `[IMPL:WINDOW_MACRO_ENUMERATION]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Window Macro Enumeration [ARCH:WINDOW_MACRO_ENUMERATION]
+- **Implementation**: See `implementation-decisions.md` § Window Macro Enumeration [IMPL:WINDOW_MACRO_ENUMERATION]
 
 **Status**: ⏳ Planned
 

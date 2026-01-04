@@ -204,6 +204,7 @@ macro        | expanded string
 `%m` `%M`   | Marked file names/paths joined by spaces
 `%d` `%D`   | Directory name/path on cursor
 `%d2` `%D2` | Neighbor directory name/path
+`%D@` `%~D@` | `[REQ:WINDOW_MACRO_ENUMERATION]` Current window stays `%D`; `%D@` appends the other directory paths (quoted vs. raw) in display order so `echo %D %D@` lists every window.
 `%~f` ...   | Expand by non quote
 `%&`        | Flag to run command in background
 

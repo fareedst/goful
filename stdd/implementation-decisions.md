@@ -572,7 +572,33 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:BASELINE_CAPTURE], [REQ:BEHAVIOR_BASELINE], [TEST:KEYMAP_BASELINE], [REQ:MODULE_VALIDATION]
 
-## 19. Debt Tracking [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+## 19. Window Macro Enumeration [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
+
+### Decision: Introduce `%D@`/`%~D@` expansions via helper modules
+**Rationale:**
+- Extends external-command macros so scripts can see every workspace directory without hard-coding pane order.
+- Keeps the macro parser maintainable by isolating the new behavior into two helpers instead of embedding list construction inside the switch.
+- Preserves compatibility with existing quoting (`%D`/`%~D`) and escape semantics while offering deterministic ordering for automation.
+
+### Implementation Approach:
+- Added `otherWindowDirPaths(ws *filer.Workspace) []string` (Module 1 `WindowSequenceBuilder`) that iterates from `Focus+1` through all directories, wrapping via modulo arithmetic. Returns an empty slice if there is only one directory.
+- Added `formatDirListForMacro(paths []string, quote bool) string` (Module 2 `MacroListFormatter`) that applies `util.Quote` per entry when `quote=true`, leaves entries untouched when `quote=false`, and joins with single spaces. Returns an empty string when no paths are provided.
+- Updated `expandMacro` to detect `%D@` and `%~D@` by looking ahead for the new `macroAllOtherDirs` sentinel (`'@'`). The branch calls both helpers instead of reusing the single-path logic so quoting rules stay localized.
+- Ensured the `%D2` code path remains unchanged by handling `'2'` before `'@'`, and kept `macrolen` accounting accurate so escape handling still works.
+
+### Code Markers:
+- `app/spawn.go` helper functions and `%D@` branch include `// [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]`.
+- `README.md` macro table entry references the same tokens so documentation remains searchable.
+
+### Validation Evidence `[REQ:MODULE_VALIDATION]`:
+- `TestOtherWindowDirPaths_REQ_WINDOW_MACRO_ENUMERATION` (new helper test) covers 1–4 directory workspaces, wrap-around behavior, and focus movement.
+- `TestMacroListFormatting_REQ_WINDOW_MACRO_ENUMERATION` confirms quoting vs. raw output and empty inputs.
+- `TestExpandMacro` gained `%D@`/`%~D@` cases so the integration path is covered with real macro parsing.
+- `./scripts/validate_tokens.sh` re-run after implementation to ensure the new tokens exist in the registry (captured in task log).
+
+**Cross-References**: [ARCH:WINDOW_MACRO_ENUMERATION], [REQ:WINDOW_MACRO_ENUMERATION], [REQ:MODULE_VALIDATION]
+
+## 20. Debt Tracking [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 
 ### Decision: Track debt via issues and TODO annotations
 **Rationale:**
@@ -593,7 +619,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:DEBT_MANAGEMENT], [REQ:DEBT_TRIAGE]
 
-## 20. Token Validation Script [IMPL:TOKEN_VALIDATION_SCRIPT] [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
+## 21. Token Validation Script [IMPL:TOKEN_VALIDATION_SCRIPT] [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
 
 ### Decision: Automate `[PROC:TOKEN_VALIDATION]` via `scripts/validate_tokens.sh`
 **Rationale:**
