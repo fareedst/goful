@@ -182,6 +182,19 @@ outputs.
 
 If goful is running in tmux, it creates a new window and executes the command.
 
+`[REQ:TERMINAL_PORTABILITY]` keeps this workflow intact on macOS and alternative
+terminal emulators:
+
+- On macOS, goful now opens Terminal.app via `osascript` so commands run in a new
+  tab/window without editing `main.go`. The command stays visible until you hit
+  enter because the historical `read -p "HIT ENTER KEY"` tail is still appended.
+- Set `GOFUL_TERMINAL_CMD="alacritty -e"` (or another emulator) to override the
+  launcher on Linux/BSD. The override is inserted before the usual `bash -c`
+  invocation, so your configured terminal still receives the expanded command.
+- Export `GOFUL_DEBUG_TERMINAL=1` to print `DEBUG: [IMPL:TERMINAL_ADAPTER]`
+  messages describing which branch was selected if you need to troubleshoot
+  environment detection.
+
 ### Expand Macro
 
 macro        | expanded string

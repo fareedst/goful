@@ -76,3 +76,17 @@ Before opening a PR:
 
 Following this checklist keeps `[REQ:CONTRIBUTING_GUIDE]` satisfied and accelerates reviews.
 
+## Terminal Launcher Overrides [REQ:TERMINAL_PORTABILITY]
+
+- macOS: no manual edits are required—`[IMPL:TERMINAL_ADAPTER]` opens Terminal.app via
+  `osascript` and runs the same `bash -c "<command>;read -p \"HIT ENTER KEY\""` flow that
+  Linux users see.
+- Linux/BSD: set `GOFUL_TERMINAL_CMD="alacritty -e"` (or similar) to replace the default
+  `gnome-terminal -- bash -c ...` invocation. The adapter appends the command and
+  keep-open tail automatically.
+- Debugging: export `GOFUL_DEBUG_TERMINAL=1` to print `DEBUG: [IMPL:TERMINAL_ADAPTER]`
+  messages describing which branch was selected (override, tmux, macOS, default).
+- Validation: new terminal launchers must include module validation evidence (unit tests for
+  `terminalcmd.CommandFactory`, integration tests for the `g.ConfigTerminal` glue, and a
+  manual macOS + Linux checklist) before landing.
+

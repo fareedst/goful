@@ -277,6 +277,28 @@ Each requirement includes:
 
 **Status**: ⏳ Planned
 
+### [REQ:TERMINAL_PORTABILITY] Cross-Platform Terminal Launcher
+
+**Priority: P0 (Critical)**
+
+- **Description**: Goful must launch external commands inside an interactive terminal window on every supported platform (Linux desktops, tmux/screen sessions, and macOS desktops) without forcing users to edit source files. When invoked from macOS, the launcher must open Terminal.app (or an operator-provided terminal command) via `osascript` or another native automation hook and keep the window alive long enough for users to read command output.
+- **Rationale**: The current Linux-only `gnome-terminal` assumption breaks the “execute in terminal” workflow on macOS and any Linux host that prefers a different emulator. A portable launcher improves out-of-the-box usability and unblocks mixed-environment teams.
+- **Satisfaction Criteria**:
+  - Terminal invocation order follows: tmux/screen detection ➜ explicit override (e.g., `GOFUL_TERMINAL_CMD`) ➜ OS-specific defaults (`gnome-terminal` on Linux, `osascript ... Terminal.app` on macOS).
+  - macOS flow opens a new Terminal window/tab, runs the requested shell command, emits the existing “HIT ENTER KEY” tail, and leaves the window visible until the user dismisses it.
+  - Linux flow maintains existing behavior for tmux and gnome-terminal while allowing overrides for other emulators.
+  - Configuration lives in a dedicated module so tests can exercise the resolver without spawning real terminals.
+  - README/CONTRIBUTING document the new behavior, overrides, and macOS prerequisites.
+- **Validation Criteria**:
+  - Unit tests validate the command factory for Linux, macOS, tmux, and custom overrides without invoking real terminals.
+  - Integration tests (or wiring tests) prove `g.ConfigTerminal` uses the factory output and preserves the “keep open” tail string.
+  - Manual validation checklist confirms commands run successfully on macOS Terminal and a standard Linux desktop.
+  - Token audit shows `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]` annotations across code/tests/docs.
+- **Architecture**: See `architecture-decisions.md` § Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER]
+- **Implementation**: See `implementation-decisions.md` § Terminal Adapter Module [IMPL:TERMINAL_ADAPTER]
+
+**Status**: ⏳ Planned
+
 ### [REQ:ARCH_DOCUMENTATION] Architecture Guide
 
 **Priority: P1 (Important)**

@@ -102,7 +102,7 @@ When referencing other tokens:
 
 ### Immutable Requirements
 
-### Core Functional Requirements
+-### Core Functional Requirements
 - `[REQ:STDD_SETUP]` - STDD methodology setup
 - `[REQ:MODULE_VALIDATION]` - Independent module validation before integration
 - `[REQ:CONFIGURABLE_STATE_PATHS]` - Configurable state/history persistence
@@ -119,6 +119,7 @@ When referencing other tokens:
 - `[REQ:RELEASE_BUILD_MATRIX]` - Reproducible release builds via Makefile and matrix targets
 - `[REQ:BEHAVIOR_BASELINE]` - Baseline interactions and key mappings are captured in automation/docs
 - `[REQ:DEBT_TRIAGE]` - Technical debt and risky areas are triaged with TODOs/issues
+- `[REQ:TERMINAL_PORTABILITY]` - Terminal launcher works across Linux, macOS, and tmux contexts
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -151,6 +152,7 @@ When referencing other tokens:
 - `[ARCH:DEBT_MANAGEMENT]` - Debt triage and TODO/issue tracking [REQ:DEBT_TRIAGE]
 - `[ARCH:TOKEN_VALIDATION_AUTOMATION]` - Token validation helper automation [REQ:STDD_SETUP]
 - `[ARCH:QUIT_DIALOG_KEYS]` - Quit dialog key translation guarantees [REQ:QUIT_DIALOG_DEFAULT]
+- `[ARCH:TERMINAL_LAUNCHER]` - Cross-platform terminal launcher abstraction [REQ:TERMINAL_PORTABILITY]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -176,6 +178,7 @@ When referencing other tokens:
 - `[IMPL:DEBT_TRACKING]` - Debt triage annotations/issues [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 - `[IMPL:TOKEN_VALIDATION_SCRIPT]` - Shell script enforcing token registry [ARCH:TOKEN_VALIDATION_AUTOMATION] [REQ:STDD_SETUP]
 - `[IMPL:QUIT_DIALOG_ENTER]` - Return/Enter mapping for quit dialog default [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
+- `[IMPL:TERMINAL_ADAPTER]` - Platform-aware terminal command adapter [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

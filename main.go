@@ -14,6 +14,7 @@ import (
 	"github.com/anmitsu/goful/look"
 	"github.com/anmitsu/goful/menu"
 	"github.com/anmitsu/goful/message"
+	"github.com/anmitsu/goful/terminalcmd"
 	"github.com/anmitsu/goful/widget"
 	"github.com/mattn/go-runewidth"
 )
@@ -140,17 +141,19 @@ func config(g *app.Goful, is_tmux bool) {
 		g.ConfigShell(func(cmd string) []string {
 			return []string{"bash", "-c", cmd}
 		})
-		g.ConfigTerminal(func(cmd string) []string {
-			// for not close the terminal when the shell finishes running
-			const tail = `;read -p "HIT ENTER KEY"`
-
-			if is_tmux { // such as screen and tmux
-				return []string{"tmux", "new-window", "-n", cmd, cmd + tail}
-			}
-			// To execute bash in gnome-terminal of a new window or tab.
-			title := "echo -n '\033]0;" + cmd + "\007';" // for change title
-			return []string{"gnome-terminal", "--", "bash", "-c", title + cmd + tail}
+		overrideArgs, overrideErr := terminalcmd.ParseOverride(os.Getenv(terminalcmd.EnvTerminalCommand))
+		if overrideErr != nil {
+			message.Errorf("[REQ:TERMINAL_PORTABILITY] failed to parse %s: %v", terminalcmd.EnvTerminalCommand, overrideErr)
+		}
+		factory := terminalcmd.NewFactory(terminalcmd.Options{
+			GOOS:     runtime.GOOS,
+			IsTmux:   is_tmux,
+			Override: overrideArgs,
+			Tail:     terminalcmd.KeepOpenTail,
+			Debug:    os.Getenv(terminalcmd.EnvDebugTerminal) != "",
 		})
+		// [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
+		terminalcmd.Apply(g, factory)
 	}
 
 	// Setup menus and add to keymap.

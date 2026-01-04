@@ -309,4 +309,36 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P1 to surface risks before refactors.
 
+## P0: Cross-Platform Terminal Launcher [REQ:TERMINAL_PORTABILITY] [ARCH:TERMINAL_LAUNCHER] [IMPL:TERMINAL_ADAPTER]
+
+**Status**: ⏳ Pending
+
+**Description**: Provide a portable terminal launcher so executing commands from goful works on macOS (Terminal.app), Linux desktops, and tmux/screen sessions without editing source. Centralize OS detection and overrides in a testable module that feeds `g.ConfigTerminal`.
+
+**Dependencies**: [REQ:MODULE_VALIDATION], [REQ:STDD_SETUP]
+
+**Module Boundaries**:
+- `CommandFactory` – pure function that decides which terminal command slice to run based on GOOS, tmux detection, and overrides.
+- `Configurator` – wires the factory output (plus tail suffix) into `g.ConfigTerminal` and emits diagnostics.
+- `ManualValidationChecklist` – documents macOS + Linux verification steps after automated tests pass.
+
+**Subtasks**:
+- [x] Document requirement + architecture/implementation tokens for terminal portability [REQ:TERMINAL_PORTABILITY] [ARCH:TERMINAL_LAUNCHER] [IMPL:TERMINAL_ADAPTER]
+- [x] Implement `CommandFactory` with tmux detection, overrides, Linux default, and macOS `osascript` path [IMPL:TERMINAL_ADAPTER]
+- [x] Add unit tests covering Linux, macOS, tmux, and override branches (module validation) [REQ:MODULE_VALIDATION]
+- [x] Implement `Configurator` glue + logging, and wire it into `g.ConfigTerminal` [IMPL:TERMINAL_ADAPTER]
+- [x] Add integration tests or fakes proving `g.ConfigTerminal` receives the correct command slices [REQ:TERMINAL_PORTABILITY]
+- [x] Update README/CONTRIBUTING with macOS guidance and override instructions [REQ:TERMINAL_PORTABILITY]
+- [ ] Manual validation checklist for macOS Terminal + Linux desktop runs [REQ:TERMINAL_PORTABILITY]
+- [x] `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) recorded after code/tests land (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 158 token references across 44 files.`)
+
+**Completion Criteria**:
+- [ ] Factory + configurator modules validated independently before integration
+- [ ] `main.go` uses the new adapter; legacy gnome-terminal call removed
+- [ ] Tests cover selection matrix and keep-open tail behavior
+- [ ] Documentation updated with macOS instructions and overrides
+- [ ] `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]` logs captured
+
+**Priority Rationale**: P0 because macOS users currently cannot execute external commands in a terminal, blocking a core workflow.
+
 

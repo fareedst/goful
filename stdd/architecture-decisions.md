@@ -490,3 +490,37 @@ When documenting architecture decisions, use this format:
 
 **Cross-References**: [REQ:QUIT_DIALOG_DEFAULT], [IMPL:QUIT_DIALOG_ENTER]
 
+## 26. Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]
+
+### Decision: Create a dedicated terminal launcher module that selects the correct command sequence for tmux, Linux desktops, and macOS Terminal.
+**Rationale:**
+- Restores “execute in terminal” workflows on macOS by invoking Terminal.app via `osascript` while preserving the Linux/tmux experience.
+- Centralizes platform detection and overrides so future terminal additions (iTerm2, alacritty, Kitty) only touch one module.
+- Keeps `main.go` declarative by wiring `g.ConfigTerminal` to a pure factory that can be unit-tested per [REQ:MODULE_VALIDATION].
+
+**Architecture Outline:**
+- Introduce package `terminalcmd` with two modules:
+  1. `CommandFactory` (pure) returns the `[]string` invocation for the active environment. Inputs: requested shell command, detected tmux/screen, runtime GOOS, optional `GOFUL_TERMINAL_CMD` override.
+  2. `Configurator` wires the factory into `g.ConfigTerminal`, logs `DEBUG: [IMPL:TERMINAL_ADAPTER] ...` selections, and applies the existing “HIT ENTER KEY” tail.
+- Selection order:
+  - If `GOFUL_TERMINAL_CMD` (or config flag) is set, split and use it verbatim.
+  - Else if `is_tmux`, run `tmux new-window -n <title> <cmd+tail>`.
+  - Else if `runtime.GOOS == "darwin"`, run `osascript -e 'tell application "Terminal"' ... 'do script "<title && command && tail>"'`.
+  - Else default to current Linux behavior: gnome-terminal (with title escape) running bash.
+- Provide extension points for future emulators by returning structured data rather than building strings inline.
+
+**Module Validation [REQ:MODULE_VALIDATION]:**
+- `CommandFactory` validated via table-driven unit tests (no external processes).
+- `Configurator` validated via integration-style tests that stub `g.ConfigTerminal` and assert it receives factory output plus the tail suffix.
+- Manual validation checklist documents macOS Terminal run plus Linux gnome-terminal run.
+
+**Alternatives Considered:**
+- Hard-coding another case inside `main.go`: rejected because it scales poorly and is hard to test.
+- Shelling out to `open -a Terminal ...`: rejected in favor of `osascript` so we can run the command immediately and keep the window open.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `terminalcmd/factory.go`, `terminalcmd/factory_test.go`, and `main.go` wiring must include `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY]`.
+- README/CONTRIBUTING updates describe overrides and reference `[REQ:TERMINAL_PORTABILITY]`.
+
+**Cross-References**: [REQ:TERMINAL_PORTABILITY], [IMPL:TERMINAL_ADAPTER], [REQ:MODULE_VALIDATION]
+
