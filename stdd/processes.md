@@ -140,6 +140,7 @@ Use the structure below for every process you document. Each entry should be kep
    - Launch goful outside tmux/screen, focus the staged directory, press `:` to open the shell prompt, and enter `echo mac`.
    - Expect Terminal.app to open a new tab/window, log the AppleScript branch, run `cd "<focused dir>"; echo mac;read -p "HIT ENTER KEY"`, and keep the window open until Enter is pressed, after which it exits cleanly.
    - Repeat inside a tmux session; tmux should take precedence and open a new window without invoking Terminal.app.
+   - Repeat with `GOFUL_TERMINAL_APP="iTerm2"` and/or `GOFUL_TERMINAL_SHELL="zsh"` set to confirm `[REQ:TERMINAL_PORTABILITY]` applies the new runtime parameters (logs should call out the selected app/shell).
 3. **Linux Desktop Validation**
    - On a Linux desktop (no tmux), repeat the shell prompt action and confirm gnome-terminal launches with the title escape (`echo -n '\033]0;cmd\007'`) before running the payload and pause prompt.
    - Set `GOFUL_TERMINAL_CMD="alacritty -e"`, rerun the step, and confirm the override command receives the payload and pause tail while inheriting the focused-directory working dir when GOOS=darwin.

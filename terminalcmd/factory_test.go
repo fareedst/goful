@@ -1,7 +1,9 @@
 package terminalcmd
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -35,14 +37,25 @@ func TestCommandFactoryDarwin_REQ_TERMINAL_PORTABILITY(t *testing.T) {
 		GOOS: "darwin",
 	})
 	got := factory.CommandWithCwd("echo hi", "/tmp/demo")
-	want := []string{
-		"osascript",
-		"-e", `tell application "Terminal" to do script "bash -c \"cd \\\"/tmp/demo\\\"; echo hi;read -p \\\"HIT ENTER KEY\\\"\"; exit"`,
-		"-e", `tell application "Terminal" to activate`,
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("darwin command mismatch\nwant: %v\ngot:  %v", want, got)
-	}
+	assertAppleScriptCommand(t, got, "Terminal", "bash", "/tmp/demo")
+}
+
+func TestCommandFactoryDarwinCustomApp_REQ_TERMINAL_PORTABILITY(t *testing.T) {
+	factory := NewFactory(Options{
+		GOOS:        "darwin",
+		TerminalApp: "iTerm2",
+	})
+	got := factory.CommandWithCwd("echo hi", "/tmp/demo")
+	assertAppleScriptCommand(t, got, "iTerm2", "bash", "/tmp/demo")
+}
+
+func TestCommandFactoryDarwinCustomShell_REQ_TERMINAL_PORTABILITY(t *testing.T) {
+	factory := NewFactory(Options{
+		GOOS:          "darwin",
+		TerminalShell: "zsh",
+	})
+	got := factory.CommandWithCwd("echo hi", "/tmp/demo")
+	assertAppleScriptCommand(t, got, "Terminal", "zsh", "/tmp/demo")
 }
 
 func TestCommandFactoryOverrideDarwin_REQ_TERMINAL_CWD(t *testing.T) {
@@ -114,12 +127,39 @@ func TestApplyDarwinCwd_REQ_TERMINAL_CWD(t *testing.T) {
 	cfg := &stubConfigurator{}
 	factory := NewFactory(Options{GOOS: "darwin"})
 	Apply(cfg, factory, func() string { return "/tmp/demo" })
-	want := []string{
-		"osascript",
-		"-e", `tell application "Terminal" to do script "bash -c \"cd \\\"/tmp/demo\\\"; echo hi;read -p \\\"HIT ENTER KEY\\\"\"; exit"`,
-		"-e", `tell application "Terminal" to activate`,
+	assertAppleScriptCommand(t, cfg.last, "Terminal", "bash", "/tmp/demo")
+}
+
+func assertAppleScriptCommand(t *testing.T, got []string, app, shell, dir string) {
+	t.Helper()
+	if len(got) != 5 {
+		t.Fatalf("unexpected osascript command shape: %v", got)
 	}
-	if !reflect.DeepEqual(cfg.last, want) {
-		t.Fatalf("apply darwin mismatch\nwant: %v\ngot:  %v", want, cfg.last)
+	if got[0] != "osascript" {
+		t.Fatalf("expected osascript binary, got %v", got)
+	}
+	if got[1] != "-e" || got[3] != "-e" {
+		t.Fatalf("unexpected osascript flags: %v", got)
+	}
+	activate := fmt.Sprintf("tell application \"%s\" to activate", app)
+	if got[4] != activate {
+		t.Fatalf("activate clause mismatch\nwant: %s\ngot:  %s", activate, got[4])
+	}
+	script := got[2]
+	prefix := fmt.Sprintf("tell application \"%s\" to do script", app)
+	if !strings.Contains(script, prefix) {
+		t.Fatalf("missing app script prefix in %q", script)
+	}
+	if !strings.Contains(script, fmt.Sprintf("%s -c", shell)) {
+		t.Fatalf("missing shell %q in %q", shell, script)
+	}
+	if !strings.Contains(script, "cd ") || !strings.Contains(script, dir) {
+		t.Fatalf("missing cd clause with dir %q in %q", dir, script)
+	}
+	if !strings.Contains(script, "echo hi") {
+		t.Fatalf("missing payload in %q", script)
+	}
+	if !strings.Contains(script, "read -p") || !strings.Contains(script, "HIT ENTER KEY") {
+		t.Fatalf("missing pause tail in %q", script)
 	}
 }

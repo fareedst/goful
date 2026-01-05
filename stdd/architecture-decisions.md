@@ -581,9 +581,12 @@ func formatDirs(paths []string, quote bool) string {
 - Selection order:
   - If `GOFUL_TERMINAL_CMD` (or config flag) is set, split and use it verbatim.
   - Else if `is_tmux`, run `tmux new-window -n <title> <cmd+tail>`.
-  - Else if `runtime.GOOS == "darwin"`, run `osascript -e 'tell application "Terminal"' ... 'do script "<cd %D; title && command && tail>"'` so Terminal.app begins inside the focused directory.
+  - Else if `runtime.GOOS == "darwin"`, run `osascript -e 'tell application "<configured app>" to do script "%s" & activate'` so the selected macOS terminal (default Terminal.app, override via `GOFUL_TERMINAL_APP`) begins inside the focused directory while `GOFUL_TERMINAL_SHELL` controls the inline shell command (default `bash`).
   - Else default to current Linux behavior: gnome-terminal (with title escape) running bash.
-- Provide extension points for future emulators by returning structured data rather than building strings inline.
+- Provide extension points for future emulators by returning structured data rather than building strings inline. macOS-specific extension points include:
+  - `GOFUL_TERMINAL_APP` (default `Terminal`) so operators can direct the AppleScript payload to another application (iTerm2, Warp, etc.) without writing their own `osascript`.
+  - `GOFUL_TERMINAL_SHELL` (default `bash`) so the in-window command can switch to `zsh`, `fish`, or another shell without edits.
+
 
 **Module Validation [REQ:MODULE_VALIDATION]:**
 - `CommandFactory` validated via table-driven unit tests (no external processes).

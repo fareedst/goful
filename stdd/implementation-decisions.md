@@ -758,11 +758,11 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 ### Implementation Approach:
 - **Module 1: `CommandFactory`**
   - Signature: `func NewFactory(opts Options) Factory`.
-  - `Options` include `GOOS`, `HasTmux`, `TerminalOverride []string`, and `Tail string`.
+  - `Options` include `GOOS`, `IsTmux`, `Override []string`, `Tail string`, plus macOS-specific fields `TerminalApp string` (default `Terminal`) and `TerminalShell string` (default `bash`) so AppleScript launches can be customized without editing Go code.
   - `Factory.CommandWithCwd(cmd string, cwd string) []string` returns:
-    - Override path: `TerminalOverride + []string{"bash", "-c", payload}` where `payload` already prefixes macOS commands with `cd "<cwd>";` to satisfy `[REQ:TERMINAL_CWD]`.
+    - Override path: `Override + []string{"bash", "-c", payload}` where `payload` already prefixes macOS commands with `cd "<cwd>";` to satisfy `[REQ:TERMINAL_CWD]`.
     - Tmux path: `[]string{"tmux", "new-window", "-n", title(cmd), cmd + tail}`.
-    - macOS path: `[]string{"osascript", "-e", fmt.Sprintf("tell application \"Terminal\" to do script \"%s\" & activate", script)}` where `script` embeds the title escape plus the same `cd "<cwd>"; <cmd + tail>` payload.
+    - macOS path: `[]string{"osascript", "-e", fmt.Sprintf("tell application \"%s\" to do script \"%s\"", terminalApp, script), "-e", fmt.Sprintf("tell application \"%s\" to activate", terminalApp)}` where `script` embeds the configured shell (`<terminalShell> -c "cd \"<cwd>\"; <cmd + tail>"; exit`).
     - Linux default: maintain current gnome-terminal invocation with title-setting escape.
   - Emits `DEBUG: [IMPL:TERMINAL_ADAPTER] ...` logs describing the branch taken and any overrides, guarded by `GOFUL_DEBUG_TERMINAL=1`.
 
@@ -773,10 +773,11 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 - **Environment & Overrides**
   - Parse `GOFUL_TERMINAL_CMD` (string) or `-terminal` flag (future) into the override slice.
+  - Read `GOFUL_TERMINAL_APP` and `GOFUL_TERMINAL_SHELL` (with defaults baked into `NewFactory`) so AppleScript launches can target another application or shell without modifying Go code.
   - Document how to supply fallback commands (e.g., `iTerm2`).
 - **macOS Shell Invocation Safeguard**
-  - [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] Switching the AppleScript payload from `bash -lc` to `bash -c` prevents login-shell initialization from hanging Terminal windows that source interactive profiles.  
-  - [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] The payload is still quoted via `strconv.Quote` so `bash -c` receives the entire `cd "<cwd>"; <cmd><tail>` sequence intact while avoiding `.bash_profile` prompts.
+  - [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] Switching the AppleScript payload from `bash -lc` to `<shell> -c` prevents login-shell initialization from hanging Terminal windows that source interactive profiles while respecting the configured shell binary.
+  - [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] The payload is still quoted via `strconv.Quote` so `<shell> -c` receives the entire `cd "<cwd>"; <cmd><tail>` sequence intact while avoiding `.bash_profile` prompts.
 
 **Code Markers**:
 - `terminalcmd/*.go` and `main.go` wiring include `[IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]`.

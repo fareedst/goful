@@ -82,6 +82,10 @@ Following this checklist keeps `[REQ:CONTRIBUTING_GUIDE]` satisfied and accelera
   `osascript`, automatically runs `cd "%D";` (focused directory), and runs the same
   `bash -c "<command>;read -p \"HIT ENTER KEY\""` flow that
   Linux users see.
+- macOS customization: set `GOFUL_TERMINAL_APP="iTerm2"` (or another AppleScript-aware
+  terminal) and/or `GOFUL_TERMINAL_SHELL="zsh"` (or another shell) to reuse the
+  built-in AppleScript path without editing code—the defaults remain
+  Terminal.app + bash.
 - Linux/BSD: set `GOFUL_TERMINAL_CMD="alacritty -e"` (or similar) to replace the default
   `gnome-terminal -- bash -c ...` invocation. The adapter appends the command and
   keep-open tail automatically.

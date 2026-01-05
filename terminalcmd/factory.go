@@ -15,17 +15,28 @@ const (
 	EnvTerminalCommand = "GOFUL_TERMINAL_CMD"
 	// EnvDebugTerminal enables debug logs for branch selection.
 	EnvDebugTerminal = "GOFUL_DEBUG_TERMINAL"
+	// EnvTerminalApp chooses which macOS application receives the AppleScript (default Terminal).
+	EnvTerminalApp = "GOFUL_TERMINAL_APP"
+	// EnvTerminalShell chooses which shell binary runs inside the macOS window (default bash).
+	EnvTerminalShell = "GOFUL_TERMINAL_SHELL"
 	// KeepOpenTail preserves the historical pause behaviour after running a command.
 	KeepOpenTail = `;read -p "HIT ENTER KEY"`
 )
 
+const (
+	defaultTerminalApp   = "Terminal"
+	defaultTerminalShell = "bash"
+)
+
 // Options drive how the terminal adapter behaves.
 type Options struct {
-	GOOS     string
-	IsTmux   bool
-	Override []string
-	Tail     string
-	Debug    bool
+	GOOS          string
+	IsTmux        bool
+	Override      []string
+	Tail          string
+	Debug         bool
+	TerminalApp   string // macOS-only application name for AppleScript
+	TerminalShell string // macOS-only shell binary inserted into AppleScript
 }
 
 // Factory builds terminal command invocations per platform.
@@ -38,6 +49,12 @@ type Factory struct {
 func NewFactory(opts Options) Factory {
 	if opts.Tail == "" {
 		opts.Tail = KeepOpenTail
+	}
+	if opts.TerminalApp == "" {
+		opts.TerminalApp = defaultTerminalApp
+	}
+	if opts.TerminalShell == "" {
+		opts.TerminalShell = defaultTerminalShell
 	}
 	return Factory{opts: opts}
 }
@@ -63,8 +80,8 @@ func (f Factory) CommandWithCwd(cmd string, cwd string) []string {
 		f.log("tmux branch selected")
 		return []string{"tmux", "new-window", "-n", cmd, payload}
 	case strings.EqualFold(f.opts.GOOS, "darwin"):
-		f.log("macOS Terminal (osascript) branch selected")
-		return buildAppleScriptCommand(payload)
+		f.log(fmt.Sprintf("macOS AppleScript branch selected (app=%s shell=%s)", f.opts.TerminalApp, f.opts.TerminalShell))
+		return f.buildAppleScriptCommand(payload)
 	}
 
 	f.log("default gnome-terminal branch selected")
@@ -103,14 +120,17 @@ func linuxTitle(cmd string) string {
 	return "echo -n '\\033]0;" + cmd + "\\007';"
 }
 
-func buildAppleScriptCommand(payload string) []string {
-	shellLine := fmt.Sprintf("bash -c %s; exit", strconv.Quote(payload))
+func (f Factory) buildAppleScriptCommand(payload string) []string {
+	shell := f.opts.TerminalShell
+	shellLine := fmt.Sprintf("%s -c %s; exit", shell, strconv.Quote(payload))
 	escaped := appleScriptEscape(shellLine)
-	run := fmt.Sprintf("tell application \"Terminal\" to do script \"%s\"", escaped)
+	app := f.opts.TerminalApp
+	run := fmt.Sprintf("tell application \"%s\" to do script \"%s\"", app, escaped)
+	activate := fmt.Sprintf("tell application \"%s\" to activate", app)
 	return []string{
 		"osascript",
 		"-e", run,
-		"-e", "tell application \"Terminal\" to activate",
+		"-e", activate,
 	}
 }
 

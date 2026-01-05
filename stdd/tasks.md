@@ -513,6 +513,29 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P0 because macOS users currently cannot execute external commands in a terminal, blocking a core workflow.
 
+## P0: macOS AppleScript terminal parameters [REQ:TERMINAL_PORTABILITY] [ARCH:TERMINAL_LAUNCHER] [IMPL:TERMINAL_ADAPTER]
+
+**Status**: ✅ Complete
+
+**Description**: Allow the AppleScript branch to change the target application name and inline shell (e.g., iTerm2 + zsh) via runtime parameters so macOS workflows stay portable without editing Go code.
+
+**Dependencies**: Cross-Platform Terminal Launcher, [REQ:MODULE_VALIDATION]
+
+**Subtasks**:
+- [x] Update `[REQ:TERMINAL_PORTABILITY]`, `[ARCH:TERMINAL_LAUNCHER]`, and `[IMPL:TERMINAL_ADAPTER]` documentation with the new env vars and acceptance criteria.
+- [x] Extend `terminalcmd.Options`/`Factory` + `main.go` wiring to honor `GOFUL_TERMINAL_APP` and `GOFUL_TERMINAL_SHELL`, including debug output and defaults.
+- [x] Add unit tests covering custom app/shell values and ensure module validation evidence references `[REQ:TERMINAL_PORTABILITY]`.
+- [x] Refresh README/CONTRIBUTING/process docs so operators know how to use the new knobs.
+- [x] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` once the change lands and record the diagnostic output (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 260 token references across 55 files.` on 2026-01-05).
+
+**Completion Criteria**:
+- [x] Docs cross-reference new env vars and satisfaction/validation criteria.
+- [x] Code + tests pass for default and customized macOS app/shell settings.
+- [x] README/CONTRIBUTING mention the new env vars with `[REQ:TERMINAL_PORTABILITY]` tags.
+- [x] `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]` runs captured in this task.
+
+**Priority Rationale**: P0 follow-up to unblock macOS teams that prefer alternate terminal apps or zsh while keeping the AppleScript automation path.
+
 ## P0: Event Loop Shutdown [REQ:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [IMPL:EVENT_LOOP_SHUTDOWN]
 
 **Status**: ⏳ Pending

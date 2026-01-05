@@ -152,12 +152,16 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		if overrideErr != nil {
 			message.Errorf("[REQ:TERMINAL_PORTABILITY] failed to parse %s: %v", terminalcmd.EnvTerminalCommand, overrideErr)
 		}
+		macApp := os.Getenv(terminalcmd.EnvTerminalApp)
+		macShell := os.Getenv(terminalcmd.EnvTerminalShell)
 		factory := terminalcmd.NewFactory(terminalcmd.Options{
-			GOOS:     runtime.GOOS,
-			IsTmux:   is_tmux,
-			Override: overrideArgs,
-			Tail:     terminalcmd.KeepOpenTail,
-			Debug:    os.Getenv(terminalcmd.EnvDebugTerminal) != "",
+			GOOS:          runtime.GOOS,
+			IsTmux:        is_tmux,
+			Override:      overrideArgs,
+			Tail:          terminalcmd.KeepOpenTail,
+			Debug:         os.Getenv(terminalcmd.EnvDebugTerminal) != "",
+			TerminalApp:   macApp,
+			TerminalShell: macShell,
 		})
 		// [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
 		terminalcmd.Apply(g, factory, func() string {

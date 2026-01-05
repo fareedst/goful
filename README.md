@@ -191,6 +191,11 @@ terminal emulators:
   the command stays visible until you hit enter because the historical
   `read -p "HIT ENTER KEY"` prompt remains—after acknowledging it, the adapter
   issues `exit` so the temporary window closes cleanly.
+- Want another AppleScript-friendly terminal or shell? Set
+  `GOFUL_TERMINAL_APP="iTerm2"` (or similar) to reuse the built-in macOS branch
+  with a different application, and set `GOFUL_TERMINAL_SHELL="zsh"` (or any
+  other binary) to change the inline shell that runs inside that window—defaults
+  remain Terminal.app + bash so existing workflows stay unchanged.
 - Set `GOFUL_TERMINAL_CMD="alacritty -e"` (or another emulator) to override the
   launcher on Linux/BSD. The override is inserted before the usual `bash -c`
   invocation, so your configured terminal still receives the expanded command

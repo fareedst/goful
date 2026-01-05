@@ -332,11 +332,13 @@ Each requirement includes:
 - **Satisfaction Criteria**:
   - `tmux`/`screen` sessions always use `tmux new-window -n <cmd>` regardless of OS.
   - macOS launches via AppleScript, reusing the historical payload plus pause tail while injecting the focused directory ahead of the command.
+  - macOS operators can change the AppleScript application name (`GOFUL_TERMINAL_APP`, default `Terminal`) and the shell used inside that window (`GOFUL_TERMINAL_SHELL`, default `bash`) at runtime so iTerm2 or zsh workflows work without modifying Go code.
   - Linux desktops default to gnome-terminal with the legacy title escape, and overrides (e.g., `GOFUL_TERMINAL_CMD="alacritty -e"`) insert before the `bash -c` payload.
   - `GOFUL_DEBUG_TERMINAL=1` emits `DEBUG: [IMPL:TERMINAL_ADAPTER]` logs describing the branch taken.
   - README and CONTRIBUTING include guidance for macOS behaviour, overrides, and troubleshooting, all tagged with `[REQ:TERMINAL_PORTABILITY]`.
 - **Validation Criteria**:
   - Unit tests cover override parsing plus Linux, macOS, and tmux branches with `[REQ:TERMINAL_PORTABILITY]` suffixes.
+  - Tests exercise the AppleScript branch with custom `GOFUL_TERMINAL_APP` / `GOFUL_TERMINAL_SHELL` values to prove the new runtime parameters flow into the generated commands.
   - `terminalcmd.Apply` tests prove `g.ConfigTerminal` receives the expected command slices and re-reads the focused directory each time.
   - Manual verification follows `[PROC:TERMINAL_VALIDATION]` on real macOS Terminal.app, Linux desktops, and tmux sessions.
   - README/CONTRIBUTING references are updated whenever behaviour changes.
