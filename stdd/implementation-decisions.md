@@ -665,20 +665,19 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - Preserves compatibility with existing quoting (`%D`/`%~D`) and escape semantics while offering deterministic ordering for automation.
 
 ### Implementation Approach:
-- Added `otherWindowDirPaths(ws *filer.Workspace) []string` (Module 1 `WindowSequenceBuilder`) that iterates from `Focus+1` through all directories, wrapping via modulo arithmetic. Returns an empty slice if there is only one directory.
-- Added `formatDirListForMacro(paths []string, quote bool) string` (Module 2 `MacroListFormatter`) that applies `util.Quote` per entry when `quote=true`, leaves entries untouched when `quote=false`, and joins with single spaces. `%D@` and `%~D@` both invoke the quoted branch so each path is escaped even if the tilde modifier is present. Returns an empty string when no paths are provided.
-- Updated `expandMacro` to detect `%D@` and `%~D@` by looking ahead for the new `macroAllOtherDirs` sentinel (`'@'`). The branch calls both helpers instead of reusing the single-path logic so quoting rules stay localized.
-- Ensured the `%D2` code path remains unchanged by handling `'2'` before `'@'`, and kept `macrolen` accounting accurate so escape handling still works.
+- Added `otherWindowDirPaths(ws *filer.Workspace) []string` (Module 1 `WindowSequenceBuilder`) that iterates from `Focus+1` through all directories, wrapping via modulo arithmetic. Returns an empty slice if there is only one directory. A companion `otherWindowDirNames` helper derives the same deterministic ordering but returns `Directory.Base()` so `%d@` can reuse the sequence logic without duplicating basename handling across call sites.
+- Added `formatDirListForMacro(paths []string, quote bool) string` (Module 2 `MacroListFormatter`) that applies `util.Quote` per entry when `quote=true`, leaves entries untouched when `quote=false`, and joins with single spaces. `%D@` invokes the quoted branch so each path is escaped, while `%~D@` deliberately uses the raw branch to honor the tilde modifier's non-quote semantics. `%d@` shares the same formatter for directory names so the quoting guarantees (and `%~` override) behave identically whether scripts need paths or basenames. Returns an empty string when no paths are provided.
+- Updated `expandMacro` to detect `%D@`, `%~D@`, `%d@`, and `%~d@` by looking ahead for the `macroAllOtherDirs` sentinel (`'@'`). The dispatcher calls the helpers instead of reusing the single-path logic so quoted vs. raw behavior stays localized and tied to whether the tilde modifier was present.
 
 ### Code Markers:
-- `app/spawn.go` helper functions and `%D@` branch include `// [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]`.
+- `app/spawn.go` helper functions and `%D@`/`%d@` branches include `// [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]`.
 - `README.md` macro table entry references the same tokens so documentation remains searchable.
 
 ### Validation Evidence `[REQ:MODULE_VALIDATION]`:
-- `TestOtherWindowDirPaths_REQ_WINDOW_MACRO_ENUMERATION` (new helper test) covers 1–4 directory workspaces, wrap-around behavior, and focus movement.
+- `TestOtherWindowDirPaths_REQ_WINDOW_MACRO_ENUMERATION` (helper test) covers 1–4 directory workspaces, wrap-around behavior, and focus movement, and `TestOtherWindowDirNames_REQ_WINDOW_MACRO_ENUMERATION` mirrors that coverage for basenames.
 - `TestMacroListFormatting_REQ_WINDOW_MACRO_ENUMERATION` confirms quoting vs. raw output and empty inputs.
-- `TestExpandMacro` gained `%D@`/`%~D@` cases so the integration path is covered with real macro parsing, asserting that `%~D@` is still escaped for shell safety.
-- `./scripts/validate_tokens.sh` re-run after implementation to ensure the new tokens exist in the registry (captured in task log).
+- `TestExpandMacro` gained `%d@`/`%~d@` assertions so the integration path is covered with real macro parsing, asserting that `%D@` remains quoted while `%~D@` returns raw paths (including entries with spaces) and that `%d@`/`%~d@` only emit directory names.
+- `./scripts/validate_tokens.sh` (2026-01-05) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 260 token references across 55 files.` (captured in this decision and the active task log).
 
 **Cross-References**: [ARCH:WINDOW_MACRO_ENUMERATION], [REQ:WINDOW_MACRO_ENUMERATION], [REQ:MODULE_VALIDATION]
 

@@ -280,17 +280,19 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: External command macros must expose the full set of visible directories so operators can pass every window to shell scripts. `%D@` appends the other window paths (relative order starting from the next window and wrapping). `%~D@` accepts the historical “non-quote” modifier for symmetry with other macros but each path is still escaped so multi-word directories remain safe when injected into the target command line. `echo %D %D@` therefore prints all window directories with the focused window first.
-- **Rationale**: Bulk copy/move workflows depend on knowing all workspace paths. Today `%D2` exposes only the next window, so automation that needs >2 windows requires manual re-entry. Enumerating the remaining windows keeps macros self-contained and removes repetitive typing.
+- **Description**: External command macros must expose the full set of visible directories so operators can pass every window to shell scripts. `%D@` appends the other window paths (relative order starting from the next window and wrapping) with shell quoting so each entry stays safe. `%~D@` keeps the historical "non-quote" modifier and therefore emits the exact paths without shell escaping so advanced workflows can opt into raw arguments. `%d@` mirrors the same enumeration but emits just the directory names (no parent directories) so scripts that only care about window labels can avoid extra `basename` calls, and `%~d@` keeps the raw/non-quote semantics for that list as well. `echo %D %D@` therefore prints all window directories with the focused window first, while `echo %d@` mirrors the same ordering using only directory names.
+- **Rationale**: Bulk copy/move workflows depend on knowing all workspace paths. Today `%D2` exposes only the next window, so automation that needs >2 windows requires manual re-entry. Enumerating the remaining windows keeps macros self-contained and removes repetitive typing while preserving the tilde modifier's "raw" semantics for compatibility with other macros and reducing extra shell processing when only directory names are needed.
 - **Satisfaction Criteria**:
-  - `%D@` expands to a space-separated list of every other directory path in deterministic order (start with next window, then wrap through the rest). When only one window is open, the expansion is empty.
-  - `%~D@` emits the same ordering and, despite the `~` modifier, individually quotes each path just like `%D@` so directories with spaces remain safe.
-  - `%D@` respects the same macro parser features as `%D` (supports escaping, `%~~` safeguards, etc.) and can be combined with other text inside commands.
-  - Both the requirement and the README document the new placeholder so `external-command` users can discover it.
-  - A regression test proves `expandMacro("echo %D %D@")` covers all window paths with the focused directory appearing only once at the beginning.
+  - `%D@` expands to a space-separated list of every other directory path in deterministic order (start with next window, then wrap through the rest). When only one window is open, the expansion is empty and nothing extra is appended.
+  - `%~D@` emits the same ordering as `%D@` but leaves each entry unquoted (no escaping) so scripts that intentionally need raw arguments can opt in by using the tilde modifier.
+  - `%d@` expands to the same deterministic ordering but returns just the directory names (`Directory.Base()`), quoting each entry unless the caller supplies the tilde modifier.
+  - `%~d@` mirrors `%d@` but returns raw names (no quoting) so existing `%~` automation patterns stay consistent.
+  - `%D@`/`%d@` respect the same macro parser features as their single-item counterparts (supports escaping, `%~~` safeguards, etc.) and can be combined with other text inside commands.
+  - README and developer docs document all four placeholders, clearly stating the quoting and basename differences so operators choose the right macro for their workflow.
+  - Regression tests prove `expandMacro("echo %D %D@")` covers all window paths with the focused directory appearing only once at the beginning, that `expandMacro("echo %d@")` emits only the directory names, and that `%~D@`/`%~d@` return raw entries even when directories include spaces.
 - **Validation Criteria**:
-  - Pure helper tests validate that the path enumeration logic handles 1–4 windows, wrapping order, and quoting rules.
-  - `app/spawn_test.go` exercises `%D@` and `%~D@` end-to-end, including escaping/quoting scenarios that prove every path is shell-safe.
+  - Pure helper tests validate that the path and name enumeration logic handles 1–4 windows, wrapping order, and both quoted and raw formatting modes.
+  - `app/spawn_test.go` exercises `%D@`, `%~D@`, `%d@`, and `%~d@` end-to-end, including scenarios with spaces that prove the quoting guarantees hold.
   - Token validation confirms `[REQ:WINDOW_MACRO_ENUMERATION]`, `[ARCH:WINDOW_MACRO_ENUMERATION]`, and `[IMPL:WINDOW_MACRO_ENUMERATION]` references exist across docs, code, and tests.
 - **Architecture**: See `architecture-decisions.md` § Window Macro Enumeration [ARCH:WINDOW_MACRO_ENUMERATION]
 - **Implementation**: See `implementation-decisions.md` § Window Macro Enumeration [IMPL:WINDOW_MACRO_ENUMERATION]

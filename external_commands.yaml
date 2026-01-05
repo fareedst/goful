@@ -1,6 +1,32 @@
 # mkdir -p ~/.goful
 # cp -p external_commands.yaml ~/.goful/
-- key: O
-  label: "copy %m to %D2    "
-  command: "cp -vai %m %D2"
-  offset: -2
+- key: "."
+  label: Examples of escaped expansions
+  command: >-
+    echo "F:  File name/path on cursor:" %F ;\
+    echo "f:  File name/path on cursor:" %f ;\
+    echo "X:  File name/path with extension excluded on cursor:" %X ;\
+    echo "x:  File name/path with extension excluded on cursor:" %x ;\
+    echo "M:  Marked file names/paths joined by spaces:" %M ;\
+    echo "m:  Marked file names/paths joined by spaces:" %m ;\
+    echo "D:  Directory name/path on cursor:" %D ;\
+    echo "d:  Directory name/path on cursor:" %d ;\
+    echo "D2: Next name/path:" %D2 ;\
+    echo "d2: Next name/path:" %d2 ;\
+    echo "D@: Other directory names/paths:" %D@ ;\
+    echo "d@: Other directory names/paths:" %d@
+- key: "~"
+  label: Examples of raw expansions
+  command: >-
+    echo "~F:  File name/path on cursor: %~F" ;\
+    echo "~f:  File name/path on cursor: %~f" ;\
+    echo "~X:  File name/path with extension excluded on cursor: %~X" ;\
+    echo "~x:  File name/path with extension excluded on cursor: %~x" ;\
+    echo "~M:  Marked file names/paths joined by spaces: %~M" ;\
+    echo "~m:  Marked file names/paths joined by spaces: %~m" ;\
+    echo "~D:  Directory name/path on cursor: %~D" ;\
+    echo "~d:  Directory name/path on cursor: %~d" ;\
+    echo "~D2: Next name/path: %~D2" ;\
+    echo "~d2: Next name/path: %~d2" ;\
+    echo "~D@: Other directory names/paths: %~D@" ;\
+    echo "~d@: Other directory names/paths: %~d@"

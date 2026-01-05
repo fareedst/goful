@@ -348,6 +348,50 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P1 because broken escaping corrupts automation workflows but does not stop the application from launching.
 
+## P1: `%~D@` Raw Output Parity [REQ:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [IMPL:WINDOW_MACRO_ENUMERATION]
+
+**Status**: ✅ Complete
+
+**Description**: Re-align `%~D@` with the historical `%~` non-quote semantics so automation can opt into raw directory arguments without shell escaping, while keeping `%D@` quoted for safety by default.
+
+**Dependencies**: [REQ:WINDOW_MACRO_ENUMERATION], [REQ:MODULE_VALIDATION]
+
+**Subtasks**:
+- [x] Update requirements + architecture + implementation docs + README to describe the quoted vs. raw behavior split [REQ:WINDOW_MACRO_ENUMERATION]
+- [x] Adjust `app/spawn.go` helpers so `%~D@` uses the raw formatter and `%D@` stays quoted, with debug annotations preserved [IMPL:WINDOW_MACRO_ENUMERATION]
+- [x] Refresh macro tests (helpers + integration) to assert `%~D@` returns raw paths, including directories containing spaces [REQ:WINDOW_MACRO_ENUMERATION]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` and capture the latest output in this task + implementation decisions (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 254 token references across 55 files.` on 2026-01-04) [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] Docs, README, and requirements call out the quoting difference explicitly
+- [x] `%D@` expansions remain quoted while `%~D@` emits raw paths in all workspaces
+- [x] Tests prove raw vs. quoted behavior (space-containing paths) and `[REQ:WINDOW_MACRO_ENUMERATION]` coverage remains intact
+- [x] Token audit + validation logs recorded and linked
+
+**Priority Rationale**: P1 because automation workflows that expect raw `%~` semantics cannot consume the quoted variant, but core navigation continues to function.
+
+## P1: `%d@` Directory Name Enumeration [REQ:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [IMPL:WINDOW_MACRO_ENUMERATION]
+
+**Status**: ✅ Complete
+
+**Description**: Extend the window-enumeration macros so `%d@`/`%~d@` append the other directory **names** (basename only) with the same deterministic ordering and tilde-driven quoting rules as `%D@`.
+
+**Dependencies**: [REQ:WINDOW_MACRO_ENUMERATION], [REQ:MODULE_VALIDATION]
+
+**Subtasks**:
+- [x] Update requirements/architecture/implementation docs, README, and macro tables to describe `%d@`/`%~d@` behavior. [REQ:WINDOW_MACRO_ENUMERATION]
+- [x] Add helper coverage for directory names (companions to `otherWindowDirPaths`) and annotate with semantic tokens. [IMPL:WINDOW_MACRO_ENUMERATION]
+- [x] Teach `expandMacro` + tests to recognize `%d@`/`%~d@`, including quoting vs. raw name guarantees. [IMPL:WINDOW_MACRO_ENUMERATION]
+- [x] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` and log the latest diagnostic output (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 260 token references across 55 files.` on 2026-01-05). [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] Documentation + README clearly explain `%d@`/`%~d@` quoting/name semantics alongside `%D@`.
+- [x] `%d@` returns quoted basenames and `%~d@` returns raw basenames in deterministic order; single-window workspaces emit empty strings.
+- [x] Helper + integration tests cover the new macros and reference `[REQ:WINDOW_MACRO_ENUMERATION]`.
+- [x] Token audit + validation outputs recorded in this task and supporting docs.
+
+**Priority Rationale**: P1 because automation workflows that only need directory names must currently post-process `%D@` output, adding brittle shell logic.
+
 ## P1: External Command Configuration [REQ:EXTERNAL_COMMAND_CONFIG] [ARCH:EXTERNAL_COMMAND_REGISTRY] [IMPL:EXTERNAL_COMMAND_LOADER] [IMPL:EXTERNAL_COMMAND_BINDER]
 
 **Status**: ✅ Complete

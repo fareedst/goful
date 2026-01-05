@@ -443,9 +443,9 @@ When documenting architecture decisions, use this format:
 - Deterministic ordering (focused window followed by the next windows wrapping around) keeps automation predictable even as panes are added or rotated.
 
 **Module Boundaries & Contracts** `[REQ:MODULE_VALIDATION]`:
-- `WindowSequenceBuilder` (Module 1) – Pure helper that inspects `filer.Workspace` state and returns the ordered list of other directory paths. The function must not mutate focus or layout and must gracefully handle 1-window workspaces by returning an empty slice.
-- `MacroListFormatter` (Module 2) – Formats the sequence for macro insertion, applying quoting rules (`util.Quote`) per entry. `%D@` and `%~D@` both call the quoted branch so every emitted path is shell safe; the raw branch remains available to other macros should they need it. It joins entries with single spaces and returns an empty string for empty input.
-- Integration point: `expandMacro` routes `%D@` and `%~D@` to these modules, so existing macro parsing (escapes, `%~~` guardrails, `%&`) continues to behave identically for other placeholders.
+- `WindowSequenceBuilder` (Module 1) – Pure helper that inspects `filer.Workspace` state and returns the ordered list of other directory paths. The function must not mutate focus or layout and must gracefully handle 1-window workspaces by returning an empty slice. A companion helper derives just the directory names (`Directory.Base()`) from the same deterministic ordering so `%d@` can reuse the sequence logic without copying path manipulation everywhere.
+- `MacroListFormatter` (Module 2) – Formats the sequence for macro insertion, applying quoting rules (`util.Quote`) per entry when requested. `%D@` calls the quoted branch so every emitted path is shell safe, while `%~D@` explicitly opts into the raw branch (no escaping) to preserve the tilde modifier's "non-quote" semantics. `%d@` reuses the same formatter on the basename list so the quoting guarantees stay identical whether scripts need full paths or names. It joins entries with single spaces and returns an empty string for empty input.
+- Integration point: `expandMacro` routes `%D@`, `%~D@`, `%d@`, and `%~d@` to these modules, so existing macro parsing (escapes, `%~~` guardrails, `%&`) continues to behave identically for other placeholders. The dispatcher now selects the quoted vs. raw formatter based on whether the tilde modifier was present.
 
 **Pseudo-Code Sketch:**
 ```text
@@ -473,10 +473,10 @@ func formatDirs(paths []string, quote bool) string {
 
 **Validation Plan:**
 - Module tests instantiate lightweight workspaces with synthetic directories to verify ordering, wrap-around, and 1-window behavior.
-- Integration tests extend `app/spawn_test.go` to assert `%D@`/`%~D@` expansions (including escaping) so regression coverage ties back to the requirement, even when the tilde modifier is present.
+- Integration tests extend `app/spawn_test.go` to assert `%D@` expansions stay quoted while `%~D@` returns raw paths (including cases with spaces) and to prove `%d@`/`%~d@` reuse the same ordering using only directory names. This keeps regression coverage tied back to the requirement even when the tilde modifier is present.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
-- `app/spawn.go` comments for the new helper(s) and `%D@` branch carry `[IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]`.
+- `app/spawn.go` comments for the new helper(s) and `%D@`/`%d@` branches carry `[IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]`.
 - `app/spawn_test.go` test names/comments reference `[REQ:WINDOW_MACRO_ENUMERATION]`.
 - `README.md` macro table documents `%D@` with matching tokens for discoverability.
 

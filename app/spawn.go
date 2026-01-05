@@ -88,7 +88,7 @@ const (
 	macroDir                = 'd'  // %d %~d are expanded a directory name on the cursor
 	macroDirPath            = 'D'  // %D %~D are expanded a directory path on the cursor
 	macroNextDir            = '2'  // %d2 %D2 %~d2 %~D2 are expanded the neighbor directory name or path
-	macroAllOtherDirs       = '@'  // %D@ %~D@ expand to the remaining window directories in display order
+	macroAllOtherDirs       = '@'  // %D@ %~D@ %d@ %~d@ expand to the remaining window directories in display order
 	macroRunBackground      = '&'  // %& is a flag runned in background
 )
 
@@ -160,35 +160,47 @@ func (g *Goful) expandMacro(cmd string) (result string, background bool) {
 					src = strings.Join(g.Dir().MarkfilePaths(), " ")
 				}
 			case macroDir:
-				if i != len(data)-1 && data[i+1] == macroNextDir {
-					src = g.Workspace().NextDir().Base()
-					macrolen++
-				} else {
-					src = g.Dir().Base()
+				src = g.Dir().Base()
+				formattedList := false
+				if i != len(data)-1 {
+					switch data[i+1] {
+					case macroNextDir:
+						src = g.Workspace().NextDir().Base()
+						macrolen++
+					case macroAllOtherDirs:
+						// `%d@` mirrors `%D@` but emits only the basename for each window.
+						// [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
+						src = formatDirListForMacro(
+							otherWindowDirNames(g.Workspace()),
+							!nonQuote,
+						)
+						macrolen++
+						formattedList = true
+					}
 				}
-				if !nonQuote {
+				if !formattedList && !nonQuote {
 					src = util.Quote(src)
 				}
 			case macroDirPath:
 				src = g.Dir().Path
-				quotedList := false
+				formattedList := false
 				if i != len(data)-1 {
 					switch data[i+1] {
 					case macroNextDir:
 						src = g.Workspace().NextDir().Path
 						macrolen++
 					case macroAllOtherDirs:
-						// Always quote `%D@` / `%~D@` entries so multi-window commands remain shell safe.
+						// `%D@` stays quoted for safety while `%~D@` explicitly opts into raw output.
 						// [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
 						src = formatDirListForMacro(
 							otherWindowDirPaths(g.Workspace()),
-							true,
+							!nonQuote,
 						)
 						macrolen++
-						quotedList = true
+						formattedList = true
 					}
 				}
-				if !quotedList && !nonQuote {
+				if !formattedList && !nonQuote {
 					src = util.Quote(src)
 				}
 			case macroRunBackground:
@@ -238,7 +250,22 @@ func otherWindowDirPaths(ws *filer.Workspace) []string {
 	return paths
 }
 
-// formatDirListForMacro joins directory paths with spaces, optionally quoting each entry.
+// otherWindowDirNames returns every non-focused directory basename in deterministic order.
+// [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
+func otherWindowDirNames(ws *filer.Workspace) []string {
+	if ws == nil || len(ws.Dirs) <= 1 {
+		return nil
+	}
+
+	names := make([]string, 0, len(ws.Dirs)-1)
+	for offset := 1; offset < len(ws.Dirs); offset++ {
+		idx := (ws.Focus + offset) % len(ws.Dirs)
+		names = append(names, ws.Dirs[idx].Base())
+	}
+	return names
+}
+
+// formatDirListForMacro joins directory entries with spaces, optionally quoting each value.
 // [IMPL:WINDOW_MACRO_ENUMERATION] [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
 func formatDirListForMacro(paths []string, quote bool) string {
 	if len(paths) == 0 {

@@ -208,14 +208,15 @@ macro        | expanded string
 `%m` `%M`   | Marked file names/paths joined by spaces
 `%d` `%D`   | Directory name/path on cursor
 `%d2` `%D2` | Neighbor directory name/path
-`%D@` `%~D@` | `[REQ:WINDOW_MACRO_ENUMERATION]` Current window stays `%D`; both macros append the other directory paths (individually quoted for shell safety) in display order so `echo %D %D@` lists every window. `%~D@` keeps the tilde modifier for parity with other macros but still escapes each entry.
+`%D@` `%~D@` | Current window stays `%D`; both macros append the other directory paths in display order so `echo %D %D@` lists every window. `%D@` quotes each appended path for shell safety, while `%~D@` deliberately emits the same list without quoting so advanced scripts can opt into raw arguments.
+`%d@` `%~d@` | Appends the other directory **names** (`Directory.Base()`) in the same order. `%d@` quotes each name so shell invocations stay safe, while `%~d@` emits raw names when scripts only need lightweight labels.
 `%~f` ...   | Expand by non quote
 `%&`        | Flag to run command in background
 
 The macro is useful if do not want to specify a file name when run the shell.
 
 Macros starts with `%` are expanded surrounded by quote, and those starts with
-`%~` are expanded by non quote (except `%~D@`, which still quotes each path so multi-directory expansions remain safe).  The `%~` mainly uses to for cmd.exe.
+`%~` are expanded by non quote (including `%~D@` and `%~d@`, which return raw directory paths or names just like other tilde macros). The `%~` mainly uses to for cmd.exe.
 
 Use `%&` when background execute the shell such as GUI apps launching.
 

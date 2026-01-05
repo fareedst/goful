@@ -105,6 +105,28 @@ func TestOtherWindowDirPaths_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T) {
 	}
 }
 
+func TestOtherWindowDirNames_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T) {
+	ws := &filer.Workspace{
+		Dirs: []*filer.Directory{
+			stubDirectory("/alpha"),
+			stubDirectory("/beta"),
+			stubDirectory("/gamma"),
+		},
+		Focus: 1,
+	}
+
+	got := otherWindowDirNames(ws)
+	want := []string{"gamma", "alpha"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("expected %v, got %v", want, got)
+	}
+
+	ws.Dirs = ws.Dirs[:1]
+	if got := otherWindowDirNames(ws); len(got) != 0 {
+		t.Fatalf("expected empty result for single directory, got %v", got)
+	}
+}
+
 func TestFormatDirListForMacro_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T) {
 	paths := []string{"/one", "/path with space"}
 
@@ -129,9 +151,9 @@ func TestExpandMacroWindowEnumeration_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T)
 	g := NewGoful("")
 	ws := g.Workspace()
 	ws.Dirs = []*filer.Directory{
-		stubDirectory("/alpha"),
+		stubDirectory("/alpha gap"),
 		stubDirectory("/beta"),
-		stubDirectory("/gamma"),
+		stubDirectory("/gamma space"),
 	}
 
 	ws.Focus = 1 // current: /beta
@@ -139,17 +161,33 @@ func TestExpandMacroWindowEnumeration_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T)
 	got, _ := g.expandMacro("echo %D %D@")
 	want := fmt.Sprintf("echo %s %s %s",
 		util.Quote("/beta"),
-		util.Quote("/gamma"),
-		util.Quote("/alpha"),
+		util.Quote("/gamma space"),
+		util.Quote("/alpha gap"),
 	)
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
 
 	raw, _ := g.expandMacro("echo %~D@")
-	wantRaw := fmt.Sprintf("echo %s %s", util.Quote("/gamma"), util.Quote("/alpha"))
+	wantRaw := "echo /gamma space /alpha gap"
 	if raw != wantRaw {
-		t.Fatalf("expected escaped list %q, got %q", wantRaw, raw)
+		t.Fatalf("expected raw list %q, got %q", wantRaw, raw)
+	}
+
+	names, _ := g.expandMacro("echo %d %d@")
+	wantNames := fmt.Sprintf("echo %s %s %s",
+		util.Quote("beta"),
+		util.Quote("gamma space"),
+		util.Quote("alpha gap"),
+	)
+	if names != wantNames {
+		t.Fatalf("expected %q, got %q", wantNames, names)
+	}
+
+	rawNames, _ := g.expandMacro("echo %~d@")
+	wantRawNames := "echo gamma space alpha gap"
+	if rawNames != wantRawNames {
+		t.Fatalf("expected raw names %q, got %q", wantRawNames, rawNames)
 	}
 
 	ws.Dirs = ws.Dirs[:1]
@@ -157,6 +195,11 @@ func TestExpandMacroWindowEnumeration_REQ_WINDOW_MACRO_ENUMERATION(t *testing.T)
 	empty, _ := g.expandMacro("echo %D@")
 	if empty != "echo " {
 		t.Fatalf("expected empty expansion for single window, got %q", empty)
+	}
+
+	emptyNames, _ := g.expandMacro("echo %d@")
+	if emptyNames != "echo " {
+		t.Fatalf("expected empty name expansion for single window, got %q", emptyNames)
 	}
 }
 
