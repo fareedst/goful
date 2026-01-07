@@ -630,3 +630,76 @@ func formatDirs(paths []string, quote bool) string {
 
 **Cross-References**: [REQ:EVENT_LOOP_SHUTDOWN], [IMPL:EVENT_LOOP_SHUTDOWN], [REQ:MODULE_VALIDATION]
 
+## 28. Xform CLI Pipeline [ARCH:XFORM_CLI_PIPELINE] [REQ:CLI_TO_CHAINING]
+
+### Decision: Split the `scripts/xform.sh` helper into a reusable argument parser and command builder so multi-target commands can be rewritten (inserting a configurable prefix after a configurable number of untouched arguments) without duplicating fragile shell quoting.
+**Rationale:**
+- External command recipes and developer workflows need the same transformation—keep the first *N* arguments, then interleave `<prefix> target` pairs—so the helper must be callable as either a script or a sourced function.
+- Providing configurable `--prefix` and `--keep` options keeps the helper generic enough for different consumers while preserving the simple dry-run/exec flow.
+- Keeping the parser and builder as pure Bash functions enables module validation via shell-based tests despite Bash 3.2 limitations on macOS.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `XformArgs` parses flags (`-p/--prefix`, `-k/--keep`, `-n/--dry-run`, `-h/--help`, `--`) and ensures at least `keep + 1` positional arguments remain. It normalizes defaults (`prefix="--to"`, `keep=2`) and returns structured state without invoking external commands. Errors exit with status 64 after printing help text.
+- `TargetInterleaver` constructs the transformed argv array by copying the leading `keep` arguments verbatim and pairing each remaining argument with the selected prefix. It emits `%q`-formatted output in dry-run mode while execution mode runs the transformed command and propagates its exit status.
+- Integration glue detects whether the script is executed directly (`BASH_SOURCE[0] == $0`) or sourced, defining `xform()` for reuse across scripts.
+
+**Alternatives Considered:**
+- Inline argument manipulation inside every external command: rejected because it duplicates quoting logic and increases maintenance overhead.
+- A Go-based helper: rejected for now to avoid adding a build step for quick shell automation (script must run anywhere Git checkout exists).
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `scripts/xform.sh` comments annotate both modules with `[IMPL:XFORM_CLI_SCRIPT] [ARCH:XFORM_CLI_PIPELINE] [REQ:CLI_TO_CHAINING]`.
+- `scripts/xform_test.sh` test cases include `[REQ:CLI_TO_CHAINING]` references proving module validation for parser and interleaver behavior.
+
+**Cross-References**: [REQ:CLI_TO_CHAINING], [IMPL:XFORM_CLI_SCRIPT], [REQ:MODULE_VALIDATION]
+
+## 29. Workspace Bootstrap from Positional Directories [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]
+
+### Decision: Treat trailing CLI arguments as ordered workspace directories and seed filer windows before the UI starts.
+**Rationale:**
+- Keeps invocation parity with other TUIs by letting scripts dictate deterministic layouts without mutating persisted state files.
+- Centralizes the behavior into two testable modules so `[REQ:MODULE_VALIDATION]` can be satisfied independently of the rest of the startup logic.
+- Ensures fallback behavior remains unchanged when no positional arguments are provided, protecting long-standing workflows.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `StartupDirParser` – Pure helper that consumes `flag.Args()` after `flag.Parse()`, trims whitespace, expands `~`, resolves absolute paths, and collects warnings for invalid entries (missing, non-directory, permission errors). Returns the ordered slice that mirrors user input so duplicates produce multiple panes intentionally.
+- `WorkspaceSeeder` – Receives the parsed slice plus the `*app.Goful` instance, resizing the workspace list to match (creating new panes or closing extras) and calling `Dir().Chdir()` / `ReloadAll()` so each pane shows the desired directory. Emits `DEBUG: [IMPL:WORKSPACE_START_DIRS] ...` lines when `GOFUL_DEBUG_WORKSPACE` is set to document the mutations.
+- Error Handling – `message.Errorf` surfaces warnings before the UI loop begins; invalid entries are skipped so remaining valid directories still open. If every argument fails, the helper aborts and defaults to the persisted workspace layout.
+
+**Alternatives Considered:**
+- **Repeated `-workspace` flags** – Rejected because it duplicates shell quoting requirements and diverges from common CLI expectations where positional directories control startup state.
+- **Post-startup seeding** – Rejected to avoid visible flicker and to keep module validation simple by running before `goful.Run()`.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Code: `main.go` and `app/startup_dirs.go` include `[IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]` annotations.
+- Tests: `app/startup_dirs_test.go` (parser/seeder unit coverage) and future integration tests reference `[REQ:WORKSPACE_START_DIRS]`.
+
+**Cross-References**: [REQ:WORKSPACE_START_DIRS], [IMPL:WORKSPACE_START_DIRS], [REQ:MODULE_VALIDATION]
+
+## 29. Workspace Bootstrap from Positional Directories [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]
+
+### Decision: Treat trailing CLI arguments as ordered workspace directories and seed filer windows accordingly before the UI starts.
+**Rationale:**
+- Power users often launch goful via scripts and expect deterministic multi-pane layouts without manual navigation; positional args keep invocation parity with other TUIs.
+- Centralizing parsing + seeding logic maintains testability and ensures `[REQ:MODULE_VALIDATION]` coverage by isolating pure helpers from widget wiring.
+- Enables automation-friendly diagnostics (`GOFUL_DEBUG_WORKSPACE`) describing how startup directories were interpreted without polluting runtime code paths elsewhere.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `StartupDirParser` (Module 1) – Consumes `flag.Args()` after `flag.Parse()`, normalizes paths via `util.ExpandPath`, and returns `(orderedDirs []string, warnings []error)` so callers can log non-fatal issues (e.g., missing paths) while proceeding with valid ones in the exact order entered. Empty inputs yield `nil` and indicate fallback to legacy behavior.
+- `WorkspaceSeeder` (Module 2) – Accepts the parsed directory list plus `*app.Goful` and mutates the underlying `filer.Workspace` so the window count and ordering match the supplied arguments. Responsibilities:
+  - Create additional directories via `g.CreateWorkspace()` / `g.Dir().Chdir()` style helpers when more args exist than windows.
+  - Reuse existing windows when counts align by calling `Workspace().Chdir(idx, dir)` without resetting focus unnecessarily.
+  - Close surplus windows (beyond one) when fewer args arrive than currently open panes, preserving the first window for the first directory.
+  - Emit `DEBUG: [IMPL:WORKSPACE_START_DIRS] ...` lines when `GOFUL_DEBUG_WORKSPACE=1`, documenting before/after state.
+- Error Handling Contract – Missing directories trigger `message.Errorf` but do not abort seeding; invalid arguments are skipped so valid windows still open. When every argument fails, the seeder aborts and falls back to the default workspace.
+
+**Alternatives Considered:**
+- **New `-workspace` flag per directory**: rejected to avoid duplicating shell quoting rules and to keep parity with existing TUIs that use positional args.
+- **Lazy seeding post UI launch**: rejected because it complicates module validation and introduces flicker as panes are added after widget initialization.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Code: `main.go` helper `applyStartupDirs` plus new parser/seeder files include `[IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]`.
+- Tests: `app/startup_dirs_test.go` (unit) and `filer/integration_test.go` additions include `[REQ:WORKSPACE_START_DIRS]` to prove module validation before integration.
+
+**Cross-References**: [REQ:WORKSPACE_START_DIRS], [IMPL:WORKSPACE_START_DIRS], [REQ:MODULE_VALIDATION]
+

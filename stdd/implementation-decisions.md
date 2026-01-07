@@ -830,4 +830,106 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:EVENT_LOOP_SHUTDOWN], [REQ:EVENT_LOOP_SHUTDOWN], [REQ:MODULE_VALIDATION]
 
+## 24. Xform CLI Script [IMPL:XFORM_CLI_SCRIPT] [ARCH:XFORM_CLI_PIPELINE] [REQ:CLI_TO_CHAINING]
+
+### Decision: Implement `scripts/xform.sh` as a portable Bash helper that can be executed directly or sourced, exposing a `xform` function that inserts `--to` before every destination argument while offering a dry-run preview.
+**Rationale:**
+- Provides a single, well-tested place to handle argument parsing and quoting for workflows that need the `--to <target>` pattern repeated for multiple paths.
+- Keeps the helper compatible with macOS `/bin/bash` 3.2 by avoiding Bash 4+ features (no associative arrays or `local -n`) so contributors can run it without Homebrew Bash.
+
+### Implementation Approach:
+- `scripts/xform.sh` starts with `set -euo pipefail` and defines:
+  - `xform::usage` — prints help text and exits with status 64 when invoked incorrectly.
+  - `xform::parse` — consumes `-p/--prefix`, `-k/--keep`, `-n/--dry-run`, `-h/--help`, and `--` flags, ensures at least `keep + 1` positional arguments remain, and exports globals (`XFORM_PREFIX`, `XFORM_KEEP`, `XFORM_DRY_RUN`, `XFORM_ARGS`) for downstream logic. Defaults: prefix `--to`, keep `2`.
+  - `xform::run` — builds the transformed argv array by preserving the first `keep` positional arguments and interleaving `<prefix>` between the remaining entries. When `dry-run` is enabled it prints the `%q`-formatted command; otherwise it executes the new argv and propagates the exit code.
+  - `xform` — public wrapper that calls `xform::parse` followed by `xform::run`.
+- The script checks `[[ "${BASH_SOURCE[0]}" == "$0" ]]` to decide whether to execute immediately or just define the function for callers who `source` it.
+- `scripts/xform_test.sh` sources the helper and runs two module-validation suites:
+  - Parser tests feed different flag combinations (custom prefix/keep along with error paths) and assert correct exit codes/messages for insufficient arguments.
+  - Builder tests run `xform -n ...` and check the printed, quoted command to ensure interleaving/logging semantics work for arguments with spaces and custom prefixes/keep windows.
+
+**Code Markers**:
+- `scripts/xform.sh` contains `# [IMPL:XFORM_CLI_SCRIPT] [ARCH:XFORM_CLI_PIPELINE] [REQ:CLI_TO_CHAINING]` comments near the parser and builder functions.
+- `scripts/xform_test.sh` comments reference `[REQ:CLI_TO_CHAINING]` when asserting dry-run output and error handling.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Files: `scripts/xform.sh`, `scripts/xform_test.sh`, `scripts/xform.bats`.
+- Tests: shell harness cases (`test_dry_run_inserts_targets_REQ_CLI_TO_CHAINING`, etc.) and Bats specs (`dry-run uses default prefix [REQ:CLI_TO_CHAINING]`, `invalid keep value fails with guidance [REQ:CLI_TO_CHAINING]`).
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `bash scripts/xform_test.sh` (2026-01-06, macOS 15.1 arm64) validates parser and builder modules independently.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-06) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 269 token references across 55 files.` (recorded in `stdd/tasks.md`).
+
+**Cross-References**: [ARCH:XFORM_CLI_PIPELINE], [REQ:CLI_TO_CHAINING], [REQ:MODULE_VALIDATION]
+
+## 25. Startup Directory Parser & Seeder [IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]
+
+### Decision: Implement helpers that convert positional CLI arguments into deterministic workspace layouts before the UI loop runs.
+**Rationale:**
+- Keeps startup customization encapsulated, making it easy to validate and maintain without scattering logic across `main.go` and filer internals.
+- Provides clear debug output (`GOFUL_DEBUG_WORKSPACE=1`) so operators and CI scripts can diagnose mismatched directories quickly.
+- Honors `[REQ:MODULE_VALIDATION]` by keeping the parser pure and the seeder isolated from runtime event handling.
+
+### Implementation Approach:
+- `ParseStartupDirs(args []string) ([]string, []string)` (in `app/startup_dirs.go`):
+  - Trims whitespace, expands `~`, resolves absolute clean paths, and checks existence + directory-ness via `os.Stat`.
+  - Returns ordered directories (duplicates allowed intentionally) plus warnings describing invalid entries; warnings are surfaced through `message.Errorf`.
+- `SeedStartupWorkspaces(g *app.Goful, dirs []string, debug bool) bool`:
+  - Early-exits when no directories are provided to preserve historical state restoration.
+  - Adds or removes workspaces to match the requested count by calling existing `CreateWorkspace` / `CloseWorkspace` helpers.
+  - For each pane, focuses the first directory, calls `Dir().Chdir()` + `ReloadAll()`, retitles the workspace, and optionally logs `DEBUG:` entries tagged with `[IMPL:WORKSPACE_START_DIRS]`.
+  - Returns a boolean indicating whether seeding occurred so callers can decide whether additional fallback work is needed.
+- `main.go` integration:
+  - After parsing flags and loading history, `flag.Args()` are fed into the parser, warnings produce `message.Errorf` output, and seeding runs with debug mode tied to `GOFUL_DEBUG_WORKSPACE`.
+
+**Code Markers**:
+- `app/startup_dirs.go`, `app/startup_dirs_test.go`, and the new block in `main.go` include `[IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]` comments.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `main.go`, `app/startup_dirs.go`, and associated tests/reference docs.
+- Tests: `TestParseStartupDirs_REQ_WORKSPACE_START_DIRS`, `TestSeedStartupWorkspaces_REQ_WORKSPACE_START_DIRS`.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./...` (darwin/arm64, Go 1.24.3) on 2026-01-07 validates parser/seeder helpers plus `main.go` wiring.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 288 token references across 58 files.` (2026-01-07)
+
+**Cross-References**: [ARCH:WORKSPACE_BOOTSTRAP], [REQ:WORKSPACE_START_DIRS], [REQ:MODULE_VALIDATION]
+
+## 25. Startup Directory Parser & Seeder [IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]
+
+### Decision: Parse trailing CLI arguments into deterministic workspace targets and seed filer windows before the UI loop begins.
+**Rationale:**
+- Keeps positional directory support encapsulated so tests can validate parsing and workspace mutation independently per `[REQ:MODULE_VALIDATION]`.
+- Preserves backward compatibility by falling back to the historical workspace flow when no arguments are supplied or when every supplied path fails validation.
+- Provides structured diagnostics (`GOFUL_DEBUG_WORKSPACE=1`) that help operators troubleshoot mismatched layouts without attaching a debugger.
+
+### Implementation Approach:
+- Added `applyStartupDirs(g *app.Goful, cwd func() string, args []string)` in `main.go` which:
+  - Invokes `parseStartupDirs(args)` to normalize positional arguments (trim whitespace, expand `~`, preserve order—including intentional duplicates) and collect validation warnings for nonexistent paths.
+  - Emits `DEBUG: [IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS] parsed=<dirs> warnings=<count>` when `GOFUL_DEBUG_WORKSPACE` is set.
+  - Calls `seedWorkspace(g, dirs)` only when at least one valid directory remains.
+- Introduced `parseStartupDirs` + `seedWorkspace` helpers (new file under `app/`), where:
+  - Parser ensures each directory exists (using `os.Stat`), records warnings for missing items, and returns the sanitized slice.
+  - Seeder inspects `g.Workspace()` to determine current pane count, then:
+    - Calls `g.CreateWorkspace()` until panes reach the requested length, setting each window via `workspace.MoveFocus` + `g.Dir().Chdir(path)`.
+    - When more windows exist than directories, closes excess panes via `g.CloseWorkspace()` while retaining at least one window.
+    - Ensures window ordering matches the CLI order and focuses the first requested directory.
+  - Each mutation path logs `DEBUG: ... seeding window` lines under the same token triplet when debug mode is enabled.
+- Nonexistent directories trigger `message.Errorf` with actionable text but do not abort seeding the remaining entries.
+- Default (no positional args) path is unchanged; helper returns early without modifying workspaces.
+
+**Code Markers**:
+- `main.go`, `app/startup_dirs.go`, and supporting tests include `// [IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]`.
+- Debug output and error messages reference `[REQ:WORKSPACE_START_DIRS]` so operators can trace the behavior back to the requirement.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `main.go`, `app/startup_dirs.go`.
+- Tests: `app/startup_dirs_test.go` (parser + seeder unit tests) and `filer/integration_test.go` (launch integration) include `[REQ:WORKSPACE_START_DIRS]` markers.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./app ./filer` (darwin/arm64, Go 1.24.3) covering parser/seeder units plus integration updates (`2026-01-07`).
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (`2026-01-07`) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 273 token references across 55 files.`
+
+**Cross-References**: [ARCH:WORKSPACE_BOOTSTRAP], [REQ:WORKSPACE_START_DIRS], [REQ:MODULE_VALIDATION]
+
 

@@ -1,5 +1,10 @@
 # mkdir -p ~/.goful
 # cp -p external_commands.yaml ~/.goful/
+# - key: N
+#   label: Nsync move %F to multiple %D@
+#   command: |-
+#     set -x; /Users/fareed/Documents/dev/go/goful/scripts/xform.sh --prefix --to --keep 3 /Users/fareed/Documents/dev/go/nsync/nsync move %F %D@
+
 - key: "."
   label: Examples of escaped expansions
   command: >-
@@ -15,6 +20,7 @@
     echo "d2: Next name/path:" %d2 ;\
     echo "D@: Other directory names/paths:" %D@ ;\
     echo "d@: Other directory names/paths:" %d@
+
 - key: "~"
   label: Examples of raw expansions
   command: >-

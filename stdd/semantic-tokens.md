@@ -106,6 +106,7 @@ When referencing other tokens:
 - `[REQ:STDD_SETUP]` - STDD methodology setup
 - `[REQ:MODULE_VALIDATION]` - Independent module validation before integration
 - `[REQ:CONFIGURABLE_STATE_PATHS]` - Configurable state/history persistence
+- `[REQ:WORKSPACE_START_DIRS]` - Positional CLI directories seed workspace windows
 - `[REQ:EXTERNAL_COMMAND_CONFIG]` - External command menu definitions are configurable via files/overrides
 - `[REQ:WINDOW_MACRO_ENUMERATION]` - `%D@`/`%d@` enumerate other workspace directories (paths + basenames) for external commands
 - `[REQ:GO_TOOLCHAIN_LTS]` - Go toolchain tracks current LTS baseline
@@ -124,6 +125,7 @@ When referencing other tokens:
 - `[REQ:TERMINAL_PORTABILITY]` - Terminal launcher works across Linux, macOS, and tmux contexts
 - `[REQ:TERMINAL_CWD]` - macOS terminal sessions start in the active directory
 - `[REQ:EVENT_LOOP_SHUTDOWN]` - Event poller must observe shutdown signals and terminate without leaking goroutines
+- `[REQ:CLI_TO_CHAINING]` - CLI helper rewrites commands by interleaving `--to` before every target argument with dry-run support
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -160,6 +162,8 @@ When referencing other tokens:
 - `[ARCH:QUIT_DIALOG_KEYS]` - Quit dialog key translation guarantees [REQ:QUIT_DIALOG_DEFAULT]
 - `[ARCH:TERMINAL_LAUNCHER]` - Cross-platform terminal launcher abstraction [REQ:TERMINAL_PORTABILITY]
 - `[ARCH:EVENT_LOOP_SHUTDOWN]` - Event poller shutdown coordination [REQ:EVENT_LOOP_SHUTDOWN]
+- `[ARCH:XFORM_CLI_PIPELINE]` - Parser/builder split for the xform helper that inserts `--to` between targets [REQ:CLI_TO_CHAINING]
+- `[ARCH:WORKSPACE_BOOTSTRAP]` - Workspace seeding from positional startup directories [REQ:WORKSPACE_START_DIRS]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -191,6 +195,8 @@ When referencing other tokens:
 - `[IMPL:QUIT_DIALOG_ENTER]` - Return/Enter mapping for quit dialog default [ARCH:QUIT_DIALOG_KEYS] [REQ:QUIT_DIALOG_DEFAULT]
 - `[IMPL:TERMINAL_ADAPTER]` - Platform-aware terminal command adapter [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
 - `[IMPL:EVENT_LOOP_SHUTDOWN]` - Event poller stop controller [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+- `[IMPL:XFORM_CLI_SCRIPT]` - Bash helper and tests that expose `xform` with dry-run output [ARCH:XFORM_CLI_PIPELINE] [REQ:CLI_TO_CHAINING]
+- `[IMPL:WORKSPACE_START_DIRS]` - Parser + seeder for positional startup directories [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

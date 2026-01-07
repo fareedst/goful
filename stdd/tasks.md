@@ -479,6 +479,37 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [x] Token audit + validation logged with the latest script output.
 
 **Priority Rationale**: P1 because automation workflows rely on defaults staying available; implementation and tokens must match the documented contract.
+
+## P1: Startup Workspace Directories [REQ:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [IMPL:WORKSPACE_START_DIRS]
+
+**Status**: ✅ Complete
+
+**Description**: Allow operators to pass positional directories after CLI flags so goful opens one window per argument (ordered), expanding or shrinking the workspace before the UI loop starts while falling back to current behavior when no directories are specified.
+
+**Dependencies**: [REQ:MODULE_VALIDATION], [ARCH:STATE_PATH_SELECTION] (workspace helper access)
+
+**Subtasks**:
+- [x] Document requirement/architecture/implementation updates + token registry entries. [REQ:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [IMPL:WORKSPACE_START_DIRS]
+- [x] Develop `StartupDirParser` module with unit tests covering empty input, duplicates, missing paths, and tilde expansion. [REQ:WORKSPACE_START_DIRS] [REQ:MODULE_VALIDATION]
+- [x] Develop `WorkspaceSeeder` module + tests proving windows are created/closed/reused to match the directory list with deterministic ordering. [REQ:WORKSPACE_START_DIRS] [REQ:MODULE_VALIDATION]
+- [x] Integrate helpers into `main.go`, add debug logging/env flag, and ensure errors surface via `message.Errorf`. [REQ:WORKSPACE_START_DIRS]
+- [x] Add integration-style coverage (e.g., filer/app tests) showing CLI args seed windows while default behavior remains unchanged. [REQ:WORKSPACE_START_DIRS]
+- [x] README/ARCHITECTURE updates highlighting positional syntax and examples. [REQ:WORKSPACE_START_DIRS]
+- [x] Token audit & validation (`./scripts/validate_tokens.sh`) recorded with diagnostics. [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] Requirements, architecture, implementation docs, and semantic tokens updated with cross-references.
+- [x] Parser + seeder modules independently validated before integration, evidence recorded.
+- [x] `main.go` honors positional directories with debug logging and safe fallbacks.
+- [x] Tests (unit + integration) cover ordering, error handling, and default behavior.
+- [x] README/ARCHITECTURE document the new CLI behavior.
+- [x] Latest `[PROC:TOKEN_AUDIT]`/`[PROC:TOKEN_VALIDATION]` results logged.
+
+**Priority Rationale**: P1 because deterministic workspace layouts significantly improve automation and startup ergonomics but do not block core navigation when absent.
+
+**Validation Evidence**:
+- `go test ./...` (darwin/arm64, Go 1.24.3) on 2026-01-07 covering parser/seeder helpers plus regressions in `main`.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 288 token references across 58 files.` (2026-01-07)
 ## P0: Cross-Platform Terminal Launcher [REQ:TERMINAL_PORTABILITY] [ARCH:TERMINAL_LAUNCHER] [IMPL:TERMINAL_ADAPTER]
 
 **Status**: ✅ Complete
@@ -535,6 +566,58 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [x] `[PROC:TOKEN_AUDIT]` + `[PROC:TOKEN_VALIDATION]` runs captured in this task.
 
 **Priority Rationale**: P0 follow-up to unblock macOS teams that prefer alternate terminal apps or zsh while keeping the AppleScript automation path.
+
+## P2: CLI xform helper [REQ:CLI_TO_CHAINING] [ARCH:XFORM_CLI_PIPELINE] [IMPL:XFORM_CLI_SCRIPT]
+
+**Status**: ✅ Complete
+
+**Description**: Deliver a portable Bash helper that rewrites commands by inserting `--to` before every destination argument, with dry-run output for previewing quoting so external command recipes stay readable.
+
+**Dependencies**: [REQ:MODULE_VALIDATION]
+
+**Module Boundaries**:
+- `XformArgs` — parses `-n/--dry-run`, `-h/--help`, and `--` while ensuring the minimum argument count before running transformations.
+- `TargetInterleaver` — builds the transformed argv array, prints `%q`-formatted dry-run output, or executes the rewritten command and propagates its exit status.
+
+**Subtasks**:
+- [x] Document requirement/architecture/implementation updates before coding [REQ:CLI_TO_CHAINING]
+- [x] Implement parser + builder modules with inline debug comments [IMPL:XFORM_CLI_SCRIPT]
+- [x] Add shell-based validation suite covering dry-run output + error handling [REQ:MODULE_VALIDATION]
+- [x] Run `[PROC:TOKEN_AUDIT]` and `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` `[PROC:TOKEN_VALIDATION]`, recording diagnostic output (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 269 token references across 55 files.` on 2026-01-06)
+
+**Completion Criteria**:
+- [x] Helper works when executed directly or sourced, including dry-run/help paths
+- [x] Tests validate parser and builder modules independently before integration
+- [x] Documentation + token registry updated with new tokens
+- [x] `[PROC:TOKEN_AUDIT]` / `[PROC:TOKEN_VALIDATION]` logs stored in this entry and `implementation-decisions.md`
+
+**Priority Rationale**: P2 because this helper improves developer ergonomics and external command authoring but does not block core app flows.
+
+## P2: CLI xform configurability [REQ:CLI_TO_CHAINING] [ARCH:XFORM_CLI_PIPELINE] [IMPL:XFORM_CLI_SCRIPT]
+
+**Status**: ✅ Complete
+
+**Description**: Expand the helper so callers can choose which arguments stay untouched and which prefix is inserted (e.g., `--to`, `--dest`, etc.) while preserving the existing dry-run/exec flow.
+
+**Dependencies**: [REQ:MODULE_VALIDATION]
+
+**Module Boundaries**:
+- `XformArgs` — extended parser that captures `--prefix` (string) and `--keep` (number of untouched arguments) along with existing dry-run/help handling.
+- `TargetInterleaver` — uses the configured prefix/keep values when constructing the rewritten argv and ensures validation errors surface clearly when insufficient arguments remain.
+
+**Subtasks**:
+- [x] Update requirements/architecture/implementation docs with the new configurability expectations [REQ:CLI_TO_CHAINING]
+- [x] Implement parser + builder changes supporting `--prefix`/`--keep` defaults and validation [IMPL:XFORM_CLI_SCRIPT]
+- [x] Add/extend shell tests covering custom prefix/keep cases and failure paths [REQ:MODULE_VALIDATION]
+- [x] Run `[PROC:TOKEN_AUDIT]` and `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` `[PROC:TOKEN_VALIDATION]` once changes land (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 269 token references across 55 files.` on 2026-01-06)
+
+**Completion Criteria**:
+- [x] CLI usage/README-like help documents the new options
+- [x] Tests validate default behavior plus new prefix/keep paths independently before integration
+- [x] Documentation and registries updated to describe configurability
+- [x] Token audit + validation logs recorded in this entry and `implementation-decisions.md`
+
+**Priority Rationale**: P2 ergonomics improvement—important for automation flexibility but not blocking core flows.
 
 ## P0: Event Loop Shutdown [REQ:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [IMPL:EVENT_LOOP_SHUTDOWN]
 

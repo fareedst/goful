@@ -21,6 +21,8 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+const debugWorkspaceEnv = "GOFUL_DEBUG_WORKSPACE"
+
 var (
 	stateFlag = flag.String(
 		"state",
@@ -68,6 +70,13 @@ func main() {
 	// plumb LoadHistory errors (distinguish first-run missing files vs actual IO failures) so we can alert users instead of
 	// silently discarding history and ingest errors.
 	_ = cmdline.LoadHistory(runtimePaths.History)
+
+	startupDirs, startupWarnings := app.ParseStartupDirs(flag.Args())
+	for _, warn := range startupWarnings {
+		message.Errorf("[REQ:WORKSPACE_START_DIRS] %s", warn)
+	}
+	// [IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]
+	app.SeedStartupWorkspaces(goful, startupDirs, os.Getenv(debugWorkspaceEnv) != "")
 
 	goful.Run()
 

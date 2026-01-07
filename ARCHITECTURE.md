@@ -10,6 +10,7 @@ main.go
      └─ config(goful, isTMUX?)
          ├─ look/menu/message/info/progress initialization
          ├─ keymap + menu wiring (filer/cmdline/finder/completion/menu) [REQ:BEHAVIOR_BASELINE]
+         ├─ app.ParseStartupDirs()/SeedStartupWorkspaces() apply positional CLI directories to filer windows [REQ:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP]
          └─ goful.Run()
              ├─ widget.Init()/PollEvent() loop (tcell)
              ├─ app.Goful.Draw()/Input()/Resize orchestrate widgets

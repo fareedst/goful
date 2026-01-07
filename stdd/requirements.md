@@ -203,7 +203,7 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Race Testing Pipeline [ARCH:RACE_TESTING_PIPELINE]
 - **Implementation**: See `implementation-decisions.md` § Race Job [IMPL:RACE_JOB]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
 ### [REQ:UI_PRIMITIVE_TESTS] UI Widget Coverage
 
@@ -221,7 +221,7 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § UI Test Strategy [ARCH:TEST_STRATEGY_UI]
 - **Implementation**: See `implementation-decisions.md` § Widget Tests [IMPL:TEST_WIDGETS]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
 
 ### [REQ:CMD_HANDLER_TESTS] Command Handling Coverage
 
@@ -274,6 +274,46 @@ Each requirement includes:
   - README and developer docs describe the flags and environment variables with their precedence order.
 - **Architecture**: See `architecture-decisions.md` § State Path Selection [ARCH:STATE_PATH_SELECTION]
 - **Implementation**: See `implementation-decisions.md` § State Path Resolver [IMPL:STATE_PATH_RESOLVER]
+
+**Status**: ⏳ Planned
+### [REQ:WORKSPACE_START_DIRS] Positional Startup Directories
+
+**Priority: P1 (Important)**
+
+- **Description**: After CLI flags are parsed, any trailing positional arguments must be treated as explicit workspace directory targets. Goful should open one filer window per argument—creating, reusing, or closing panes so the visible workspace order exactly matches the provided list—and fall back to the current directory/open-directory behavior when no arguments are supplied.
+- **Rationale**: Power users often launch goful from shell scripts or project-specific wrappers and want deterministic, multi-pane layouts without manual navigation. Enabling positional directories eliminates repetitive `b`/`C-m` workflows, improves automation ergonomics, and keeps invocation parity with other TUI file managers that accept startup paths.
+- **Satisfaction Criteria**:
+  - `flag.Args()` are interpreted as startup directories in the order supplied; when empty, the existing default workspace arrangement is preserved.
+  - The workspace is expanded or shrunk to match the number of directories provided, creating new panes or closing extras so every argument maps to exactly one window with matching focus order.
+  - Nonexistent directories trigger `message.Errorf` guidance yet do not crash the UI; remaining valid directories continue to open.
+  - `GOFUL_DEBUG_WORKSPACE=1` emits diagnostics referencing `[IMPL:WORKSPACE_START_DIRS]` that show the parsed arguments, normalization, and workspace mutations.
+  - README/ARCHITECTURE documentation lists the positional syntax with examples and describes how defaults behave when arguments are omitted.
+- **Validation Criteria**:
+  - Unit tests cover the startup parser (empty args, multiple entries, whitespace, non-existent paths) and the workspace seeding helper (creation, reuse, trimming, ordering).
+  - Integration-style tests prove launching with `go run . dirA dirB dirC` yields three windows in order, while launching without arguments preserves historical behavior.
+  - Token validation confirms `[REQ:WORKSPACE_START_DIRS]`, `[ARCH:WORKSPACE_BOOTSTRAP]`, and `[IMPL:WORKSPACE_START_DIRS]` are referenced across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Workspace Bootstrap from Positional Directories [ARCH:WORKSPACE_BOOTSTRAP]
+- **Implementation**: See `implementation-decisions.md` § Startup Directory Parser & Seeder [IMPL:WORKSPACE_START_DIRS]
+
+**Status**: ⏳ Planned
+### [REQ:WORKSPACE_START_DIRS] Positional Startup Directories
+
+**Priority: P1 (Important)**
+
+- **Description**: After CLI flags are parsed, any trailing positional arguments must be interpreted as explicit workspace directory targets. Goful should open one filer window per argument—creating, reusing, or closing panes so the visible workspace order exactly matches the provided list—and fall back to the current directory restoration behavior when no arguments are supplied.
+- **Rationale**: Operators often launch goful via shell scripts or project-specific wrappers and want deterministic multi-pane layouts without manual navigation. Allowing positional directories removes repetitive keybind sequences, enables automation to align UI state with the calling context, and keeps parity with other TUIs that accept startup paths.
+- **Satisfaction Criteria**:
+  - `flag.Args()` are consumed in order and mapped to workspace directories; empty input leaves startup behavior unchanged.
+  - The workspace is expanded or shrunk to match the number of directories provided, with each pane displaying the corresponding path and the first argument receiving focus.
+  - Non-existent paths trigger actionable `message.Errorf` guidance yet do not crash the UI; the remaining valid directories continue to open.
+  - `GOFUL_DEBUG_WORKSPACE=1` emits `DEBUG: [IMPL:WORKSPACE_START_DIRS] ...` diagnostics that show parsed arguments, normalization decisions, and workspace mutations.
+  - README/ARCHITECTURE documentation includes examples illustrating positional usage, duplicate handling, and the debug workflow.
+- **Validation Criteria**:
+  - Unit tests cover the parser (empty args, tilde expansion, duplicates, invalid paths) and the workspace-seeding helper (window creation/removal, ordering, focus).
+  - Integration-style tests demonstrate that launching with positional directories produces deterministic panes, while launching without extra arguments preserves historical behavior.
+  - Token validation confirms `[REQ:WORKSPACE_START_DIRS]`, `[ARCH:WORKSPACE_BOOTSTRAP]`, and `[IMPL:WORKSPACE_START_DIRS]` references across documents, code comments, and tests.
+- **Architecture**: See `architecture-decisions.md` § Workspace Bootstrap from Positional Directories [ARCH:WORKSPACE_BOOTSTRAP]
+- **Implementation**: See `implementation-decisions.md` § Startup Directory Parser & Seeder [IMPL:WORKSPACE_START_DIRS]
 
 **Status**: ⏳ Planned
 ### [REQ:WINDOW_MACRO_ENUMERATION] External Command Window Enumeration
@@ -375,6 +415,26 @@ Each requirement includes:
 **Validation Evidence (2026-01-04)**:
 - `TestCommandFactoryDarwin_REQ_TERMINAL_PORTABILITY` and `TestApplyDarwinCwd_REQ_TERMINAL_CWD` (`terminalcmd/factory_test.go`) confirm the `cd` preamble is injected and re-computed per invocation.
 - Manual checklist `[PROC:TERMINAL_VALIDATION]` documents macOS Terminal steps (outside and inside tmux) so operators can confirm the working-directory guarantee on physical hardware.
+
+### [REQ:CLI_TO_CHAINING] Command-Line Target Chaining Helper
+
+**Priority: P2 (Nice-to-have)**
+
+- **Description**: Provide a portable Bash helper (`scripts/xform.sh`) that rewrites multi-target commands by inserting a caller-provided prefix (default `--to`) in front of every argument beyond a configurable “keep” window (default 2). The helper must retain its preview mode, continue working when executed directly or sourced, and remain compatible with macOS `/bin/bash` 3.2+.
+- **Rationale**: Copy/move automation frequently needs to call tools that expect repeating flags such as `--to <path>` or `--dest <path>`. Manually inserting these strings between each argument is error-prone, especially when dealing with paths that include spaces. A tiny CLI helper keeps command definitions declarative, reduces quoting mistakes, and becomes reusable across workflows because callers can tune both the prefix and how many leading arguments stay untouched.
+- **Satisfaction Criteria**:
+  - `scripts/xform.sh` accepts at least `keep + 1` positional arguments and rewrites every argument past the keep index into `<prefix> <target>` pairs while executing the resulting command.
+  - CLI options include `-p/--prefix <string>` (defaults to `--to`), `-k/--keep <n>` (defaults to 2 and must be ≥1), and the existing `-n/--dry-run` / `-h/--help` flags. Invalid combinations emit actionable errors and exit with code 64.
+  - Dry-run output prints the fully quoted command (using `%q` formatting) without executing it so operators can verify quoting in CI or before destructive runs.
+  - The helper supports both direct execution (shebang) and sourcing (defines `xform` function) on macOS `/bin/bash` 3.2+ without using Bash 4+ only features.
+- **Validation Criteria**:
+  - Shell-based tests exercise the parser (including custom prefix/keep and error handling) and the command construction module independently, proving dry-run output matches expectations.
+  - Integration tests (or scripted invocations) ensure the helper can be executed directly, supports dry-run output, and propagates exit codes from the invoked command.
+  - Token validation confirms `[REQ:CLI_TO_CHAINING]`, `[ARCH:XFORM_CLI_PIPELINE]`, and `[IMPL:XFORM_CLI_SCRIPT]` references exist across documentation, the script, and its tests.
+- **Architecture**: See `architecture-decisions.md` § Xform CLI Pipeline [ARCH:XFORM_CLI_PIPELINE]
+- **Implementation**: See `implementation-decisions.md` § Xform CLI Script [IMPL:XFORM_CLI_SCRIPT]
+
+**Status**: ✅ Implemented
 
 ### [REQ:ARCH_DOCUMENTATION] Architecture Guide
 

@@ -330,6 +330,33 @@ Need an object wrapper in JSON to drop the defaults entirely:
 - Pass `-state /tmp/state.json` or `-history /tmp/history` on the command line to override everything else (flags win over environment variables).
 - Export `GOFUL_DEBUG_PATHS=1` to log which source produced each path (`DEBUG: [IMPL:STATE_PATH_RESOLVER] ...`) for troubleshooting sandboxes and CI jobs.
 
+### Startup Workspace Directories
+
+`[REQ:WORKSPACE_START_DIRS]` and `[ARCH:WORKSPACE_BOOTSTRAP]` let you pass directories **after** the usual CLI flags so goful opens one filer window per argument (ordered). Examples:
+
+```bash
+$ goful ~/src/dotfiles ~/src/goful ~/Downloads
+# window 1 -> ~/src/dotfiles, window 2 -> ~/src/goful, window 3 -> ~/Downloads
+```
+
+- The arguments are normalized (tilde expansion + absolute paths) but otherwise preserved, so duplicates intentionally open multiple panes pointing at the same directory.
+- If an argument does not exist or is not a directory, goful prints `message.Errorf` output explaining the issue and continues processing the remaining entries. When every argument fails, startup falls back to the persisted workspace layout.
+- Set `GOFUL_DEBUG_WORKSPACE=1` to emit `DEBUG: [IMPL:WORKSPACE_START_DIRS] ...` lines that document the parsed arguments and window assignments—useful when debugging automation scripts or verifying CI launches.
+- Launching without trailing directories keeps the historical behavior (state restoration or default layout), so existing workflows continue to work unchanged.
+
+### Startup Workspace Directories
+
+`[REQ:WORKSPACE_START_DIRS]` and `[ARCH:WORKSPACE_BOOTSTRAP]` let you tell goful which directories to open **after** the usual CLI flags—every remaining positional argument seeds one workspace (tab) in the order provided:
+
+```bash
+$ goful ~/src/dotfiles ~/src/goful ~/Downloads
+```
+
+- When at least one directory is supplied, goful resizes the workspace list to match (creating or closing tabs as needed) and focuses the first entry. Provide duplicates if you want multiple tabs pointing to the same path; the order is preserved exactly as entered.
+- When no positional arguments are present, the historical startup behavior (state.json restoration or default layout) remains unchanged.
+- Invalid entries surface via `message.Errorf` before the UI launches so you can fix typos without guessing which path failed.
+- Set `GOFUL_DEBUG_WORKSPACE=1` to log `DEBUG: [IMPL:WORKSPACE_START_DIRS] ...` lines that describe how CLI arguments were parsed, which workspaces were created/removed, and which directories were applied—handy when automating project layouts.
+
 ## Documentation
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) – `[REQ:ARCH_DOCUMENTATION]` package/data-flow overview plus module validation map.
