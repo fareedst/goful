@@ -109,3 +109,34 @@ func contains(slice []string, target string) bool {
 	}
 	return false
 }
+
+func TestExcludedNamesHideEntries_REQ_FILER_EXCLUDE_NAMES(t *testing.T) {
+	// [REQ:FILER_EXCLUDE_NAMES] [ARCH:FILER_EXCLUDE_FILTER] [IMPL:FILER_EXCLUDE_RULES]
+	t.Cleanup(func() { ConfigureExcludedNames(nil, false) })
+	tmp := t.TempDir()
+	noisePath := filepath.Join(tmp, ".DS_Store")
+	keepPath := filepath.Join(tmp, "keep.txt")
+	if err := os.WriteFile(noisePath, []byte("noise"), 0o644); err != nil {
+		t.Fatalf("write noise file: %v", err)
+	}
+	if err := os.WriteFile(keepPath, []byte("keep"), 0o644); err != nil {
+		t.Fatalf("write keep file: %v", err)
+	}
+
+	ConfigureExcludedNames([]string{".ds_store"}, true)
+	dir := newTestDirectory(t, tmp)
+	names := namesOf(dir)
+	if contains(names, ".DS_Store") {
+		t.Fatalf("excluded file was still listed: %v", names)
+	}
+	if !contains(names, "keep.txt") {
+		t.Fatalf("expected keep.txt to remain visible, got %v", names)
+	}
+
+	ToggleExcludedNames() // disable filter
+	dir.reload()
+	names = namesOf(dir)
+	if !contains(names, ".DS_Store") {
+		t.Fatalf("excluded file should reappear after toggling filter off, got %v", names)
+	}
+}

@@ -108,6 +108,7 @@ When referencing other tokens:
 - `[REQ:CONFIGURABLE_STATE_PATHS]` - Configurable state/history persistence
 - `[REQ:WORKSPACE_START_DIRS]` - Positional CLI directories seed workspace windows
 - `[REQ:EXTERNAL_COMMAND_CONFIG]` - External command menu definitions are configurable via files/overrides
+- `[REQ:FILER_EXCLUDE_NAMES]` - Configurable basename exclusions with runtime toggles
 - `[REQ:WINDOW_MACRO_ENUMERATION]` - `%D@`/`%d@` enumerate other workspace directories (paths + basenames) for external commands
 - `[REQ:GO_TOOLCHAIN_LTS]` - Go toolchain tracks current LTS baseline
 - `[REQ:DEPENDENCY_REFRESH]` - Dependencies refreshed for security and compatibility
@@ -144,6 +145,7 @@ When referencing other tokens:
 - `[ARCH:MODULE_VALIDATION]` - Module validation strategy [REQ:MODULE_VALIDATION]
 - `[ARCH:STATE_PATH_SELECTION]` - Path precedence for persistence [REQ:CONFIGURABLE_STATE_PATHS]
 - `[ARCH:EXTERNAL_COMMAND_REGISTRY]` - External command config resolution/binding [REQ:EXTERNAL_COMMAND_CONFIG]
+- `[ARCH:FILER_EXCLUDE_FILTER]` - Basename exclude filter + loader/toggle strategy [REQ:FILER_EXCLUDE_NAMES]
 - `[ARCH:WINDOW_MACRO_ENUMERATION]` - Workspace directory enumeration for `%D@` [REQ:WINDOW_MACRO_ENUMERATION]
 - `[ARCH:GO_RUNTIME_STRATEGY]` - Go LTS/toolchain policy [REQ:GO_TOOLCHAIN_LTS]
 - `[ARCH:DEPENDENCY_POLICY]` - Dependency refresh and security approach [REQ:DEPENDENCY_REFRESH]
@@ -177,6 +179,8 @@ When referencing other tokens:
 - `[IMPL:EXTERNAL_COMMAND_LOADER]` - External command config loader/defaults [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
 - `[IMPL:EXTERNAL_COMMAND_APPEND]` - Default inheritance (prepended custom entries) + replacement toggle for external command configs [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
 - `[IMPL:EXTERNAL_COMMAND_BINDER]` - Menu binding helpers for commands [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+- `[IMPL:FILER_EXCLUDE_RULES]` - Centralized basename filtering + toggles [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
+- `[IMPL:FILER_EXCLUDE_LOADER]` - Exclude list loader, resolver wiring, and UI toggle [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
 - `[IMPL:WINDOW_MACRO_ENUMERATION]` - `%D@`/`%d@` macro helpers [ARCH:WINDOW_MACRO_ENUMERATION] [REQ:WINDOW_MACRO_ENUMERATION]
 - `[IMPL:GO_MOD_UPDATE]` - Go version/toolchain update [ARCH:GO_RUNTIME_STRATEGY] [REQ:GO_TOOLCHAIN_LTS]
 - `[IMPL:DEP_BUMP]` - Dependency refresh and tidy [ARCH:DEPENDENCY_POLICY] [REQ:DEPENDENCY_REFRESH]

@@ -703,3 +703,27 @@ func formatDirs(paths []string, quote bool) string {
 
 **Cross-References**: [REQ:WORKSPACE_START_DIRS], [IMPL:WORKSPACE_START_DIRS], [REQ:MODULE_VALIDATION]
 
+## 30. Filename Exclude Filter [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
+
+### Decision: Load newline-delimited basename filters via flag/env/default and enforce them inside the filer pipeline with a runtime toggle.
+**Rationale:**
+- Keeps nuisance files (e.g., `.DS_Store`, `Thumbs.db`, build outputs) out of every pane without hand-maintained per-directory ignores.
+- Aligns with existing precedence rules (`flag` > `env` > default) so operators can share curated lists without code edits.
+- Provides a runtime toggle so users can temporarily show everything, inspect results, and return to the filtered view without restarting goful.
+
+**Module Boundaries & Contracts** `[REQ:MODULE_VALIDATION]`:
+- `ExcludeRules` (Module 1 – package `filer`): Pure helper that stores a case-insensitive set of excluded basenames, exposes `ConfigureExcludedNames`, `ToggleExcludedNames`, and `ShouldExclude`. The `Directory.read` callback consults the helper before appending `FileStat` entries so every reader (default, glob, finder) honors the filter automatically. Excludes remain disabled when no names are configured to preserve historical behaviour.
+- `ExcludeListLoader` (Module 2 – package `main`): Reads the newline-delimited file resolved by `configpaths.Resolver` (`-exclude-names`, `GOFUL_EXCLUDES_FILE`, default `~/.goful/excludes`), trims whitespace, skips blank lines and `#` comments, normalizes to lower-case, and calls `filer.ConfigureExcludedNames`. Emits `DEBUG:` / `message.Infof` diagnostics tagged with `[IMPL:FILER_EXCLUDE_LOADER]` that list how many entries were loaded or why the file was skipped. Surfaces a View menu entry plus a dedicated `E` key binding that toggles the filter (`Workspace.ReloadAll` afterward) so users can observe changes immediately.
+
+**Alternatives Considered:**
+- **Inline glob filters per workspace**: Rejected because it introduces per-pane state and complicates persistence.
+- **Embedding excludes in the existing JSON state**: Rejected to keep the block list shareable outside the Go binary and to avoid migrations.
+- **Directory-level filter only**: Rejected because finder/glob flows would still leak excluded entries.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `configpaths/resolver.go`, `main.go`, and loader tests include `[IMPL:FILER_EXCLUDE_LOADER] [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]`.
+- `filer/exclude.go`, `filer/directory.go`, and filer tests include `[IMPL:FILER_EXCLUDE_RULES] [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]`.
+- Toggle handlers log `[REQ:FILER_EXCLUDE_NAMES]` so operators can trace runtime state changes.
+
+**Cross-References**: [REQ:FILER_EXCLUDE_NAMES], [IMPL:FILER_EXCLUDE_RULES], [IMPL:FILER_EXCLUDE_LOADER], [REQ:MODULE_VALIDATION]
+

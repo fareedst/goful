@@ -252,6 +252,10 @@ func (d *Directory) read() {
 	}
 
 	callback := func(name string) {
+		if shouldExcludeName(name) {
+			// [IMPL:FILER_EXCLUDE_RULES] [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
+			return
+		}
 		if fs := NewFileStat(d.Path, name); fs != nil {
 			d.AppendList(fs)
 		}

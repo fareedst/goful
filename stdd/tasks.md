@@ -392,6 +392,34 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P1 because automation workflows that only need directory names must currently post-process `%D@` output, adding brittle shell logic.
 
+## P1: Filename Exclude Filter [REQ:FILER_EXCLUDE_NAMES] [ARCH:FILER_EXCLUDE_FILTER] [IMPL:FILER_EXCLUDE_RULES] [IMPL:FILER_EXCLUDE_LOADER]
+
+**Status**: ✅ Complete
+
+**Description**: Load a newline-delimited basename block list (flag/env/default path), hide matching entries across all filer views, and provide a runtime keystroke/menu toggle so operators can temporarily reveal excluded files without restarting goful.
+
+**Dependencies**: [REQ:MODULE_VALIDATION], [REQ:CONFIGURABLE_STATE_PATHS] (resolver precedence reuse)
+
+**Subtasks**:
+- [x] Update `requirements.md`, `architecture-decisions.md`, `implementation-decisions.md`, and `semantic-tokens.md` with `[REQ:FILER_EXCLUDE_NAMES]`, `[ARCH:FILER_EXCLUDE_FILTER]`, `[IMPL:FILER_EXCLUDE_RULES]`, `[IMPL:FILER_EXCLUDE_LOADER]`.
+- [x] Extend `configpaths.Resolver` with `-exclude-names` / `GOFUL_EXCLUDES_FILE` precedence and log provenance via `emitPathDebug`.
+- [x] Implement loader/parser + diagnostics in `main.go`, wiring the View menu + dedicated keystroke toggle. [REQ:FILER_EXCLUDE_NAMES] [IMPL:FILER_EXCLUDE_LOADER]
+- [x] Implement `filer`-level rule store and hook into `Directory.read`, including unit/integration tests that validate hiding + toggling. [REQ:FILER_EXCLUDE_NAMES] [IMPL:FILER_EXCLUDE_RULES]
+- [x] Add tests for resolver + loader parsing (comments, blank lines, case-insensitivity) and for filer filtering/toggle behaviour. [REQ:MODULE_VALIDATION]
+- [x] Run `[PROC:TOKEN_AUDIT]` and `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh`, recording diagnostic output.
+
+**Completion Criteria**:
+- [x] Docs and token registry capture the new requirement, architecture, implementation, and process notes.
+- [x] Resolver, loader, runtime toggle, and filer logic are implemented with semantic token comments and debug output.
+- [x] Unit + integration tests validate both modules independently before integration; README/ARCHITECTURE mention the new feature.
+- [x] `[PROC:TOKEN_AUDIT]` / `[PROC:TOKEN_VALIDATION]` results recorded with command output.
+
+**Validation Evidence**:
+- `go test ./...` (darwin/arm64, Go 1.24.3) — 2026-01-07.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 302 token references across 58 files.` (2026-01-07).
+
+**Priority Rationale**: P1 because hiding noisy files dramatically improves navigation ergonomics while remaining optional and discoverable via runtime toggle.
+
 ## P1: External Command Configuration [REQ:EXTERNAL_COMMAND_CONFIG] [ARCH:EXTERNAL_COMMAND_REGISTRY] [IMPL:EXTERNAL_COMMAND_LOADER] [IMPL:EXTERNAL_COMMAND_BINDER]
 
 **Status**: ✅ Complete

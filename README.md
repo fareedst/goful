@@ -64,6 +64,7 @@ key                  | function
 `i`                  | Open by pager
 `s`                  | Sort
 `v`                  | View
+`E`                  | Toggle filename excludes
 `b`                  | Bookmark
 `e`                  | Editor
 `x`                  | Command
@@ -85,6 +86,13 @@ key                  | function
 `q` `Q`              | Quit
 
 For more see [main.go](main.go)
+
+### Filename exclude list `[REQ:FILER_EXCLUDE_NAMES]`
+
+- Create a newline-delimited file containing the basenames you want to hide (for example `.DS_Store`, `Thumbs.db`). Blank lines and lines starting with `#` are ignored.
+- The list is loaded from `~/.goful/excludes` by default. Override the path with `-exclude-names /path/to/file` or `GOFUL_EXCLUDES_FILE=/path/to/file` to share custom lists across machines.
+- Matching is case-insensitive and applies to every directory pane, finder result, and macro expansion while the filter is enabled.
+- Press `E` (or open the View menu and press `n`) to toggle the filter at runtime. Goful instantly reloads every pane so you can temporarily reveal hidden files, inspect them, and re-enable the filter without restarting the UI.
 
 ## Demos
 

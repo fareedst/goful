@@ -932,4 +932,62 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:WORKSPACE_BOOTSTRAP], [REQ:WORKSPACE_START_DIRS], [REQ:MODULE_VALIDATION]
 
+## 26. Filename Exclude Rules [IMPL:FILER_EXCLUDE_RULES] [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
+
+### Decision: Centralize basename filtering inside `filer` so every reader (default, glob, finder) automatically skips excluded entries.
+**Rationale:**
+- Keeps the filter logic deterministic, testable, and shareable across `Directory` instances without duplicating conditionals.
+- Supports `[REQ:MODULE_VALIDATION]` by isolating the rule store from UI wiring, enabling pure unit tests for toggle/state transitions.
+- Ensures mark, finder, and macro flows inherit the same behaviour because they all append via `Directory.read`.
+
+### Implementation Approach:
+- Add `filer/exclude.go` with:
+  - `type excludeSet map[string]struct{}` stored alongside `excludedNamesMu sync.RWMutex`, `excludedNames excludeSet`, and `excludeEnabled bool`.
+  - `func ConfigureExcludedNames(names []string, activate bool)` that trims whitespace, lowercases entries, replaces the set, and toggles `excludeEnabled = activate && len(set) > 0`.
+  - `func ToggleExcludedNames() (enabled bool, hasRules bool)` plus helpers `ExcludedNamesEnabled()` and `ExcludedNameCount()` for diagnostics/UI integration.
+  - `func shouldExclude(name string) bool` used by `Directory.read` (skips once `excludeEnabled` is true and the lowercase basename exists in the set).
+- Guard mark insertion: the callback inside `Directory.read` checks `shouldExclude(fs.Name())` before `AppendList`, so `defaultReader`, `globPattern`, `globDirPattern`, and finder flows automatically inherit the filter.
+- Emit `DEBUG: [IMPL:FILER_EXCLUDE_RULES] ...` logs when `ConfigureExcludedNames` replaces the set or when toggles occur with `GOFUL_DEBUG_PATHS` to ease troubleshooting.
+
+**Code Markers**:
+- `filer/exclude.go`, `filer/directory.go`, and filer tests include `[IMPL:FILER_EXCLUDE_RULES] [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]`.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/integration_test.go` gains `TestExcludedNamesHidden_REQ_FILER_EXCLUDE_NAMES` plus helper tests to prove toggling reintroduces entries and that finder/glob reuse the same guard.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./filer` (darwin/arm64, Go 1.24.3) on 2026-01-07 covering the new unit + integration cases referenced above.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-07) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 302 token references across 58 files.` (captured in `stdd/tasks.md` once implementation lands).
+
+**Cross-References**: [ARCH:FILER_EXCLUDE_FILTER], [REQ:FILER_EXCLUDE_NAMES], [REQ:MODULE_VALIDATION]
+
+## 27. Filename Exclude Loader & Toggle [IMPL:FILER_EXCLUDE_LOADER] [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
+
+### Decision: Extend the existing path resolver with `-exclude-names` / `GOFUL_EXCLUDES_FILE` and wire a loader + toggle UI hook into `main`.
+**Rationale:**
+- Reuses the proven precedence model so operators immediately understand how to override the list location.
+- Keeps parsing logic (trim, comment skip, case normalization) pure and testable.
+- Provides a discoverable runtime toggle via both the View menu and a dedicated keystroke so users can quickly inspect hidden files when necessary.
+
+### Implementation Approach:
+- `configpaths/resolver.go` adds `DefaultExcludesPath`, `EnvExcludesKey`, and `Excludes`/`ExcludesSource` fields on `Paths`, plus a new `flagExcludesSourceLabel`. `Resolver.Resolve` now accepts `flagExcludes` and returns the resolved path + provenance so `emitPathDebug` can log it.
+- `main.go` defines `excludeNamesFlag`, calls `pathsResolver.Resolve(*stateFlag, *historyFlag, *commandsFlag, *excludeNamesFlag)`, and invokes `loadExcludedNames(paths.Excludes)` before `app.SeedStartupWorkspaces`.
+- `loadExcludedNames` (new helper in `main.go`) opens the file (tolerates `os.ErrNotExist`), reads newline-delimited basenames, strips comments (`#` prefix) and whitespace, lowercases entries, and calls `filer.ConfigureExcludedNames(parsed, true)`. Errors use `message.Errorf` referencing `[REQ:FILER_EXCLUDE_NAMES]`; success paths log `message.Infof` counts.
+- Toggle helper `toggleExcludedNames(g *app.Goful)` wraps `filer.ToggleExcludedNames`, reports the new state/count via `message.Infof`, and calls `g.Workspace().ReloadAll()`. Bound to `g.AddKeymap("E", toggle)` and added as `view` menu entry (e.g., `n` for "toggle excludes") so the action is reachable via mouse/keyboard menus.
+- `emitPathDebug` gains the excludes tuple so `GOFUL_DEBUG_PATHS=1` prints provenance for the new file.
+
+**Code Markers**:
+- `main.go`, `configpaths/resolver.go`, and `configpaths/resolver_test.go` reference `[IMPL:FILER_EXCLUDE_LOADER] [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]`.
+- Toggle handlers include `[REQ:FILER_EXCLUDE_NAMES]` in logged messages for auditability.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `main/exclude_loader_test.go` (new) validates parser behaviour and log emissions with `[REQ:FILER_EXCLUDE_NAMES]`.
+- `configpaths` tests updated to ensure the resolver reports the excludes path precedence.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./configpaths ./main` (darwin/arm64, Go 1.24.3) on 2026-01-07 covering loader + resolver updates.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-07) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 302 token references across 58 files.` (same run logged under task + decision).
+
+**Cross-References**: [ARCH:FILER_EXCLUDE_FILTER], [REQ:FILER_EXCLUDE_NAMES], [REQ:MODULE_VALIDATION]
+
 

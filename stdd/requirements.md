@@ -363,6 +363,28 @@ Each requirement includes:
 
 **Status**: ⏳ Planned
 
+### [REQ:FILER_EXCLUDE_NAMES] Configurable Filename Exclusions
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must honor a user-supplied block list of file *basenames* (stem + extension after the last path separator) so noise files such as `.DS_Store`, `Thumbs.db`, or build artifacts never appear in directory listings, marks, or finder results while the filter is enabled. The exclude list is managed in a newline-delimited text file located by flag/env/default (`-exclude-names`, `GOFUL_EXCLUDES_FILE`, default `~/.goful/excludes`), supports `#` comments and blank lines, and is case-insensitive per entry. The filter is enabled automatically when at least one name is configured and can be toggled on/off at runtime via a dedicated keystroke (and View menu entry) without restarting the UI.
+- **Rationale**: Large repositories and shared workspaces often contain generated files that clutter navigation and lead to accidental operations. Centralizing the filter in configuration keeps behaviour consistent across panes, reduces cognitive load, and allows teams to share curated lists without patching the codebase.
+- **Satisfaction Criteria**:
+  - CLI flag `-exclude-names`, environment variable `GOFUL_EXCLUDES_FILE`, and default path precedence follow the existing resolver contract so operators can override the block list location without code changes.
+  - Each non-empty, non-comment line represents a basename to hide regardless of directory depth; matching entries are omitted from directory listings, finder results, macro expansions, and downstream operations while the filter is active.
+  - Filtering is case-insensitive to cover typical cross-platform nuisance files, and diagnostics reference `[IMPL:FILER_EXCLUDE_RULES]` when entries are loaded or skipped.
+  - A dedicated keystroke (surfaced both as a View menu item and a direct key binding) toggles the filter state at runtime, emits a `message.Infof` summary with `[REQ:FILER_EXCLUDE_NAMES]`, and forces `Workspace.ReloadAll()` so panes immediately reflect the change.
+  - When no list is configured, toggle attempts log actionable guidance instead of silently failing, and the UI behaves exactly as today (no entries hidden).
+  - README/ARCHITECTURE documentation explains the file format (comments, whitespace), precedence, case-insensitive matching, default path, and the toggle workflow.
+- **Validation Criteria**:
+  - Unit tests cover the parser (comments, whitespace, duplicates, case normalization), runtime toggle helpers, and the directory-level filter to prove hidden files never reach the list when enabled.
+  - Integration-style tests (or augmented filer integration tests) demonstrate that excluded basenames disappear from directory listings and reappear when the filter is toggled off.
+  - Token validation confirms `[REQ:FILER_EXCLUDE_NAMES]`, `[ARCH:FILER_EXCLUDE_FILTER]`, `[IMPL:FILER_EXCLUDE_RULES]`, and `[IMPL:FILER_EXCLUDE_LOADER]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Filename Exclude Filter [ARCH:FILER_EXCLUDE_FILTER]
+- **Implementation**: See `implementation-decisions.md` § Filename Exclude Rules / Loader [IMPL:FILER_EXCLUDE_RULES], [IMPL:FILER_EXCLUDE_LOADER]
+
+**Status**: ⏳ Planned
+
 ### [REQ:TERMINAL_PORTABILITY] Cross-Platform Terminal Launcher
 
 **Priority: P0 (Critical)**

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"strings"
@@ -39,14 +42,20 @@ var (
 		"",
 		"Override path to external-command config (default "+configpaths.DefaultCommandsPath+" or "+configpaths.EnvCommandsKey+")",
 	)
+	excludeNamesFlag = flag.String(
+		"exclude-names",
+		"",
+		"Override path to filename exclude list (default "+configpaths.DefaultExcludesPath+" or "+configpaths.EnvExcludesKey+")",
+	)
 )
 
 func main() {
 	flag.Parse()
 
 	pathsResolver := configpaths.Resolver{}
-	runtimePaths := pathsResolver.Resolve(*stateFlag, *historyFlag, *commandsFlag)
+	runtimePaths := pathsResolver.Resolve(*stateFlag, *historyFlag, *commandsFlag, *excludeNamesFlag)
 	emitPathDebug(runtimePaths)
+	loadExcludedNames(runtimePaths.Excludes)
 
 	is_tmux := false
 	widget.Init()
@@ -112,6 +121,21 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 
 	filer.SetStatView(true, false, true)  // size, permission and time
 	filer.SetTimeFormat("06-01-02 15:04") // ex: "Jan _2 15:04"
+
+	toggleExcludedNames := func() {
+		enabled, hasRules, count := filer.ToggleExcludedNames()
+		if !hasRules {
+			message.Infof("[REQ:FILER_EXCLUDE_NAMES] exclude list inactive (path %s)", paths.Excludes)
+			return
+		}
+		state := "disabled"
+		if enabled {
+			state = "enabled"
+		}
+		// [REQ:FILER_EXCLUDE_NAMES] [IMPL:FILER_EXCLUDE_LOADER] Runtime toggle feedback + reload.
+		message.Infof("[REQ:FILER_EXCLUDE_NAMES] filename excludes %s (%d entries)", state, count)
+		g.Workspace().ReloadAll()
+	}
 
 	// Setup open command for C-m (when the enter key is pressed)
 	// The macro %f means expanded to a file name, for more see (spawn.go)
@@ -196,9 +220,11 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		"s", "stat menu    ", func() { g.Menu("stat") },
 		"l", "layout menu  ", func() { g.Menu("layout") },
 		"L", "look menu    ", func() { g.Menu("look") },
+		"n", "toggle filename excludes", func() { toggleExcludedNames() },
 		".", "toggle show hidden files", func() { filer.ToggleShowHiddens(); g.Workspace().ReloadAll() },
 	)
 	g.AddKeymap("v", func() { g.Menu("view") })
+	g.AddKeymap("E", toggleExcludedNames)
 
 	menu.Add("layout",
 		"t", "tile       ", func() { g.Workspace().LayoutTile() },
@@ -373,19 +399,71 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 	})
 }
 
+func loadExcludedNames(path string) {
+	if path == "" {
+		filer.ConfigureExcludedNames(nil, false)
+		return
+	}
+	names, err := parseExcludeFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			filer.ConfigureExcludedNames(nil, false)
+			return
+		}
+		fmt.Fprintf(os.Stderr, "WARN: [REQ:FILER_EXCLUDE_NAMES] failed to read exclude list %s: %v\n", path, err)
+		filer.ConfigureExcludedNames(nil, false)
+		return
+	}
+	count := filer.ConfigureExcludedNames(names, true)
+	if count == 0 {
+		filer.ConfigureExcludedNames(nil, false)
+		return
+	}
+	if os.Getenv("GOFUL_DEBUG_PATHS") != "" {
+		fmt.Fprintf(os.Stderr, "DEBUG: [REQ:FILER_EXCLUDE_NAMES] loaded %d excluded names from %s\n", count, path)
+	}
+}
+
+func parseExcludeFile(path string) ([]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return parseExcludeLines(file)
+}
+
+func parseExcludeLines(r io.Reader) ([]string, error) {
+	scanner := bufio.NewScanner(r)
+	names := make([]string, 0, 16)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		names = append(names, line)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return names, nil
+}
+
 func emitPathDebug(paths configpaths.Paths) {
 	if os.Getenv("GOFUL_DEBUG_PATHS") == "" {
 		return
 	}
 	fmt.Fprintf(
 		os.Stderr,
-		"DEBUG: [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS] [REQ:EXTERNAL_COMMAND_CONFIG] state=%s (%s) history=%s (%s) commands=%s (%s)\n",
+		"DEBUG: [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS] [REQ:EXTERNAL_COMMAND_CONFIG] [REQ:FILER_EXCLUDE_NAMES] state=%s (%s) history=%s (%s) commands=%s (%s) excludes=%s (%s)\n",
 		paths.State,
 		paths.StateSource,
 		paths.History,
 		paths.HistorySource,
 		paths.Commands,
 		paths.CommandsSource,
+		paths.Excludes,
+		paths.ExcludesSource,
 	)
 }
 
