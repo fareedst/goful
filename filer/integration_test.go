@@ -110,6 +110,111 @@ func contains(slice []string, target string) bool {
 	return false
 }
 
+// TestChdirAllToSubdir_REQ_LINKED_NAVIGATION tests that linked navigation propagates
+// subdirectory changes to all windows that have a matching subdirectory.
+// [REQ:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [IMPL:LINKED_NAVIGATION]
+func TestChdirAllToSubdir_REQ_LINKED_NAVIGATION(t *testing.T) {
+	// Create temp directories with shared subdirectory structure
+	tmp1 := t.TempDir()
+	tmp2 := t.TempDir()
+	tmp3 := t.TempDir()
+
+	// Create "shared" subdirectory in tmp1 and tmp2, but not tmp3
+	shared1 := filepath.Join(tmp1, "shared")
+	shared2 := filepath.Join(tmp2, "shared")
+	if err := os.Mkdir(shared1, 0o755); err != nil {
+		t.Fatalf("mkdir shared1: %v", err)
+	}
+	if err := os.Mkdir(shared2, 0o755); err != nil {
+		t.Fatalf("mkdir shared2: %v", err)
+	}
+
+	// Create workspace with 3 directories
+	ws := NewWorkspace(0, 0, 80, 60, "test")
+	dir1 := newTestDirectory(t, tmp1)
+	dir2 := newTestDirectory(t, tmp2)
+	dir3 := newTestDirectory(t, tmp3)
+	ws.Dirs = []*Directory{dir1, dir2, dir3}
+	ws.Focus = 0
+
+	// Navigate to "shared" subdirectory on all non-focused windows
+	ws.ChdirAllToSubdir("shared")
+
+	// dir1 is focused, should not be changed
+	if dir1.Path != filepath.Clean(tmp1) {
+		t.Errorf("focused dir1 changed unexpectedly to %s", dir1.Path)
+	}
+	// dir2 should have navigated to shared
+	if dir2.Path != filepath.Clean(shared2) {
+		t.Errorf("dir2 should navigate to shared, got %s, want %s", dir2.Path, shared2)
+	}
+	// dir3 should stay unchanged (no shared subdirectory)
+	if dir3.Path != filepath.Clean(tmp3) {
+		t.Errorf("dir3 changed unexpectedly to %s (should stay %s)", dir3.Path, tmp3)
+	}
+}
+
+// TestChdirAllToParent_REQ_LINKED_NAVIGATION tests that linked parent navigation
+// propagates to all non-focused windows.
+// [REQ:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [IMPL:LINKED_NAVIGATION]
+func TestChdirAllToParent_REQ_LINKED_NAVIGATION(t *testing.T) {
+	// Create temp directories with subdirectories
+	tmp1 := t.TempDir()
+	tmp2 := t.TempDir()
+	sub1 := filepath.Join(tmp1, "child1")
+	sub2 := filepath.Join(tmp2, "child2")
+	if err := os.Mkdir(sub1, 0o755); err != nil {
+		t.Fatalf("mkdir sub1: %v", err)
+	}
+	if err := os.Mkdir(sub2, 0o755); err != nil {
+		t.Fatalf("mkdir sub2: %v", err)
+	}
+
+	// Create workspace with 2 directories, starting in subdirectories
+	ws := NewWorkspace(0, 0, 80, 40, "test")
+	dir1 := newTestDirectory(t, sub1)
+	dir2 := newTestDirectory(t, sub2)
+	ws.Dirs = []*Directory{dir1, dir2}
+	ws.Focus = 0
+
+	// Navigate to parent on all non-focused windows
+	ws.ChdirAllToParent()
+
+	// dir1 is focused, should not be changed
+	if dir1.Path != filepath.Clean(sub1) {
+		t.Errorf("focused dir1 changed unexpectedly to %s", dir1.Path)
+	}
+	// dir2 should have navigated to parent
+	if dir2.Path != filepath.Clean(tmp2) {
+		t.Errorf("dir2 should navigate to parent, got %s, want %s", dir2.Path, tmp2)
+	}
+}
+
+// TestLinkedNavigationSingleWindow_REQ_LINKED_NAVIGATION tests that linked navigation
+// is a no-op when there is only one window.
+// [REQ:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [IMPL:LINKED_NAVIGATION]
+func TestLinkedNavigationSingleWindow_REQ_LINKED_NAVIGATION(t *testing.T) {
+	tmp := t.TempDir()
+	shared := filepath.Join(tmp, "shared")
+	if err := os.Mkdir(shared, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	ws := NewWorkspace(0, 0, 80, 20, "test")
+	dir := newTestDirectory(t, tmp)
+	ws.Dirs = []*Directory{dir}
+	ws.Focus = 0
+
+	// These should be no-ops without panic
+	ws.ChdirAllToSubdir("shared")
+	ws.ChdirAllToParent()
+
+	// Directory should remain unchanged (focused dir is skipped)
+	if dir.Path != filepath.Clean(tmp) {
+		t.Errorf("dir changed unexpectedly to %s", dir.Path)
+	}
+}
+
 func TestExcludedNamesHideEntries_REQ_FILER_EXCLUDE_NAMES(t *testing.T) {
 	// [REQ:FILER_EXCLUDE_NAMES] [ARCH:FILER_EXCLUDE_FILTER] [IMPL:FILER_EXCLUDE_RULES]
 	t.Cleanup(func() { ConfigureExcludedNames(nil, false) })

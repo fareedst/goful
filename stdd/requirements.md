@@ -599,6 +599,33 @@ Each requirement includes:
 
 **Status**: ⏳ Planned
 
+### [REQ:LINKED_NAVIGATION] Linked Navigation Mode
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must support a toggleable "linked" navigation mode where directory navigation in the focused window propagates to all other directory windows in the current workspace. When enabled and the user navigates into a subdirectory, all other windows that contain a matching subdirectory also navigate to it. When the user presses backspace (parent directory), all windows navigate to their respective parent directories. The mode is off by default.
+- **Rationale**: Operators comparing similar directory structures (e.g., syncing folder hierarchies, comparing release versions) benefit from synchronized navigation across panes. Manual navigation in each pane is tedious and error-prone when directory structures mirror each other.
+- **Satisfaction Criteria**:
+  - A toggle mechanism (`L` uppercase or `M-l` Alt+l) enables/disables linked navigation mode.
+  - When disabled, navigation in the focused window affects only that window (historical behavior).
+  - When enabled, entering a subdirectory attempts to navigate all other workspace windows to a matching subdirectory (by name) if it exists in each window's current path.
+  - When enabled, pressing backspace (parent navigation) causes all windows to navigate to their respective parent directories.
+  - A visual indicator (`[LINKED]`) appears in the filer header when the mode is active.
+  - The mode state is per-session and does not persist across restarts.
+- **Validation Criteria**:
+  - Unit tests cover the workspace navigation helpers (`ChdirAllToSubdir`, `ChdirAllToParent`) independently with `[REQ:LINKED_NAVIGATION]` references.
+  - Integration tests prove the toggle state affects navigation behavior correctly.
+  - Manual verification confirms the header indicator displays correctly and navigation propagates as expected.
+- **Architecture**: See `architecture-decisions.md` § Linked Navigation Mode [ARCH:LINKED_NAVIGATION]
+- **Implementation**: See `implementation-decisions.md` § Linked Navigation Implementation [IMPL:LINKED_NAVIGATION]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-09)**:
+- `TestChdirAllToSubdir_REQ_LINKED_NAVIGATION`, `TestChdirAllToParent_REQ_LINKED_NAVIGATION`, `TestLinkedNavigationSingleWindow_REQ_LINKED_NAVIGATION` in `filer/integration_test.go` covering the workspace navigation helpers.
+- Toggle keystroke: `L` (uppercase, works on all platforms) or `M-l` (Alt+l, may not work on macOS where Option produces special characters).
+- Header indicator `[LINKED]` displayed when mode is active.
+
 ### [REQ:EVENT_LOOP_SHUTDOWN] Event Poller Shutdown Control
 
 **Priority: P0 (Critical)**

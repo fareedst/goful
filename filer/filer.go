@@ -25,6 +25,16 @@ type Filer struct {
 	Current    int          `json:"current"`
 }
 
+// linkedNavIndicator is a callback that returns whether linked navigation is enabled.
+// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+var linkedNavIndicator func() bool
+
+// SetLinkedNavIndicator sets the callback used to check if linked navigation is enabled.
+// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func SetLinkedNavIndicator(fn func() bool) {
+	linkedNavIndicator = fn
+}
+
 // New creates a new filer based on specified size and coordinates.
 // Creates five workspaces and default path is home directory.
 func New(x, y, width, height int) *Filer {
@@ -265,6 +275,13 @@ func (f *Filer) drawHeader() {
 		}
 	}
 	x = widget.SetCells(x, y, " | ", look.Default())
+
+	// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+	// Show linked navigation indicator when enabled
+	if linkedNavIndicator != nil && linkedNavIndicator() {
+		x = widget.SetCells(x, y, "[LINKED]", look.Default().Reverse(true))
+		x = widget.SetCells(x, y, " ", look.Default())
+	}
 
 	ws := f.Workspace()
 	width := (f.Width() - x) / len(ws.Dirs)

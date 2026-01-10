@@ -107,6 +107,10 @@ func main() {
 func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 	look.Set("default") // default, midnight, black, white
 
+	// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+	// Wire linked navigation indicator to filer header
+	filer.SetLinkedNavIndicator(g.IsLinkedNav)
+
 	if runewidth.EastAsianWidth {
 		// Because layout collapsing for ambiguous runes if LANG=ja_JP.
 		widget.SetBorder('|', '-', '+', '+', '+', '+')
@@ -391,10 +395,20 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		"v", "vlc     ", func() { g.Spawn("vlc %f %&") },
 	)
 
+	// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+	// Helper for linked directory entry
+	linkedEnterDir := func() {
+		if g.IsLinkedNav() {
+			name := g.File().Name()
+			g.Workspace().ChdirAllToSubdir(name)
+		}
+		g.Dir().EnterDir()
+	}
+
 	var associate widget.Keymap
 	if runtime.GOOS == "windows" {
 		associate = widget.Keymap{
-			".dir": func() { g.Dir().EnterDir() },
+			".dir": linkedEnterDir, // [IMPL:LINKED_NAVIGATION]
 			".go":  func() { g.Shell("go run %~f") },
 			".py":  func() { g.Shell("python %~f") },
 			".rb":  func() { g.Shell("ruby %~f") },
@@ -402,7 +416,7 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		}
 	} else {
 		associate = widget.Keymap{
-			".dir":  func() { g.Dir().EnterDir() },
+			".dir":  linkedEnterDir, // [IMPL:LINKED_NAVIGATION]
 			".exec": func() { g.Shell(" ./" + g.File().Name()) },
 
 			".zip": func() { g.Shell("unzip %f -d %D") },
@@ -531,6 +545,15 @@ func loadCompareColors(path string) {
 // Widget keymap functions.
 
 func filerKeymap(g *app.Goful) widget.Keymap {
+	// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+	// Helper for linked parent navigation
+	linkedParentNav := func() {
+		if g.IsLinkedNav() {
+			g.Workspace().ChdirAllToParent()
+		}
+		g.Dir().Chdir("..")
+	}
+
 	return widget.Keymap{
 		"M-C-o":     func() { g.CreateWorkspace() },
 		"M-C-w":     func() { g.CloseWorkspace() },
@@ -549,52 +572,71 @@ func filerKeymap(g *app.Goful) widget.Keymap {
 		"F":         func() { g.Workspace().SwapNextDir() },
 		"B":         func() { g.Workspace().SwapPrevDir() },
 		"w":         func() { g.Workspace().ChdirNeighbor() },
-		"C-h":       func() { g.Dir().Chdir("..") },
-		"backspace": func() { g.Dir().Chdir("..") },
-		"u":         func() { g.Dir().Chdir("..") },
-		"~":         func() { g.Dir().Chdir("~") },
-		"\\":        func() { g.Dir().Chdir("/") },
-		"C-n":       func() { g.Dir().MoveCursor(1) },
-		"C-p":       func() { g.Dir().MoveCursor(-1) },
-		"down":      func() { g.Dir().MoveCursor(1) },
-		"up":        func() { g.Dir().MoveCursor(-1) },
-		"j":         func() { g.Dir().MoveCursor(1) },
-		"k":         func() { g.Dir().MoveCursor(-1) },
-		"C-d":       func() { g.Dir().MoveCursor(5) },
-		"C-u":       func() { g.Dir().MoveCursor(-5) },
-		"C-a":       func() { g.Dir().MoveTop() },
-		"C-e":       func() { g.Dir().MoveBottom() },
-		"home":      func() { g.Dir().MoveTop() },
-		"end":       func() { g.Dir().MoveBottom() },
-		"^":         func() { g.Dir().MoveTop() },
-		"$":         func() { g.Dir().MoveBottom() },
-		"M-n":       func() { g.Dir().Scroll(1) },
-		"M-p":       func() { g.Dir().Scroll(-1) },
-		"C-v":       func() { g.Dir().PageDown() },
-		"M-v":       func() { g.Dir().PageUp() },
-		"pgdn":      func() { g.Dir().PageDown() },
-		"pgup":      func() { g.Dir().PageUp() },
-		" ":         func() { g.Dir().ToggleMark() },
-		"M-=":       func() { g.Dir().InvertMark() },
-		"C-g":       func() { g.Dir().Reset() },
-		"C-[":       func() { g.Dir().Reset() }, // C-[ means ESC
-		"f":         func() { g.Dir().Finder() },
-		"/":         func() { g.Dir().Finder() },
-		"q":         func() { g.Quit() },
-		"Q":         func() { g.Quit() },
-		";":         func() { g.Shell("") },
-		":":         func() { g.ShellSuspend("") },
-		"M-W":       func() { g.ChangeWorkspaceTitle() },
-		"n":         func() { g.Touch() },
-		"K":         func() { g.Mkdir() },
-		"c":         func() { g.Copy() },
-		"m":         func() { g.Move() },
-		"r":         func() { g.Rename() },
-		"R":         func() { g.BulkRename() },
-		"D":         func() { g.Remove() },
-		"d":         func() { g.Chdir() },
-		"g":         func() { g.Glob() },
-		"G":         func() { g.Globdir() },
+		"C-h":       linkedParentNav, // [IMPL:LINKED_NAVIGATION]
+		"backspace": linkedParentNav, // [IMPL:LINKED_NAVIGATION]
+		"u":         linkedParentNav, // [IMPL:LINKED_NAVIGATION]
+		// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+		// Toggle linked navigation mode with Alt+l or L (uppercase for macOS compatibility)
+		"M-l": func() {
+			enabled := g.ToggleLinkedNav()
+			state := "disabled"
+			if enabled {
+				state = "enabled"
+			}
+			message.Infof("[REQ:LINKED_NAVIGATION] linked navigation %s", state)
+		},
+		// [IMPL:LINKED_NAVIGATION] macOS-friendly alternative (Option key often produces special chars)
+		"L": func() {
+			enabled := g.ToggleLinkedNav()
+			state := "disabled"
+			if enabled {
+				state = "enabled"
+			}
+			message.Infof("[REQ:LINKED_NAVIGATION] linked navigation %s", state)
+		},
+		"~":    func() { g.Dir().Chdir("~") },
+		"\\":   func() { g.Dir().Chdir("/") },
+		"C-n":  func() { g.Dir().MoveCursor(1) },
+		"C-p":  func() { g.Dir().MoveCursor(-1) },
+		"down": func() { g.Dir().MoveCursor(1) },
+		"up":   func() { g.Dir().MoveCursor(-1) },
+		"j":    func() { g.Dir().MoveCursor(1) },
+		"k":    func() { g.Dir().MoveCursor(-1) },
+		"C-d":  func() { g.Dir().MoveCursor(5) },
+		"C-u":  func() { g.Dir().MoveCursor(-5) },
+		"C-a":  func() { g.Dir().MoveTop() },
+		"C-e":  func() { g.Dir().MoveBottom() },
+		"home": func() { g.Dir().MoveTop() },
+		"end":  func() { g.Dir().MoveBottom() },
+		"^":    func() { g.Dir().MoveTop() },
+		"$":    func() { g.Dir().MoveBottom() },
+		"M-n":  func() { g.Dir().Scroll(1) },
+		"M-p":  func() { g.Dir().Scroll(-1) },
+		"C-v":  func() { g.Dir().PageDown() },
+		"M-v":  func() { g.Dir().PageUp() },
+		"pgdn": func() { g.Dir().PageDown() },
+		"pgup": func() { g.Dir().PageUp() },
+		" ":    func() { g.Dir().ToggleMark() },
+		"M-=":  func() { g.Dir().InvertMark() },
+		"C-g":  func() { g.Dir().Reset() },
+		"C-[":  func() { g.Dir().Reset() }, // C-[ means ESC
+		"f":    func() { g.Dir().Finder() },
+		"/":    func() { g.Dir().Finder() },
+		"q":    func() { g.Quit() },
+		"Q":    func() { g.Quit() },
+		";":    func() { g.Shell("") },
+		":":    func() { g.ShellSuspend("") },
+		"M-W":  func() { g.ChangeWorkspaceTitle() },
+		"n":    func() { g.Touch() },
+		"K":    func() { g.Mkdir() },
+		"c":    func() { g.Copy() },
+		"m":    func() { g.Move() },
+		"r":    func() { g.Rename() },
+		"R":    func() { g.BulkRename() },
+		"D":    func() { g.Remove() },
+		"d":    func() { g.Chdir() },
+		"g":    func() { g.Glob() },
+		"G":    func() { g.Globdir() },
 	}
 }
 

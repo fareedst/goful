@@ -22,6 +22,7 @@ type Goful struct {
 	callback  chan func()
 	task      chan int
 	exit      bool
+	linkedNav bool // [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION] Linked navigation mode state
 }
 
 // NewGoful creates a new goful client based recording a previous state.
@@ -147,6 +148,19 @@ func (g *Goful) eventHandler(ev tcell.Event) {
 		width, height := ev.Size()
 		g.Resize(0, 0, width, height)
 	}
+}
+
+// ToggleLinkedNav toggles the linked navigation mode and returns the new state.
+// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (g *Goful) ToggleLinkedNav() bool {
+	g.linkedNav = !g.linkedNav
+	return g.linkedNav
+}
+
+// IsLinkedNav returns true if linked navigation mode is enabled.
+// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (g *Goful) IsLinkedNav() bool {
+	return g.linkedNav
 }
 
 // SetBorderStyle sets the filer border style.

@@ -67,6 +67,7 @@ key                  | function
 `E`                  | Toggle filename excludes
 `C`                  | Toggle comparison colors
 `=`                  | Calculate file digest
+`L` or `M-l`             | Toggle linked navigation mode
 `b`                  | Bookmark
 `e`                  | Editor
 `x`                  | Command
@@ -88,6 +89,25 @@ key                  | function
 `q` `Q`              | Quit
 
 For more see [main.go](main.go)
+
+### Linked navigation mode `[REQ:LINKED_NAVIGATION]`
+
+Linked navigation synchronizes directory navigation across all open panes. When enabled, navigating into a subdirectory or pressing backspace (parent directory) in the focused window causes all other windows to attempt the same navigation.
+
+**Toggle**: Press `L` (uppercase L) or `M-l` (Alt+l) to enable or disable linked mode. The header displays `[LINKED]` when the mode is active.
+
+> **macOS note**: The Option key often produces special characters instead of acting as Meta/Alt, so use uppercase `L` (Shift+l) which works reliably across all platforms.
+
+**Subdirectory navigation**: When you enter a subdirectory named `foo`, all other panes that also contain a subdirectory named `foo` will navigate into it. Panes without a matching subdirectory stay on their current path.
+
+**Parent navigation**: When you press backspace (or `C-h` or `u`), all panes navigate to their respective parent directories.
+
+**Use cases**:
+- Comparing parallel directory structures (e.g., syncing `src/` and `backup/src/`)
+- Navigating release versions side-by-side (`v1.0/`, `v2.0/`)
+- Keeping workspace panes aligned when exploring mirrored folder hierarchies
+
+The mode is **off by default** and does not persist across restarts.
 
 ### Filename exclude list `[REQ:FILER_EXCLUDE_NAMES]`
 

@@ -129,6 +129,7 @@ When referencing other tokens:
 - `[REQ:EVENT_LOOP_SHUTDOWN]` - Event poller must observe shutdown signals and terminate without leaking goroutines
 - `[REQ:CLI_TO_CHAINING]` - CLI helper rewrites commands by interleaving `--to` before every target argument with dry-run support
 - `[REQ:FILE_COMPARISON_COLORS]` - Cross-directory file comparison with configurable color-coding for names, sizes, and times
+- `[REQ:LINKED_NAVIGATION]` - Linked navigation mode that propagates directory changes across workspace windows
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -170,6 +171,7 @@ When referencing other tokens:
 - `[ARCH:XFORM_CLI_PIPELINE]` - Parser/builder split for the xform helper that inserts `--to` between targets [REQ:CLI_TO_CHAINING]
 - `[ARCH:WORKSPACE_BOOTSTRAP]` - Workspace seeding from positional startup directories [REQ:WORKSPACE_START_DIRS]
 - `[ARCH:FILE_COMPARISON_ENGINE]` - Progressive comparison with cached indexing for cross-directory file color-coding [REQ:FILE_COMPARISON_COLORS]
+- `[ARCH:LINKED_NAVIGATION]` - Linked navigation mode architecture [REQ:LINKED_NAVIGATION]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -210,6 +212,7 @@ When referencing other tokens:
 - `[IMPL:FILE_COMPARISON_INDEX]` - Cached index of cross-directory file comparison states [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 - `[IMPL:COMPARISON_DRAW]` - Draw integration for comparison colors [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 - `[IMPL:DIGEST_COMPARISON]` - On-demand xxHash64 digest calculation for files with equal sizes [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+- `[IMPL:LINKED_NAVIGATION]` - Linked navigation mode implementation [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

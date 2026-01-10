@@ -766,6 +766,35 @@ func formatDirs(paths []string, quote bool) string {
 
 **Cross-References**: [REQ:FILE_COMPARISON_COLORS], [IMPL:COMPARE_COLOR_CONFIG], [IMPL:FILE_COMPARISON_INDEX], [IMPL:COMPARISON_DRAW], [REQ:MODULE_VALIDATION]
 
+## 32. Linked Navigation Mode [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+
+### Decision: Implement linked navigation as a toggleable mode that propagates directory changes across workspace windows.
+**Rationale:**
+- Operators comparing mirrored directory structures need synchronized pane navigation to reduce repetitive manual work.
+- Keeping the mode as a simple boolean toggle keeps the implementation minimal and avoids complex state management.
+- Propagating navigation to "matching subdirectories" (by name) allows partial synchronization when structures differ slightly.
+
+**Architecture Outline:**
+- **State Management**: Add `linkedNav bool` field to `app.Goful` struct with getter/toggle methods.
+- **Navigation Helpers**: Add `ChdirAllToSubdir(name string)` and `ChdirAllToParent()` to `filer.Workspace` that iterate non-focused directories and attempt navigation.
+- **Header Indicator**: Extend `filer.Filer.drawHeader()` to show `[LINKED]` when the mode is enabled, using a callback or exported flag.
+- **Keymap Integration**: Wrap existing navigation callbacks (backspace, enter-dir) to check linked state and invoke the appropriate helper.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `LinkedNavState` (Module 1 in `app/goful.go`) – Pure toggle and query methods; no side effects beyond flipping the boolean.
+- `LinkedNavigationHelpers` (Module 2 in `filer/workspace.go`) – Pure workspace methods that iterate directories and call `Chdir`; do not mutate linked state.
+- `LinkedNavIndicator` (Module 3 in `filer/filer.go`) – Header rendering that consumes an external flag/callback; no business logic.
+
+**Alternatives Considered:**
+- **Per-workspace linked state**: Rejected because operators typically want global linked mode, and per-workspace adds UI complexity.
+- **Automatic linking based on directory similarity**: Rejected as too implicit; explicit toggle gives operators control.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Code: `app/goful.go`, `filer/workspace.go`, `filer/filer.go`, `main.go` include `[IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]`.
+- Tests: `filer/workspace_test.go` and integration tests include `[REQ:LINKED_NAVIGATION]` in names/comments.
+
+**Cross-References**: [REQ:LINKED_NAVIGATION], [IMPL:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
+
 ## 31. Filename Exclude Filter [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
 
 ### Decision: Load newline-delimited basename filters via flag/env/default and enforce them inside the filer pipeline with a runtime toggle.

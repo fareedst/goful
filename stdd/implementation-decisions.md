@@ -1101,6 +1101,54 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:FILE_COMPARISON_ENGINE], [REQ:FILE_COMPARISON_COLORS], [IMPL:FILE_COMPARISON_INDEX], [IMPL:COMPARE_COLOR_CONFIG]
 
+## 32. Linked Navigation Implementation [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+
+### Decision: Implement linked navigation with minimal state in `app.Goful` and pure navigation helpers in `filer.Workspace`.
+**Rationale:**
+- Keeps the feature self-contained and easy to test independently per `[REQ:MODULE_VALIDATION]`.
+- Uses existing `Directory.Chdir` infrastructure rather than duplicating navigation logic.
+- Provides clear toggle feedback via message and header indicator.
+
+### Implementation Approach:
+- **State Management (`app/goful.go`)**:
+  - Add `linkedNav bool` field to `Goful` struct (default `false`).
+  - Add `func (g *Goful) ToggleLinkedNav() bool` that flips the state and returns new value.
+  - Add `func (g *Goful) IsLinkedNav() bool` getter.
+  - Export `LinkedNavEnabled` callback type for header rendering.
+
+- **Navigation Helpers (`filer/workspace.go`)**:
+  - Add `func (w *Workspace) ChdirAllToSubdir(name string)` that iterates all non-focused directories, checks if `name` exists as a subdirectory, and calls `Chdir(name)` if so.
+  - Add `func (w *Workspace) ChdirAllToParent()` that iterates all directories and calls `Chdir("..")`.
+  - Both methods skip the focused directory (caller handles it separately) and rebuild comparison index after.
+
+- **Header Indicator (`filer/filer.go`)**:
+  - Add `var linkedNavIndicatorFunc func() bool` package variable.
+  - Add `func SetLinkedNavIndicator(fn func() bool)` to wire the callback from main.
+  - Modify `drawHeader()` to show `[LINKED]` with reverse style when the callback returns true.
+
+- **Keymap Integration (`main.go`)**:
+  - Replace direct navigation callbacks with wrappers that check `g.IsLinkedNav()`.
+  - For `backspace`/`C-h`/`u`: if linked, call `g.Workspace().ChdirAllToParent()` then `g.Dir().Chdir("..")`.
+  - For enter-dir (extmap `.dir`): if linked, call `g.Workspace().ChdirAllToSubdir(name)` then `g.Dir().EnterDir()`.
+  - Add `L` (uppercase, macOS-compatible) and `M-l` bindings to toggle with `message.Infof` feedback.
+  - Wire `filer.SetLinkedNavIndicator(g.IsLinkedNav)` at startup.
+
+**Code Markers**:
+- `app/goful.go`: `// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]`
+- `filer/workspace.go`: `// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]`
+- `filer/filer.go`: `// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]`
+- `main.go`: `// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]`
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `app/goful.go`, `filer/workspace.go`, `filer/filer.go`, `main.go`.
+- Tests: `filer/workspace_test.go` tests named `TestChdirAllToSubdir_REQ_LINKED_NAVIGATION`, `TestChdirAllToParent_REQ_LINKED_NAVIGATION`.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./...` (darwin/arm64, Go 1.24.3) on 2026-01-09 validates linked navigation helpers and integration.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-09) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 616 token references across 66 files.`
+
+**Cross-References**: [ARCH:LINKED_NAVIGATION], [REQ:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
+
 ## 31. Digest Comparison [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 
 ### Decision: On-demand xxHash64 digest calculation for files with equal sizes across directories

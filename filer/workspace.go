@@ -2,6 +2,7 @@ package filer
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/anmitsu/goful/message"
 	"github.com/anmitsu/goful/widget"
@@ -221,6 +222,34 @@ func (w *Workspace) prevIndex() int {
 // SetTitle sets the workspace title.
 func (w *Workspace) SetTitle(title string) {
 	w.Title = title
+}
+
+// ChdirAllToSubdir navigates all non-focused directories to a subdirectory with the given name,
+// if that subdirectory exists in each directory's current path.
+// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (w *Workspace) ChdirAllToSubdir(name string) {
+	for i, d := range w.Dirs {
+		if i == w.Focus {
+			continue // Skip focused directory; caller handles it
+		}
+		targetPath := filepath.Join(d.Path, name)
+		if info, err := os.Stat(targetPath); err == nil && info.IsDir() {
+			d.Chdir(name)
+		}
+	}
+	w.RebuildComparisonIndex()
+}
+
+// ChdirAllToParent navigates all directories (including focused) to their respective parent directories.
+// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (w *Workspace) ChdirAllToParent() {
+	for i, d := range w.Dirs {
+		if i == w.Focus {
+			continue // Skip focused directory; caller handles it
+		}
+		d.Chdir("..")
+	}
+	w.RebuildComparisonIndex()
 }
 
 // LayoutTile allocates to the tile layout.
