@@ -552,6 +552,30 @@ Each requirement includes:
 
 **Status**: ⏳ Planned
 
+### [REQ:FILE_COMPARISON_COLORS] Multi-Directory File Comparison Coloring
+
+**Priority: P1 (Important)**
+
+- **Description**: When multiple directories are displayed in a workspace, files with common names across windows shall be color-coded. The name, size, and modification time are independently color-coded based on comparison results. File name comparison is case-sensitive, and timestamp comparison is precise to the second. The color scheme is configurable via a global YAML file, and the feature can be toggled on/off via keystroke.
+- **Rationale**: Users often compare directories to identify matching, newer, or larger files. Visual color-coding enables instant recognition of file relationships across panes without manual comparison, improving workflow efficiency for file synchronization, backup verification, and duplicate detection tasks.
+- **Satisfaction Criteria**:
+  - File names appearing in multiple directories are highlighted; files unique to one directory use neutral colors.
+  - For files with matching names across directories: sizes are color-coded as equal/smallest/largest; times are color-coded as equal/earliest/latest.
+  - Color scheme is configurable via YAML file at flag/env/default path (`-compare-colors`, `GOFUL_COMPARE_COLORS`, default `~/.goful/compare_colors.yaml`).
+  - A dedicated keystroke (and View menu entry) toggles comparison coloring on/off at runtime.
+  - Progressive rendering: files display immediately with standard colors, then comparison colors apply once all directories finish loading.
+  - Single-directory workspaces or disabled mode show standard file-type colors only.
+- **Validation Criteria**:
+  - Unit tests cover the comparison index builder for various window counts and file combinations.
+  - Unit tests cover YAML config loading with defaults for missing/invalid files.
+  - Integration tests prove color-coding applies correctly after directory loading completes.
+  - Toggle behavior verified via runtime state checks.
+  - Token validation confirms `[REQ:FILE_COMPARISON_COLORS]`, `[ARCH:FILE_COMPARISON_ENGINE]`, and `[IMPL:*]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § File Comparison Engine [ARCH:FILE_COMPARISON_ENGINE]
+- **Implementation**: See `implementation-decisions.md` § Comparison Color Config [IMPL:COMPARE_COLOR_CONFIG], File Comparison Index [IMPL:FILE_COMPARISON_INDEX], Comparison Draw [IMPL:COMPARISON_DRAW]
+
+**Status**: ⏳ Planned
+
 ### [REQ:EVENT_LOOP_SHUTDOWN] Event Poller Shutdown Control
 
 **Priority: P0 (Critical)**

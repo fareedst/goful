@@ -21,20 +21,22 @@ const (
 // Workspace is a box storing and layouting directories.
 type Workspace struct {
 	*widget.Window
-	Dirs   []*Directory `json:"directories"`
-	Layout layoutType   `json:"layout"`
-	Title  string       `json:"title"`
-	Focus  int          `json:"focus"`
+	Dirs            []*Directory     `json:"directories"`
+	Layout          layoutType       `json:"layout"`
+	Title           string           `json:"title"`
+	Focus           int              `json:"focus"`
+	comparisonIndex *ComparisonIndex // [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 }
 
 // NewWorkspace returns a new workspace of specified sizes.
 func NewWorkspace(x, y, width, height int, title string) *Workspace {
 	return &Workspace{
-		widget.NewWindow(x, y, width, height),
-		[]*Directory{},
-		layoutTile,
-		title,
-		0,
+		Window:          widget.NewWindow(x, y, width, height),
+		Dirs:            []*Directory{},
+		Layout:          layoutTile,
+		Title:           title,
+		Focus:           0,
+		comparisonIndex: nil,
 	}
 }
 
@@ -55,6 +57,8 @@ func (w *Workspace) CreateDir() {
 	w.Dirs[0] = dir
 	w.SetFocus(0)
 	w.allocate()
+	// [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+	w.RebuildComparisonIndex()
 }
 
 // CloseDir closes the focused directory.
@@ -69,6 +73,8 @@ func (w *Workspace) CloseDir() {
 	}
 	w.attach()
 	w.allocate()
+	// [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+	w.RebuildComparisonIndex()
 }
 
 // ChdirNeighbor changes the focused path a neighbor directory path.
@@ -128,6 +134,30 @@ func (w *Workspace) ReloadAll() {
 		home, _ := os.UserHomeDir()
 		w.Dir().Chdir(home)
 	}
+	// [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+	// Rebuild comparison index after all directories are loaded
+	w.RebuildComparisonIndex()
+}
+
+// RebuildComparisonIndex rebuilds the comparison index from current directory contents.
+// [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func (w *Workspace) RebuildComparisonIndex() {
+	w.comparisonIndex = BuildComparisonIndex(w.Dirs)
+}
+
+// ComparisonIndex returns the current comparison index.
+// [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func (w *Workspace) ComparisonIndex() *ComparisonIndex {
+	return w.comparisonIndex
+}
+
+// GetCompareState returns the comparison state for a file in a specific directory.
+// [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func (w *Workspace) GetCompareState(dirIndex int, filename string) *CompareState {
+	if w.comparisonIndex == nil {
+		return nil
+	}
+	return w.comparisonIndex.Get(dirIndex, filename)
 }
 
 // Dir returns the focused directory.
@@ -335,12 +365,9 @@ func (w *Workspace) isShowCursor() bool {
 	return false
 }
 
+// [IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 func (w *Workspace) draw() {
 	for i, d := range w.Dirs {
-		if i != w.Focus {
-			d.draw(false)
-		} else {
-			d.draw(true)
-		}
+		d.drawWithComparisonIndex(i == w.Focus, i, w.comparisonIndex)
 	}
 }

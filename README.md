@@ -249,6 +249,36 @@ Examples of customizing:
 * Adding bookmarks
 * Setting colors and looks
 
+### File comparison colors (`C` toggle)
+
+`[REQ:FILE_COMPARISON_COLORS]` (implemented via `[ARCH:FILE_COMPARISON_ENGINE]` + `[IMPL:COMPARE_COLOR_CONFIG]`) adds a per-column palette that highlights files with the same name across multiple windows. The feature is **off by default** so large directory scans stay unobstructed; press uppercase `C` at any time (or use `View → toggle comparison colors`) to enable it, and tap `C` again to return to the standard theme. When enabled, goful rebuilds its comparison index and redraws each pane so you can immediately spot duplicates, newer backups, or size mismatches.
+
+**Default palette**
+
+- Names present in more than one pane render in bold yellow so duplicates stand out even before you inspect metadata.
+- Size column colors: cyan when sizes match, red for the smallest copy, green for the largest copy.
+- Time column colors: cyan for matching timestamps, red for the earliest copy, green for the latest copy.
+
+**Configure the palette**
+
+The palette loads from a YAML file resolved in the usual precedence order: the `-compare-colors /path/to/colors.yaml` flag wins, next `GOFUL_COMPARE_COLORS=/path/to/colors.yaml`, then the default `~/.goful/compare_colors.yaml`. Edit or create the file, restart goful so the config is reloaded during startup, and press `C` to see the new scheme:
+
+```yaml
+# ~/.goful/compare_colors.yaml
+name:
+  present: yellow
+size:
+  equal: cyan
+  smallest: "#ff5555"   # accepts named colors or #RRGGBB hex
+  largest: green
+time:
+  equal: cyan
+  earliest: orange
+  latest: "#32cd32"
+```
+
+All entries accept tcell color names (`red`, `cyan`, `magenta`, etc.) or hex values. Leave a field blank to fall back to the default. Combine this file with the runtime toggle to tailor comparison cues to whichever terminal theme you use.
+
 Recommend remain original `main.go` and copy to own `main.go` for example:
 
 Go to source directory

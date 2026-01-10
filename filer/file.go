@@ -223,19 +223,106 @@ func (f *FileStat) look() tcell.Style {
 
 // Draw the file name and file stats.
 func (f *FileStat) Draw(x, y, width int, focus bool) {
-	style := f.look()
+	f.DrawWithComparison(x, y, width, focus, nil)
+}
+
+// DrawWithComparison draws the file with optional comparison coloring.
+// [IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func (f *FileStat) DrawWithComparison(x, y, width int, focus bool, cmp *CompareState) {
+	baseStyle := f.look()
 	if focus {
-		style = style.Reverse(true)
+		baseStyle = baseStyle.Reverse(true)
 	}
-	states := f.states()
-	width -= len(states)
+
+	// Determine if comparison colors should be applied
+	useCompare := cmp != nil && cmp.NamePresent && look.ComparisonEnabled()
+
+	// Calculate widths for each section
+	ext := f.Ext()
+	var sizeStr, timeStr string
+	if statView.size {
+		if f.stat.IsDir() {
+			sizeStr = fmt.Sprintf("%8s", "<DIR>")
+		} else {
+			sizeStr = fmt.Sprintf("%8s", util.FormatSize(f.stat.Size()))
+		}
+	}
+	permStr := ""
+	if statView.permission {
+		permStr = " " + f.stat.Mode().String()
+	}
+	if statView.time {
+		timeStr = " " + f.stat.ModTime().Format(timeFormat)
+	}
+
+	// Build states string for width calculation
+	states := ext + sizeStr + permStr + timeStr
+	nameWidth := width - len(states)
+
+	// Draw file name with prefix
 	pre := " "
 	if f.marked {
 		pre = "*"
 	}
-	s := pre + f.display + f.suffix()
-	s = runewidth.Truncate(s, width, "~")
-	s = runewidth.FillRight(s, width)
-	x = widget.SetCells(x, y, s, style)
-	widget.SetCells(x, y, states, style)
+	nameDisplay := pre + f.display + f.suffix()
+	nameDisplay = runewidth.Truncate(nameDisplay, nameWidth, "~")
+	nameDisplay = runewidth.FillRight(nameDisplay, nameWidth)
+
+	// Apply name comparison style if applicable
+	nameStyle := baseStyle
+	if useCompare {
+		nameStyle = look.CompareNamePresent()
+		if focus {
+			nameStyle = nameStyle.Reverse(true)
+		}
+	}
+	x = widget.SetCells(x, y, nameDisplay, nameStyle)
+
+	// Draw extension with base style
+	if ext != "" {
+		x = widget.SetCells(x, y, ext, baseStyle)
+	}
+
+	// Draw size with comparison style
+	if sizeStr != "" {
+		sizeStyle := baseStyle
+		if useCompare {
+			switch cmp.SizeState {
+			case SizeEqual:
+				sizeStyle = look.CompareSizeEqual()
+			case SizeSmallest:
+				sizeStyle = look.CompareSizeSmallest()
+			case SizeLargest:
+				sizeStyle = look.CompareSizeLargest()
+			}
+			if focus {
+				sizeStyle = sizeStyle.Reverse(true)
+			}
+		}
+		x = widget.SetCells(x, y, sizeStr, sizeStyle)
+	}
+
+	// Draw permission with base style
+	if permStr != "" {
+		x = widget.SetCells(x, y, permStr, baseStyle)
+	}
+
+	// Draw time with comparison style
+	if timeStr != "" {
+		timeStyle := baseStyle
+		if useCompare {
+			switch cmp.TimeState {
+			case TimeEqual:
+				timeStyle = look.CompareTimeEqual()
+			case TimeEarliest:
+				timeStyle = look.CompareTimeEarliest()
+			case TimeLatest:
+				timeStyle = look.CompareTimeLatest()
+			}
+			if focus {
+				timeStyle = timeStyle.Reverse(true)
+			}
+		}
+		widget.SetCells(x, y, timeStr, timeStyle)
+	}
 }

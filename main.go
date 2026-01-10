@@ -15,6 +15,7 @@ import (
 	"github.com/anmitsu/goful/configpaths"
 	"github.com/anmitsu/goful/externalcmd"
 	"github.com/anmitsu/goful/filer"
+	"github.com/anmitsu/goful/filer/comparecolors"
 	"github.com/anmitsu/goful/internal/externalmenu"
 	"github.com/anmitsu/goful/look"
 	"github.com/anmitsu/goful/menu"
@@ -47,15 +48,23 @@ var (
 		"",
 		"Override path to filename exclude list (default "+configpaths.DefaultExcludesPath+" or "+configpaths.EnvExcludesKey+")",
 	)
+	// [IMPL:COMPARE_COLOR_CONFIG] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+	compareColorsFlag = flag.String(
+		"compare-colors",
+		"",
+		"Override path to comparison colors config (default "+configpaths.DefaultCompareColorsPath+" or "+configpaths.EnvCompareColorsKey+")",
+	)
 )
 
 func main() {
 	flag.Parse()
 
 	pathsResolver := configpaths.Resolver{}
-	runtimePaths := pathsResolver.Resolve(*stateFlag, *historyFlag, *commandsFlag, *excludeNamesFlag)
+	runtimePaths := pathsResolver.Resolve(*stateFlag, *historyFlag, *commandsFlag, *excludeNamesFlag, *compareColorsFlag)
 	emitPathDebug(runtimePaths)
 	loadExcludedNames(runtimePaths.Excludes)
+	// [IMPL:COMPARE_COLOR_CONFIG] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+	loadCompareColors(runtimePaths.CompareColors)
 
 	is_tmux := false
 	widget.Init()
@@ -134,6 +143,21 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		}
 		// [REQ:FILER_EXCLUDE_NAMES] [IMPL:FILER_EXCLUDE_LOADER] Runtime toggle feedback + reload.
 		message.Infof("[REQ:FILER_EXCLUDE_NAMES] filename excludes %s (%d entries)", state, count)
+		g.Workspace().ReloadAll()
+	}
+
+	// [IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+	toggleComparisonColors := func() {
+		enabled := look.ToggleComparisonEnabled()
+		state := "disabled"
+		if enabled {
+			state = "enabled"
+		}
+		message.Infof("[REQ:FILE_COMPARISON_COLORS] comparison colors %s", state)
+		// Rebuild comparison index if enabling
+		if enabled {
+			g.Workspace().RebuildComparisonIndex()
+		}
 		g.Workspace().ReloadAll()
 	}
 
@@ -222,9 +246,11 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		"L", "look menu    ", func() { g.Menu("look") },
 		"n", "toggle filename excludes", func() { toggleExcludedNames() },
 		".", "toggle show hidden files", func() { filer.ToggleShowHiddens(); g.Workspace().ReloadAll() },
+		"c", "toggle comparison colors", func() { toggleComparisonColors() }, // [REQ:FILE_COMPARISON_COLORS]
 	)
 	g.AddKeymap("v", func() { g.Menu("view") })
 	g.AddKeymap("E", toggleExcludedNames)
+	g.AddKeymap("C", toggleComparisonColors) // [REQ:FILE_COMPARISON_COLORS]
 
 	menu.Add("layout",
 		"t", "tile       ", func() { g.Workspace().LayoutTile() },
@@ -455,7 +481,7 @@ func emitPathDebug(paths configpaths.Paths) {
 	}
 	fmt.Fprintf(
 		os.Stderr,
-		"DEBUG: [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS] [REQ:EXTERNAL_COMMAND_CONFIG] [REQ:FILER_EXCLUDE_NAMES] state=%s (%s) history=%s (%s) commands=%s (%s) excludes=%s (%s)\n",
+		"DEBUG: [IMPL:STATE_PATH_RESOLVER] [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS] [REQ:EXTERNAL_COMMAND_CONFIG] [REQ:FILER_EXCLUDE_NAMES] [REQ:FILE_COMPARISON_COLORS] state=%s (%s) history=%s (%s) commands=%s (%s) excludes=%s (%s) compare_colors=%s (%s)\n",
 		paths.State,
 		paths.StateSource,
 		paths.History,
@@ -464,7 +490,25 @@ func emitPathDebug(paths configpaths.Paths) {
 		paths.CommandsSource,
 		paths.Excludes,
 		paths.ExcludesSource,
+		paths.CompareColors,
+		paths.CompareColorsSource,
 	)
+}
+
+// loadCompareColors loads the comparison color configuration from the specified path.
+// [IMPL:COMPARE_COLOR_CONFIG] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func loadCompareColors(path string) {
+	cfg, err := comparecolors.Load(path)
+	if err != nil {
+		if os.Getenv("GOFUL_DEBUG_PATHS") != "" {
+			fmt.Fprintf(os.Stderr, "DEBUG: [IMPL:COMPARE_COLOR_CONFIG] failed to load compare colors from %s: %v\n", path, err)
+		}
+	}
+	parsed := cfg.Parse()
+	look.ConfigureComparisonColors(parsed)
+	if os.Getenv("GOFUL_DEBUG_PATHS") != "" {
+		fmt.Fprintf(os.Stderr, "DEBUG: [IMPL:COMPARE_COLOR_CONFIG] loaded comparison colors from %s\n", path)
+	}
 }
 
 // Widget keymap functions.

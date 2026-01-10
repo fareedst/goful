@@ -990,4 +990,87 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:FILER_EXCLUDE_FILTER], [REQ:FILER_EXCLUDE_NAMES], [REQ:MODULE_VALIDATION]
 
+## 28. Comparison Color Configuration [IMPL:COMPARE_COLOR_CONFIG] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+
+### Decision: Load comparison color scheme from YAML with sensible defaults for missing/invalid configs.
+**Rationale:**
+- Allows users to customize colors to match their terminal themes without code changes.
+- Provides consistent defaults that work on both light and dark terminals.
+- Reuses the existing path resolver pattern for flag/env/default precedence.
+
+### Implementation Approach:
+- Add `filer/comparecolors/` package with:
+  - `type Config struct` containing color definitions for each comparison state (NamePresent, SizeEqual, SizeSmallest, SizeLargest, TimeEqual, TimeEarliest, TimeLatest).
+  - `func Load(path string) (*Config, error)` that reads YAML, validates color names, and returns parsed config.
+  - `func DefaultConfig() *Config` providing sensible defaults when file is missing.
+  - Color names map to `tcell.Color` values via a lookup table supporting named colors ("red", "green", etc.) and hex codes.
+- Extend `configpaths.Resolver` with `-compare-colors` flag, `GOFUL_COMPARE_COLORS` env, and default `~/.goful/compare_colors.yaml`.
+- `main.go` loads config at startup, passes to `look.ConfigureComparisonColors()`.
+
+**Code Markers**:
+- `filer/comparecolors/config.go` includes `[IMPL:COMPARE_COLOR_CONFIG] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/comparecolors/config_test.go` validates YAML parsing, defaults, and invalid input handling with `[REQ:FILE_COMPARISON_COLORS]`.
+
+**Cross-References**: [ARCH:FILE_COMPARISON_ENGINE], [REQ:FILE_COMPARISON_COLORS], [REQ:MODULE_VALIDATION]
+
+## 29. File Comparison Index [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+
+### Decision: Build a cached index of cross-directory file comparison states for O(1) draw-time lookup.
+**Rationale:**
+- Comparison must not block directory reading or initial display.
+- Index built once after all directories load, cached until invalidation events.
+- Pure function design enables independent module validation.
+
+### Implementation Approach:
+- Add `filer/compare.go` with:
+  - `type CompareState struct { NamePresent bool; SizeState SizeCompare; TimeState TimeCompare }` where `SizeCompare` and `TimeCompare` are enums (Equal, Smallest, Largest / Equal, Earliest, Latest).
+  - `type ComparisonIndex struct` with `cache map[string]map[int]CompareState` keyed by filename then dirIndex.
+  - `func BuildIndex(dirs []*Directory) *ComparisonIndex` that:
+    - Collects all files by name across directories.
+    - For files in multiple directories: marks NamePresent=true, computes size/time comparisons.
+    - For single-directory files: no entry (returns nil on lookup).
+  - `func (idx *ComparisonIndex) Get(dirIndex int, filename string) *CompareState` for draw-time lookup.
+  - `var comparisonEnabled bool` and `func ToggleComparisonColors() (enabled bool)` for runtime toggle.
+- Workspace tracks `*ComparisonIndex` and rebuilds on invalidation events (`Chdir`, `reload`, `ReloadAll`, `CreateDir`, `CloseDir`).
+- Index building happens after `ReloadAll` completes, before next draw cycle.
+
+**Code Markers**:
+- `filer/compare.go` includes `[IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/compare_test.go` tests index building with various window/file combinations, size/time edge cases with `[REQ:FILE_COMPARISON_COLORS]`.
+
+**Cross-References**: [ARCH:FILE_COMPARISON_ENGINE], [REQ:FILE_COMPARISON_COLORS], [REQ:MODULE_VALIDATION]
+
+## 30. Comparison Draw Integration [IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+
+### Decision: Extend `FileStat.Draw()` to accept comparison context and apply colors independently to name, size, and time fields.
+**Rationale:**
+- Minimal change to existing draw path—comparison is optional context.
+- Independent color application means name, size, and time can each show different comparison states.
+- Respects existing file-type colors when comparison is disabled or file is unique.
+
+### Implementation Approach:
+- Add `look/comparison.go` with:
+  - Thread-safe style storage for each comparison state.
+  - `func CompareNamePresent() tcell.Style`, `func CompareSizeEqual() tcell.Style`, etc.
+  - `func ConfigureComparisonColors(cfg *comparecolors.Config)` to apply loaded config.
+- Modify `FileStat.Draw(x, y, width int, focus bool)` signature to accept optional `*CompareState`:
+  - New signature: `Draw(x, y, width int, focus bool, cmp *CompareState)`.
+  - When `cmp != nil` and `cmp.NamePresent`: use comparison name color.
+  - Size field uses `cmp.SizeState` to select Equal/Smallest/Largest color.
+  - Time field uses `cmp.TimeState` to select Equal/Earliest/Latest color.
+- `Directory.drawFiles()` passes comparison state from workspace index to each `FileStat.Draw()`.
+- `Workspace.Draw()` ensures index is available before drawing.
+
+**Code Markers**:
+- `filer/file.go`, `filer/directory.go`, `filer/workspace.go` include `[IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`.
+- `look/comparison.go` includes `[IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Integration tests in `filer/` validate that comparison colors apply correctly with `[REQ:FILE_COMPARISON_COLORS]`.
+
+**Cross-References**: [ARCH:FILE_COMPARISON_ENGINE], [REQ:FILE_COMPARISON_COLORS], [IMPL:FILE_COMPARISON_INDEX], [IMPL:COMPARE_COLOR_CONFIG]
 

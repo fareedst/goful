@@ -512,6 +512,12 @@ func (d *Directory) drawFooter() {
 }
 
 func (d *Directory) drawFiles(focus bool) {
+	d.drawFilesWithComparison(focus, -1, nil)
+}
+
+// drawFilesWithComparison draws files with optional comparison state.
+// [IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func (d *Directory) drawFilesWithComparison(focus bool, dirIndex int, idx *ComparisonIndex) {
 	height := d.Height() - 2
 	row := 1
 	shift := 0
@@ -527,20 +533,32 @@ func (d *Directory) drawFiles(focus bool) {
 		x, y := d.LeftTop()
 		y += row
 		x += shift
-		if focus && i == d.Cursor() {
-			d.List()[i].Draw(x, y, width, true)
-		} else {
-			d.List()[i].Draw(x, y, width, false)
+
+		fs := d.List()[i].(*FileStat)
+		isFocused := focus && i == d.Cursor()
+
+		// Get comparison state for this file
+		var cmp *CompareState
+		if idx != nil && dirIndex >= 0 {
+			cmp = idx.Get(dirIndex, fs.Name())
 		}
+
+		fs.DrawWithComparison(x, y, width, isFocused, cmp)
 		row++
 	}
 }
 
 func (d *Directory) draw(focus bool) {
+	d.drawWithComparisonIndex(focus, -1, nil)
+}
+
+// drawWithComparisonIndex draws the directory with optional comparison index.
+// [IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func (d *Directory) drawWithComparisonIndex(focus bool, dirIndex int, idx *ComparisonIndex) {
 	d.AdjustCursor()
 	d.AdjustOffset()
 	d.Border()
-	d.drawFiles(focus)
+	d.drawFilesWithComparison(focus, dirIndex, idx)
 	d.drawFooter()
 	if d.finder != nil {
 		d.finder.Draw(focus)

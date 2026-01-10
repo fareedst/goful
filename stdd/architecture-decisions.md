@@ -703,7 +703,47 @@ func formatDirs(paths []string, quote bool) string {
 
 **Cross-References**: [REQ:WORKSPACE_START_DIRS], [IMPL:WORKSPACE_START_DIRS], [REQ:MODULE_VALIDATION]
 
-## 30. Filename Exclude Filter [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
+## 30. File Comparison Engine [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+
+### Decision: Implement progressive comparison with cached indexing for cross-directory file color-coding
+**Rationale:**
+- Provides instant visual feedback for file relationships across workspace directories without manual comparison.
+- Progressive rendering ensures directories display immediately while comparison analysis runs in background.
+- Caching comparison results avoids recomputation on every draw, improving performance for large directories.
+- Configurable color scheme via YAML allows users to customize the visual appearance to their preferences.
+
+**Architecture Outline:**
+- **ComparisonColorConfig** (`filer/comparecolors/`): Loads YAML configuration defining color roles (name_present, size_equal/smallest/largest, time_equal/earliest/latest). Falls back to sensible defaults when config is missing or invalid. Path resolution via `configpaths.Resolver` extension.
+- **FileComparisonIndex** (`filer/compare.go`): Pure module that builds an index of file names across workspace directories. For each file appearing in multiple directories, computes comparison states for size and time. Results are cached per workspace and invalidated on directory changes.
+- **ComparisonLook** (`look/comparison.go`): Exposes `tcell.Style` getters for each comparison state. Manages runtime toggle state with thread-safe access.
+- **Draw Integration**: `FileStat.Draw()` accepts optional comparison context and applies appropriate colors per field (name, size, time) independently.
+
+**Progressive Rendering Strategy:**
+1. Initial draw renders file lists with standard colors (no blocking).
+2. After all directories complete loading, comparison index is built.
+3. Subsequent draws use cached comparison results.
+4. Cache invalidated on: `Chdir`, `reload`, `ReloadAll`, `CreateDir`, `CloseDir`, toggle on.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `CompareColorLoader` (Module 1): Parses YAML config, validates color names, provides defaults. Independently testable with mock file readers.
+- `FileComparisonIndex` (Module 2): Pure function that takes workspace directories and returns comparison state map. No side effects, independently testable.
+- `ComparisonCache` (Module 3): Thread-safe storage keyed by (dirIndex, filename). Provides O(1) lookup during draw.
+- `ComparisonLook` (Module 4): Style providers that consume loaded config. Tested with mock styles.
+
+**Alternatives Considered:**
+- **Synchronous comparison on every draw**: Rejected due to performance impact on large directories.
+- **Background goroutine for comparison**: Rejected to avoid concurrency complexity; progressive rendering with caching is simpler and sufficient.
+- **Hardcoded colors only**: Rejected; users have diverse terminal themes and color preferences.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/compare.go`, `filer/comparecolors/` include `[IMPL:FILE_COMPARISON_INDEX] [IMPL:COMPARE_COLOR_CONFIG] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`.
+- `look/comparison.go` includes `[IMPL:COMPARISON_LOOK] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`.
+- `filer/file.go` draw integration includes `[IMPL:COMPARISON_DRAW] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`.
+- Tests reference `[REQ:FILE_COMPARISON_COLORS]` to prove validation coverage.
+
+**Cross-References**: [REQ:FILE_COMPARISON_COLORS], [IMPL:COMPARE_COLOR_CONFIG], [IMPL:FILE_COMPARISON_INDEX], [IMPL:COMPARISON_DRAW], [REQ:MODULE_VALIDATION]
+
+## 31. Filename Exclude Filter [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
 
 ### Decision: Load newline-delimited basename filters via flag/env/default and enforce them inside the filer pipeline with a runtime toggle.
 **Rationale:**

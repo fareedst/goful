@@ -127,6 +127,7 @@ When referencing other tokens:
 - `[REQ:TERMINAL_CWD]` - macOS terminal sessions start in the active directory
 - `[REQ:EVENT_LOOP_SHUTDOWN]` - Event poller must observe shutdown signals and terminate without leaking goroutines
 - `[REQ:CLI_TO_CHAINING]` - CLI helper rewrites commands by interleaving `--to` before every target argument with dry-run support
+- `[REQ:FILE_COMPARISON_COLORS]` - Cross-directory file comparison with configurable color-coding for names, sizes, and times
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -166,6 +167,7 @@ When referencing other tokens:
 - `[ARCH:EVENT_LOOP_SHUTDOWN]` - Event poller shutdown coordination [REQ:EVENT_LOOP_SHUTDOWN]
 - `[ARCH:XFORM_CLI_PIPELINE]` - Parser/builder split for the xform helper that inserts `--to` between targets [REQ:CLI_TO_CHAINING]
 - `[ARCH:WORKSPACE_BOOTSTRAP]` - Workspace seeding from positional startup directories [REQ:WORKSPACE_START_DIRS]
+- `[ARCH:FILE_COMPARISON_ENGINE]` - Progressive comparison with cached indexing for cross-directory file color-coding [REQ:FILE_COMPARISON_COLORS]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -201,6 +203,9 @@ When referencing other tokens:
 - `[IMPL:EVENT_LOOP_SHUTDOWN]` - Event poller stop controller [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
 - `[IMPL:XFORM_CLI_SCRIPT]` - Bash helper and tests that expose `xform` with dry-run output [ARCH:XFORM_CLI_PIPELINE] [REQ:CLI_TO_CHAINING]
 - `[IMPL:WORKSPACE_START_DIRS]` - Parser + seeder for positional startup directories [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]
+- `[IMPL:COMPARE_COLOR_CONFIG]` - Comparison color YAML configuration loader [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+- `[IMPL:FILE_COMPARISON_INDEX]` - Cached index of cross-directory file comparison states [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+- `[IMPL:COMPARISON_DRAW]` - Draw integration for comparison colors [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 - Add your implementation tokens here
 
 ## Test Tokens Registry
