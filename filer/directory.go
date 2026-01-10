@@ -21,7 +21,7 @@ type Directory struct {
 	history map[string]string // key: path, value: file name on cursor
 	finder  *Finder
 	Path    string   `json:"path"`
-	Sort    sortType `json:"sort_kind"`
+	Sort    SortType `json:"sort_kind"`
 }
 
 // NewDirectory creates a new directory based on specified size and coordinates.
@@ -34,7 +34,7 @@ func NewDirectory(x, y, width, height int) *Directory {
 		reader:  defaultReader("."),
 		history: map[string]string{},
 		Path:    path,
-		Sort:    sortName,
+		Sort:    SortName,
 	}
 }
 
@@ -46,17 +46,20 @@ func SetBorderStyle(style widget.BorderStyle) {
 	borderStyle = style
 }
 
-type sortType string
+// SortType represents the file sorting order.
+type SortType string
 
+// Sort type constants for directory file ordering.
+// [IMPL:LINKED_NAVIGATION] Exported for linked sort synchronization.
 const (
-	sortName     sortType = "Name[^]"
-	sortNameRev  sortType = "Name[$]"
-	sortSize     sortType = "Size[^]"
-	sortSizeRev  sortType = "Size[$]"
-	sortMtime    sortType = "Time[^]"
-	sortMtimeRev sortType = "Time[$]"
-	sortExt      sortType = "Ext[^]"
-	sortExtRev   sortType = "Ext[$]"
+	SortName     SortType = "Name[^]"
+	SortNameRev  SortType = "Name[$]"
+	SortSize     SortType = "Size[^]"
+	SortSizeRev  SortType = "Size[$]"
+	SortMtime    SortType = "Time[^]"
+	SortMtimeRev SortType = "Time[$]"
+	SortExt      SortType = "Ext[^]"
+	SortExtRev   SortType = "Ext[$]"
 )
 
 var priorityDir = true
@@ -296,7 +299,9 @@ func (d *Directory) File() *FileStat {
 // Base returns the directory name.
 func (d *Directory) Base() string { return filepath.Base(d.Path) }
 
-func (d *Directory) sortBy(typ sortType) {
+// SortBy applies the given sort type to the directory.
+// [IMPL:LINKED_NAVIGATION] Exported for linked sort synchronization.
+func (d *Directory) SortBy(typ SortType) {
 	d.Sort = typ
 	name := d.File().Name()
 	sort.Sort(d)
@@ -305,28 +310,28 @@ func (d *Directory) sortBy(typ sortType) {
 }
 
 // SortName sorts files in ascending order by the file name.
-func (d *Directory) SortName() { d.sortBy(sortName) }
+func (d *Directory) SortName() { d.SortBy(SortName) }
 
 // SortNameDec sorts files in descending order by the file name.
-func (d *Directory) SortNameDec() { d.sortBy(sortNameRev) }
+func (d *Directory) SortNameDec() { d.SortBy(SortNameRev) }
 
 // SortMtime sorts files in ascending order by the modified time.
-func (d *Directory) SortMtime() { d.sortBy(sortMtime) }
+func (d *Directory) SortMtime() { d.SortBy(SortMtime) }
 
 // SortMtimeDec sorts files in descending order by the modified time.
-func (d *Directory) SortMtimeDec() { d.sortBy(sortMtimeRev) }
+func (d *Directory) SortMtimeDec() { d.SortBy(SortMtimeRev) }
 
 // SortSize sorts files in ascending order by the file size.
-func (d *Directory) SortSize() { d.sortBy(sortSize) }
+func (d *Directory) SortSize() { d.SortBy(SortSize) }
 
 // SortSizeDec sorts files in descending order by the file size.
-func (d *Directory) SortSizeDec() { d.sortBy(sortSizeRev) }
+func (d *Directory) SortSizeDec() { d.SortBy(SortSizeRev) }
 
 // SortExt sorts files in ascending order by the file extension.
-func (d *Directory) SortExt() { d.sortBy(sortExt) }
+func (d *Directory) SortExt() { d.SortBy(SortExt) }
 
 // SortExtDec sorts files in descending order by the file extension.
-func (d *Directory) SortExtDec() { d.sortBy(sortExtRev) }
+func (d *Directory) SortExtDec() { d.SortBy(SortExtRev) }
 
 // Less compares based on Sort.
 func (d *Directory) Less(i, j int) bool {
@@ -338,21 +343,21 @@ func (d *Directory) Less(i, j int) bool {
 		}
 	}
 	switch d.Sort {
-	case sortName:
+	case SortName:
 		return d.List()[i].Name() < d.List()[j].Name()
-	case sortNameRev:
+	case SortNameRev:
 		return d.List()[i].Name() > d.List()[j].Name()
-	case sortMtime:
+	case SortMtime:
 		return d.lessMtime(i, j)
-	case sortMtimeRev:
+	case SortMtimeRev:
 		return d.lessMtime(j, i)
-	case sortSize:
+	case SortSize:
 		return d.lessSize(i, j)
-	case sortSizeRev:
+	case SortSizeRev:
 		return d.lessSize(j, i)
-	case sortExt:
+	case SortExt:
 		return d.lessExt(i, j)
-	case sortExtRev:
+	case SortExtRev:
 		return d.lessExt(j, i)
 	}
 	return d.List()[i].Name() < d.List()[j].Name()

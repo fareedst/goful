@@ -252,6 +252,15 @@ func (w *Workspace) ChdirAllToParent() {
 	w.RebuildComparisonIndex()
 }
 
+// SortAllBy applies the given sort type to all directories in the workspace.
+// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (w *Workspace) SortAllBy(typ SortType) {
+	for _, d := range w.Dirs {
+		d.SortBy(typ)
+	}
+	w.RebuildComparisonIndex()
+}
+
 // LayoutTile allocates to the tile layout.
 func (w *Workspace) LayoutTile() {
 	w.Layout = layoutTile

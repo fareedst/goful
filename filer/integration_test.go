@@ -215,6 +215,61 @@ func TestLinkedNavigationSingleWindow_REQ_LINKED_NAVIGATION(t *testing.T) {
 	}
 }
 
+// TestSortAllBy_REQ_LINKED_NAVIGATION tests that linked sort applies
+// the same sort type to all directories in the workspace.
+// [REQ:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [IMPL:LINKED_NAVIGATION]
+func TestSortAllBy_REQ_LINKED_NAVIGATION(t *testing.T) {
+	// Create temp directories with files
+	tmp1 := t.TempDir()
+	tmp2 := t.TempDir()
+
+	// Create test files
+	for _, name := range []string{"alpha.txt", "zeta.txt", "beta.txt"} {
+		if err := os.WriteFile(filepath.Join(tmp1, name), []byte(name), 0o644); err != nil {
+			t.Fatalf("write file tmp1: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(tmp2, name), []byte(name), 0o644); err != nil {
+			t.Fatalf("write file tmp2: %v", err)
+		}
+	}
+
+	// Create workspace with 2 directories
+	ws := NewWorkspace(0, 0, 80, 40, "test")
+	dir1 := newTestDirectory(t, tmp1)
+	dir2 := newTestDirectory(t, tmp2)
+	ws.Dirs = []*Directory{dir1, dir2}
+	ws.Focus = 0
+
+	// Verify initial sort type (default is SortName)
+	if dir1.Sort != SortName {
+		t.Errorf("dir1 initial sort = %s, want %s", dir1.Sort, SortName)
+	}
+	if dir2.Sort != SortName {
+		t.Errorf("dir2 initial sort = %s, want %s", dir2.Sort, SortName)
+	}
+
+	// Apply SortNameRev to all directories
+	ws.SortAllBy(SortNameRev)
+
+	// Both directories should now have the same sort type
+	if dir1.Sort != SortNameRev {
+		t.Errorf("dir1 sort = %s, want %s", dir1.Sort, SortNameRev)
+	}
+	if dir2.Sort != SortNameRev {
+		t.Errorf("dir2 sort = %s, want %s", dir2.Sort, SortNameRev)
+	}
+
+	// Apply SortSize to all directories
+	ws.SortAllBy(SortSize)
+
+	if dir1.Sort != SortSize {
+		t.Errorf("dir1 sort = %s, want %s", dir1.Sort, SortSize)
+	}
+	if dir2.Sort != SortSize {
+		t.Errorf("dir2 sort = %s, want %s", dir2.Sort, SortSize)
+	}
+}
+
 func TestExcludedNamesHideEntries_REQ_FILER_EXCLUDE_NAMES(t *testing.T) {
 	// [REQ:FILER_EXCLUDE_NAMES] [ARCH:FILER_EXCLUDE_FILTER] [IMPL:FILER_EXCLUDE_RULES]
 	t.Cleanup(func() { ConfigureExcludedNames(nil, false) })

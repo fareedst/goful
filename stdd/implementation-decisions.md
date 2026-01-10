@@ -1119,7 +1119,12 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - **Navigation Helpers (`filer/workspace.go`)**:
   - Add `func (w *Workspace) ChdirAllToSubdir(name string)` that iterates all non-focused directories, checks if `name` exists as a subdirectory, and calls `Chdir(name)` if so.
   - Add `func (w *Workspace) ChdirAllToParent()` that iterates all directories and calls `Chdir("..")`.
-  - Both methods skip the focused directory (caller handles it separately) and rebuild comparison index after.
+  - Add `func (w *Workspace) SortAllBy(typ SortType)` that applies the given sort type to all directories.
+  - All methods rebuild comparison index after changes.
+
+- **Exported Sort Types (`filer/directory.go`)**:
+  - Export `SortType` and constants (`SortName`, `SortNameRev`, `SortSize`, `SortSizeRev`, `SortMtime`, `SortMtimeRev`, `SortExt`, `SortExtRev`) for linked sort synchronization.
+  - Export `SortBy(typ SortType)` method to enable workspace-level sorting.
 
 - **Header Indicator (`filer/filer.go`)**:
   - Add `var linkedNavIndicatorFunc func() bool` package variable.
@@ -1130,6 +1135,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
   - Replace direct navigation callbacks with wrappers that check `g.IsLinkedNav()`.
   - For `backspace`/`C-h`/`u`: if linked, call `g.Workspace().ChdirAllToParent()` then `g.Dir().Chdir("..")`.
   - For enter-dir (extmap `.dir`): if linked, call `g.Workspace().ChdirAllToSubdir(name)` then `g.Dir().EnterDir()`.
+  - For sort menu: if linked, call `g.Workspace().SortAllBy(typ)` instead of `g.Dir().Sort*()`.
   - Add `L` (uppercase, macOS-compatible) and `M-l` bindings to toggle with `message.Infof` feedback.
   - Wire `filer.SetLinkedNavIndicator(g.IsLinkedNav)` at startup.
 
@@ -1140,12 +1146,12 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - `main.go`: `// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]`
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
-- Source: `app/goful.go`, `filer/workspace.go`, `filer/filer.go`, `main.go`.
-- Tests: `filer/workspace_test.go` tests named `TestChdirAllToSubdir_REQ_LINKED_NAVIGATION`, `TestChdirAllToParent_REQ_LINKED_NAVIGATION`.
+- Source: `app/goful.go`, `filer/workspace.go`, `filer/filer.go`, `filer/directory.go`, `main.go`.
+- Tests: `filer/integration_test.go` tests named `TestChdirAllToSubdir_REQ_LINKED_NAVIGATION`, `TestChdirAllToParent_REQ_LINKED_NAVIGATION`, `TestSortAllBy_REQ_LINKED_NAVIGATION`.
 
 **Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
-- `go test ./...` (darwin/arm64, Go 1.24.3) on 2026-01-09 validates linked navigation helpers and integration.
-- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-09) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 616 token references across 66 files.`
+- `go test ./...` (darwin/arm64, Go 1.24.3) on 2026-01-09 validates linked navigation and sort helpers.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-09) → token validation passed.
 
 **Cross-References**: [ARCH:LINKED_NAVIGATION], [REQ:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
 

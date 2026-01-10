@@ -246,15 +246,65 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 	}
 
 	// Setup menus and add to keymap.
+	// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+	// Sort menu with linked mode support - when linked, sort applies to all windows
 	menu.Add("sort",
-		"n", "sort name          ", func() { g.Dir().SortName() },
-		"N", "sort name decending", func() { g.Dir().SortNameDec() },
-		"s", "sort size          ", func() { g.Dir().SortSize() },
-		"S", "sort size decending", func() { g.Dir().SortSizeDec() },
-		"t", "sort time          ", func() { g.Dir().SortMtime() },
-		"T", "sort time decending", func() { g.Dir().SortMtimeDec() },
-		"e", "sort ext           ", func() { g.Dir().SortExt() },
-		"E", "sort ext decending ", func() { g.Dir().SortExtDec() },
+		"n", "sort name          ", func() {
+			if g.IsLinkedNav() {
+				g.Workspace().SortAllBy(filer.SortName)
+			} else {
+				g.Dir().SortName()
+			}
+		},
+		"N", "sort name decending", func() {
+			if g.IsLinkedNav() {
+				g.Workspace().SortAllBy(filer.SortNameRev)
+			} else {
+				g.Dir().SortNameDec()
+			}
+		},
+		"s", "sort size          ", func() {
+			if g.IsLinkedNav() {
+				g.Workspace().SortAllBy(filer.SortSize)
+			} else {
+				g.Dir().SortSize()
+			}
+		},
+		"S", "sort size decending", func() {
+			if g.IsLinkedNav() {
+				g.Workspace().SortAllBy(filer.SortSizeRev)
+			} else {
+				g.Dir().SortSizeDec()
+			}
+		},
+		"t", "sort time          ", func() {
+			if g.IsLinkedNav() {
+				g.Workspace().SortAllBy(filer.SortMtime)
+			} else {
+				g.Dir().SortMtime()
+			}
+		},
+		"T", "sort time decending", func() {
+			if g.IsLinkedNav() {
+				g.Workspace().SortAllBy(filer.SortMtimeRev)
+			} else {
+				g.Dir().SortMtimeDec()
+			}
+		},
+		"e", "sort ext           ", func() {
+			if g.IsLinkedNav() {
+				g.Workspace().SortAllBy(filer.SortExt)
+			} else {
+				g.Dir().SortExt()
+			}
+		},
+		"E", "sort ext decending ", func() {
+			if g.IsLinkedNav() {
+				g.Workspace().SortAllBy(filer.SortExtRev)
+			} else {
+				g.Dir().SortExtDec()
+			}
+		},
 		".", "toggle priority    ", func() { filer.TogglePriority(); g.Workspace().ReloadAll() },
 	)
 	g.AddKeymap("s", func() { g.Menu("sort") })

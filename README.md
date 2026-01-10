@@ -102,6 +102,8 @@ Linked navigation synchronizes directory navigation across all open panes. When 
 
 **Parent navigation**: When you press backspace (or `C-h` or `u`), all panes navigate to their respective parent directories.
 
+**Sort synchronization**: When you change the sort order (via the `s` menu), all panes adopt the same sort order.
+
 **Use cases**:
 - Comparing parallel directory structures (e.g., syncing `src/` and `backup/src/`)
 - Navigating release versions side-by-side (`v1.0/`, `v2.0/`)

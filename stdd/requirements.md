@@ -610,6 +610,7 @@ Each requirement includes:
   - When disabled, navigation in the focused window affects only that window (historical behavior).
   - When enabled, entering a subdirectory attempts to navigate all other workspace windows to a matching subdirectory (by name) if it exists in each window's current path.
   - When enabled, pressing backspace (parent navigation) causes all windows to navigate to their respective parent directories.
+  - When enabled, changing sort order applies the same sort type to all windows in the workspace.
   - A visual indicator (`[LINKED]`) appears in the filer header when the mode is active.
   - The mode state is per-session and does not persist across restarts.
 - **Validation Criteria**:
@@ -622,9 +623,10 @@ Each requirement includes:
 **Status**: ✅ Implemented
 
 **Validation Evidence (2026-01-09)**:
-- `TestChdirAllToSubdir_REQ_LINKED_NAVIGATION`, `TestChdirAllToParent_REQ_LINKED_NAVIGATION`, `TestLinkedNavigationSingleWindow_REQ_LINKED_NAVIGATION` in `filer/integration_test.go` covering the workspace navigation helpers.
+- `TestChdirAllToSubdir_REQ_LINKED_NAVIGATION`, `TestChdirAllToParent_REQ_LINKED_NAVIGATION`, `TestLinkedNavigationSingleWindow_REQ_LINKED_NAVIGATION`, `TestSortAllBy_REQ_LINKED_NAVIGATION` in `filer/integration_test.go` covering the workspace navigation and sort helpers.
 - Toggle keystroke: `L` (uppercase, works on all platforms) or `M-l` (Alt+l, may not work on macOS where Option produces special characters).
 - Header indicator `[LINKED]` displayed when mode is active.
+- Sort synchronization: all sort menu options apply to all windows when linked mode is enabled.
 
 ### [REQ:EVENT_LOOP_SHUTDOWN] Event Poller Shutdown Control
 
