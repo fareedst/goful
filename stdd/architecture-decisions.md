@@ -795,6 +795,65 @@ func formatDirs(paths []string, quote bool) string {
 
 **Cross-References**: [REQ:LINKED_NAVIGATION], [IMPL:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
 
+## 33. Difference Search Engine [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+
+### Decision: Implement a two-command difference search that iterates through workspace files alphabetically and stops at entries that differ across windows.
+**Rationale:**
+- Users comparing similar directory structures need an efficient way to find differences without manually inspecting each file.
+- Separating "Start" and "Continue" commands allows users to inspect differences at their own pace while maintaining search state.
+- Using cursor position as the implicit bookmark simplifies state management and integrates naturally with existing navigation.
+
+**Architecture Outline:**
+- **State Management**: Add `DiffSearchState` struct to `filer.Workspace` containing `initialDirs []string` (one per window) and `active bool`.
+- **Core Comparison**: Pure module that collects the union of all filenames across directories, sorts them alphabetically (case-sensitive), and iterates to find differences.
+- **Difference Detection**: A file is "different" if it's missing from any window OR has different sizes across windows. Directories follow the same rule.
+- **Cursor Movement**: When a difference is found, move cursors to that entry in all windows where it exists.
+- **Subdirectory Descent**: If no file differences are found, process subdirectories alphabetically. If a subdir exists in all windows, descend into it and repeat. If a subdir is missing in any window, treat it as a difference. The descent function must respect the `startAfter` position to avoid re-searching already-visited subdirectories (see `FindNextSubdirInAll`).
+- **Continue Logic**: Command 2 reads the cursor filename in the active window, uses it as a starting point, and continues from the next alphabetic entry. When descending into subdirectories, the algorithm uses `FindNextSubdirInAll(dirs, startAfter)` to find the next common subdirectory after the current position, ensuring proper traversal even when the user manually navigates into subdirectories between continue commands.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `DiffSearchState` (Module 1 in `filer/diffsearch.go`): Pure struct holding initial directories, active state, and status fields (LastDiffName, LastDiffReason, CurrentPath, FilesChecked, Searching). Methods for starting, checking active, clearing, and updating status.
+- `DiffSearchEngine` (Module 2 in `filer/diffsearch.go`): Pure functions for collecting file names, detecting differences, and finding the next different entry. No side effects, independently testable.
+- `DiffSearchNavigation` (Module 3 in `filer/workspace.go`): Workspace methods that move cursors to a named entry across all directories.
+- `DiffSearchCommands` (Module 4 in `app/goful.go`): Command wrappers that wire state, engine, and navigation together. Includes periodic UI refresh via goroutine/ticker.
+- `DiffStatusDisplay` (Module 5 in `diffstatus/diffstatus.go`): Dedicated status line display that persists while diff search is active. Shows current search progress or last found difference. Integrated into app draw cycle and resize handling.
+
+**Algorithm Sketch:**
+```text
+// [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func findNextDifference(dirs []*Directory, startAfter string) (name string, reason string, found bool) {
+    names := collectAllNames(dirs)  // Union of all file/dir names
+    sort.Strings(names)              // Case-sensitive alphabetic
+    
+    started := (startAfter == "")
+    for _, name := range names {
+        if !started {
+            if name == startAfter { started = true }
+            continue
+        }
+        if isDifferent, reason := checkDifference(name, dirs); isDifferent {
+            return name, reason, true
+        }
+    }
+    return "", "", false  // No more differences at this level
+}
+```
+
+**Alternatives Considered:**
+- **Skip set for tracking inspected files**: Rejected; cursor position provides implicit tracking with no extra state.
+- **Background comparison thread**: Rejected; synchronous iteration is simpler and search is bounded by user interaction pace.
+- **Modal "diff mode" with separate keybindings**: Rejected; background state allows normal navigation between continue commands.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/diffsearch.go` includes `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`.
+- `filer/workspace.go` navigation helpers include `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`.
+- `app/goful.go` command wiring includes `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`.
+- `diffstatus/diffstatus.go` includes `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`.
+- `main.go` wiring includes `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`.
+- Tests reference `[REQ:DIFF_SEARCH]` in names/comments.
+
+**Cross-References**: [REQ:DIFF_SEARCH], [IMPL:DIFF_SEARCH], [REQ:MODULE_VALIDATION]
+
 ## 31. Filename Exclude Filter [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]
 
 ### Decision: Load newline-delimited basename filters via flag/env/default and enforce them inside the filer pipeline with a runtime toggle.

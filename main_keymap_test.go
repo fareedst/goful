@@ -30,6 +30,7 @@ func TestFilerKeymapBaseline_REQ_BEHAVIOR_BASELINE(t *testing.T) {
 	required := []string{
 		"j", "k", "h", "l", " ", "C-n", "C-p", "C-d", "C-u", "C-a", "C-e",
 		"q", "Q", ":", ";", "f", "/", "n", "K", "c", "m", "r", "R", "D", "d", "g", "G",
+		"[", "]", // [REQ:DIFF_SEARCH] diff search start/continue
 	}
 	km := filerKeymap((*app.Goful)(nil))
 	assertKeysPresent(t, "filer", km, required)

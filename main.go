@@ -13,6 +13,7 @@ import (
 	"github.com/anmitsu/goful/app"
 	"github.com/anmitsu/goful/cmdline"
 	"github.com/anmitsu/goful/configpaths"
+	"github.com/anmitsu/goful/diffstatus"
 	"github.com/anmitsu/goful/externalcmd"
 	"github.com/anmitsu/goful/filer"
 	"github.com/anmitsu/goful/filer/comparecolors"
@@ -110,6 +111,15 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 	// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 	// Wire linked navigation indicator to filer header
 	filer.SetLinkedNavIndicator(g.IsLinkedNav)
+
+	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+	// Wire diff search status indicator to filer header
+	filer.SetDiffSearchStatusFn(g.DiffSearchStatus)
+
+	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+	// Wire diff search status to dedicated status line
+	diffstatus.SetStatusFn(g.DiffSearchStatus)
+	diffstatus.SetActiveFn(g.IsDiffSearchActive)
 
 	if runewidth.EastAsianWidth {
 		// Because layout collapsing for ambiguous runes if LANG=ja_JP.
@@ -317,6 +327,8 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		".", "toggle show hidden files", func() { filer.ToggleShowHiddens(); g.Workspace().ReloadAll() },
 		"c", "toggle comparison colors", func() { toggleComparisonColors() }, // [REQ:FILE_COMPARISON_COLORS]
 		"=", "calculate file digest   ", func() { calculateDigest() }, // [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+		"[", "start diff search       ", func() { g.StartDiffSearch() }, // [REQ:DIFF_SEARCH] [IMPL:DIFF_SEARCH]
+		"]", "continue diff search    ", func() { g.ContinueDiffSearch() }, // [REQ:DIFF_SEARCH] [IMPL:DIFF_SEARCH]
 	)
 	g.AddKeymap("v", func() { g.Menu("view") })
 	g.AddKeymap("E", toggleExcludedNames)
@@ -687,6 +699,10 @@ func filerKeymap(g *app.Goful) widget.Keymap {
 		"d":    func() { g.Chdir() },
 		"g":    func() { g.Glob() },
 		"G":    func() { g.Globdir() },
+		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+		// Difference search commands
+		"[": func() { g.StartDiffSearch() },    // Start difference search
+		"]": func() { g.ContinueDiffSearch() }, // Continue to next difference
 	}
 }
 

@@ -27,6 +27,7 @@ type Workspace struct {
 	Title           string           `json:"title"`
 	Focus           int              `json:"focus"`
 	comparisonIndex *ComparisonIndex // [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+	diffSearch      *DiffSearchState // [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 }
 
 // NewWorkspace returns a new workspace of specified sizes.
@@ -259,6 +260,64 @@ func (w *Workspace) SortAllBy(typ SortType) {
 		d.SortBy(typ)
 	}
 	w.RebuildComparisonIndex()
+}
+
+// StartDiffSearch initializes a new difference search session.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (w *Workspace) StartDiffSearch() {
+	w.diffSearch = NewDiffSearchState(w.Dirs)
+}
+
+// ClearDiffSearch clears the difference search state.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (w *Workspace) ClearDiffSearch() {
+	if w.diffSearch != nil {
+		w.diffSearch.Clear()
+	}
+}
+
+// DiffSearchState returns the current difference search state.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (w *Workspace) DiffSearchState() *DiffSearchState {
+	return w.diffSearch
+}
+
+// IsDiffSearchActive returns whether a difference search is active.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (w *Workspace) IsDiffSearchActive() bool {
+	return w.diffSearch.IsActive()
+}
+
+// SetCursorByNameAll moves the cursor to the named entry in all directories where it exists.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (w *Workspace) SetCursorByNameAll(name string) {
+	for _, d := range w.Dirs {
+		d.SetCursorByName(name)
+	}
+}
+
+// ChdirAll changes all directories to the specified subdirectory name.
+// Used during diff search to descend into matching subdirectories.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (w *Workspace) ChdirAll(name string) {
+	for _, d := range w.Dirs {
+		d.Chdir(name)
+	}
+	w.RebuildComparisonIndex()
+}
+
+// ChdirAllToInitial navigates all directories back to their initial paths.
+// Returns true if successful, false if any directory failed.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (w *Workspace) ChdirAllToInitial() bool {
+	if w.diffSearch == nil || len(w.diffSearch.InitialDirs) != len(w.Dirs) {
+		return false
+	}
+	for i, d := range w.Dirs {
+		d.Chdir(w.diffSearch.InitialDirs[i])
+	}
+	w.RebuildComparisonIndex()
+	return true
 }
 
 // LayoutTile allocates to the tile layout.

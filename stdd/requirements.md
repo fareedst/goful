@@ -628,6 +628,42 @@ Each requirement includes:
 - Header indicator `[LINKED]` displayed when mode is active.
 - Sort synchronization: all sort menu options apply to all windows when linked mode is enabled.
 
+### [REQ:DIFF_SEARCH] Cross-Window Difference Search
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must provide two commands for iteratively searching for file/directory differences across all windows in the current workspace. Command 1 (Start) records the "initial directories" for each window, then iterates through files in alphabetic order (case-sensitive) looking for entries that are "different" (missing from any window OR have different sizes across windows). When a difference is found, the search stops, cursors move to that entry in all windows (where present), and a message explains why the search stopped. If no file differences exist, the search descends into subdirectories. Command 2 (Continue) reads the cursor position in the active window, skips that file, and continues the search from the next alphabetic entry.
+- **Rationale**: Users comparing similar directory structures need an efficient way to find differences without manually inspecting each file. This feature provides guided navigation through differences, allowing users to quickly identify mismatches, missing files, or size discrepancies across workspace windows.
+- **Satisfaction Criteria**:
+  - Command 1 records initial directory paths for all windows and begins comparison from the first alphabetic entry.
+  - Files are compared across all windows: "different" means missing from any window OR having different sizes in any window.
+  - When a difference is found, cursors move to that entry in all windows where it exists, and a descriptive message appears (e.g., "Different: file.txt missing in window 2" or "Different: file.txt size mismatch").
+  - If no file differences are found, subdirectories are processed in alphabetic order; missing subdirs are treated as differences.
+  - Descending into a subdir that exists in all windows continues the comparison recursively.
+  - If all entries are processed back to initial directories, a "No differences found" message appears.
+  - Command 2 reads the filename at the cursor position in the active window, skips it, and continues from the next alphabetic entry.
+  - The search state (initial directories, active flag) persists across commands until a new search is started.
+  - A dedicated persistent status line appears when diff search is active, showing the current search status (path being searched, files checked, or last difference found).
+  - The status line persists until the search is completed or cleared, and does not auto-dismiss like regular messages.
+  - The UI updates once per second during active search to show progress.
+- **Validation Criteria**:
+  - Unit tests cover the difference detection logic (missing files, size mismatches, all-same scenarios).
+  - Unit tests cover the alphabetic iteration and subdirectory descent logic.
+  - Integration tests prove cursor movement across windows when a difference is found.
+  - Manual verification confirms the dedicated status line displays and persists during search.
+  - Token validation confirms `[REQ:DIFF_SEARCH]`, `[ARCH:DIFF_SEARCH]`, and `[IMPL:DIFF_SEARCH]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Difference Search Engine [ARCH:DIFF_SEARCH]
+- **Implementation**: See `implementation-decisions.md` § Difference Search Implementation [IMPL:DIFF_SEARCH]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-10)**:
+- Unit tests in `filer/diffsearch_test.go` covering state management, difference detection, and alphabetic sorting.
+- Keybindings: `[` (start diff search), `]` (continue diff search), also in View menu.
+- Dedicated `diffstatus` package provides persistent status line during search.
+- Periodic UI refresh (1 second ticker) updates status during active search.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 756 token references across 68 files.`
+
 ### [REQ:EVENT_LOOP_SHUTDOWN] Event Poller Shutdown Control
 
 **Priority: P0 (Critical)**

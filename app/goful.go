@@ -2,6 +2,10 @@
 package app
 
 import (
+	"fmt"
+	"time"
+
+	"github.com/anmitsu/goful/diffstatus"
 	"github.com/anmitsu/goful/filer"
 	"github.com/anmitsu/goful/info"
 	"github.com/anmitsu/goful/menu"
@@ -30,6 +34,7 @@ func NewGoful(path string) *Goful {
 	message.Init()
 	info.Init()
 	progress.Init()
+	diffstatus.Init() // [IMPL:DIFF_SEARCH] Initialize diff status display
 	width, height := widget.Size()
 	goful := &Goful{
 		Filer:     filer.NewFromState(path, 0, 0, width, height-2),
@@ -69,21 +74,60 @@ func (g *Goful) Disconnect() { g.next = widget.Nil() }
 // Resize all widgets.
 func (g *Goful) Resize(x, y, width, height int) {
 	offset := 0
-	if !progress.IsFinished() {
-		offset = 2
+	progressActive := !progress.IsFinished()
+	diffSearchActive := diffstatus.IsActive()
+
+	if progressActive {
+		offset = 2 // progress uses 2 rows (task + gauge)
+	}
+	// [IMPL:DIFF_SEARCH] Add offset for diff status line when active
+	if diffSearchActive {
+		offset++
 	}
 	g.Filer.Resize(x, y, width, height-2-offset)
 	g.Next().Resize(x, y, width, height-2-offset)
-	progress.Resize(0, height-4, width, 1)
-	message.Resize(0, height-2, width, 1)
+
+	// Position status rows from bottom up:
+	// - info at height-1 (always)
+	// - message at height-2 (always)
+	// - diffstatus at height-3 when active (or height-5 if progress is also active)
+	// - progress at height-4 and height-3 (gauge) when active
 	info.Resize(0, height-1, width, 1)
+	message.Resize(0, height-2, width, 1)
+
+	if progressActive && diffSearchActive {
+		// Both active: diffstatus above progress
+		// [IMPL:DIFF_SEARCH] Position diff status above progress gauge
+		diffstatus.Resize(0, height-5, width, 1)
+		progress.Resize(0, height-4, width, 1)
+	} else if progressActive {
+		// Only progress active
+		progress.Resize(0, height-4, width, 1)
+		diffstatus.Resize(0, height-3, width, 1) // Not drawn, but positioned
+	} else if diffSearchActive {
+		// Only diff search active
+		// [IMPL:DIFF_SEARCH] Position diff status above message line
+		diffstatus.Resize(0, height-3, width, 1)
+		progress.Resize(0, height-4, width, 1) // Not drawn, but positioned
+	} else {
+		// Neither active
+		diffstatus.Resize(0, height-3, width, 1)
+		progress.Resize(0, height-4, width, 1)
+	}
 }
 
 // Draw all widgets.
 func (g *Goful) Draw() {
+	// [IMPL:DIFF_SEARCH] Ensure layout is correct when diff search is active
+	// This handles cases where navigation might not trigger a resize
+	if diffstatus.IsActive() {
+		width, height := widget.Size()
+		g.Resize(0, 0, width, height)
+	}
 	g.Filer.Draw()
 	g.Next().Draw()
 	progress.Draw()
+	diffstatus.Draw() // [IMPL:DIFF_SEARCH] Draw diff status line
 	message.Draw()
 	info.Draw(g.File())
 }
@@ -161,6 +205,164 @@ func (g *Goful) ToggleLinkedNav() bool {
 // [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 func (g *Goful) IsLinkedNav() bool {
 	return g.linkedNav
+}
+
+// DiffSearchStatus returns the current diff search status text for the header.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (g *Goful) DiffSearchStatus() string {
+	state := g.Workspace().DiffSearchState()
+	if state == nil {
+		return ""
+	}
+	return state.StatusText()
+}
+
+// IsDiffSearchActive returns true if a difference search is currently active.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (g *Goful) IsDiffSearchActive() bool {
+	return g.Workspace().IsDiffSearchActive()
+}
+
+// StartDiffSearch begins a new difference search across all windows.
+// Records initial directories and finds the first difference.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (g *Goful) StartDiffSearch() {
+	ws := g.Workspace()
+	if len(ws.Dirs) < 2 {
+		message.Errorf("Difference search requires at least 2 windows")
+		return
+	}
+
+	// Start a new search session
+	ws.StartDiffSearch()
+	state := ws.DiffSearchState()
+	state.SetSearching(true)
+	state.SetCurrentPath(ws.Dir().Path)
+
+	// Resize to allocate space for the diff status line
+	width, height := widget.Size()
+	g.Resize(0, 0, width, height)
+
+	// Find the first difference
+	g.findNextDiff("")
+}
+
+// ContinueDiffSearch continues the difference search from the current cursor position.
+// Skips the file at cursor and finds the next difference.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (g *Goful) ContinueDiffSearch() {
+	ws := g.Workspace()
+	if !ws.IsDiffSearchActive() {
+		message.Errorf("No active difference search. Use start diff search first.")
+		return
+	}
+
+	// Get the current file name to skip
+	currentFile := g.File().Name()
+	if currentFile == ".." {
+		currentFile = ""
+	}
+
+	// Set searching state
+	state := ws.DiffSearchState()
+	state.SetSearching(true)
+	state.SetCurrentPath(ws.Dir().Path)
+
+	// Continue from the next entry
+	g.findNextDiff(currentFile)
+}
+
+// findNextDiff is the core search loop that finds the next difference.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (g *Goful) findNextDiff(startAfter string) {
+	ws := g.Workspace()
+	state := ws.DiffSearchState()
+
+	// Start periodic UI refresh goroutine (updates once per second)
+	// [IMPL:DIFF_SEARCH] Periodic refresh for progress display
+	quit := make(chan struct{})
+	defer close(quit)
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				g.Draw()
+				widget.Show()
+			case <-quit:
+				return
+			}
+		}
+	}()
+
+	for {
+		// Update current path being searched
+		state.SetCurrentPath(ws.Dir().Path)
+		state.IncrementFilesChecked()
+
+		// First, check files for differences
+		result := filer.FindNextDifference(ws.Dirs, startAfter, true)
+		if result.Found {
+			// Found a file difference - pause search and record result
+			// [IMPL:DIFF_SEARCH] Route status to dedicated diffstatus row, not ephemeral message
+			state.SetLastDiff(result.Name, result.Reason)
+			ws.SetCursorByNameAll(result.Name)
+			diffstatus.SetMessage(fmt.Sprintf("Different: %s - %s", result.Name, result.Reason))
+			return
+		}
+
+		// No file differences, check subdirectories
+		subdirResult := filer.FindNextDifference(ws.Dirs, startAfter, false)
+		if subdirResult.Found && subdirResult.IsDir {
+			// Found a subdir that differs (missing in some window)
+			// [IMPL:DIFF_SEARCH] Route status to dedicated diffstatus row, not ephemeral message
+			state.SetLastDiff(subdirResult.Name+"/", subdirResult.Reason)
+			ws.SetCursorByNameAll(subdirResult.Name)
+			diffstatus.SetMessage(fmt.Sprintf("Different: %s/ - %s", subdirResult.Name, subdirResult.Reason))
+			return
+		}
+
+		// No differences at this level, try to descend into a subdir that exists in all
+		// Use FindNextSubdirInAll to respect startAfter and avoid re-searching already-visited subdirs
+		subdir, found := filer.FindNextSubdirInAll(ws.Dirs, startAfter)
+		if found {
+			// Descend into this subdir in all windows
+			ws.ChdirAll(subdir)
+			startAfter = "" // Start from beginning in new directory
+			continue
+		}
+
+		// No more subdirs to descend into
+		// Check if we're back at initial dirs
+		if state.AtInitialDirs(ws.Dirs) {
+			// We've completed the search
+			// [IMPL:DIFF_SEARCH] Use ephemeral message for completion since diffstatus row disappears
+			ws.ClearDiffSearch()
+			diffstatus.ClearMessage()
+			message.Info("Difference search complete - no differences found")
+			// Resize to reclaim space from diff status line
+			width, height := widget.Size()
+			g.Resize(0, 0, width, height)
+			return
+		}
+
+		// Go back to parent in all directories and continue
+		for _, d := range ws.Dirs {
+			d.Chdir("..")
+		}
+		ws.RebuildComparisonIndex()
+
+		// Find the current directory name (what we just came out of)
+		// and continue searching from there
+		startAfter = ws.Dir().Base()
+
+		// If we're back at initial dirs after going up, we're done
+		if state.AtInitialDirs(ws.Dirs) {
+			// Continue search from where we left off at this level
+			continue
+		}
+	}
 }
 
 // SetBorderStyle sets the filer border style.

@@ -700,4 +700,37 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P0 because the leaking poller burns CPU and risks crashes for every exit, making the UI unreliable.
 
+## P1: Cross-Window Difference Search [REQ:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [IMPL:DIFF_SEARCH]
+
+**Status**: ✅ Complete
+
+**Description**: Implement a two-command difference search that iterates through files/directories across workspace windows, finds entries that differ (missing or different size), and highlights them with cursor movement.
+
+**Dependencies**: [REQ:MODULE_VALIDATION]
+
+**Subtasks**:
+- [x] Document requirement/architecture/implementation tokens [REQ:DIFF_SEARCH]
+- [x] Implement DiffSearchState struct with initial dirs tracking [IMPL:DIFF_SEARCH]
+- [x] Implement core comparison logic: union of names, alphabetic sort, difference detection [IMPL:DIFF_SEARCH]
+- [x] Implement cursor movement to different file across all windows [IMPL:DIFF_SEARCH]
+- [x] Implement subdirectory descent when no file differences found [IMPL:DIFF_SEARCH]
+- [x] Wire StartDiffSearch and ContinueDiffSearch commands in app/goful.go [IMPL:DIFF_SEARCH]
+- [x] Add keybindings (`[` start, `]` continue) and View menu entries [IMPL:DIFF_SEARCH]
+- [x] Add unit tests for DiffSearchState and comparison logic [REQ:DIFF_SEARCH]
+- [x] Token audit & validation [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+- [x] Fix: Subdirectory descent respects `startAfter` position via `FindNextSubdirInAll` [IMPL:DIFF_SEARCH]
+
+**Completion Criteria**:
+- [x] Modules documented with interfaces + validation evidence
+- [x] Unit tests pass independently before integration
+- [x] Integration wiring + documentation merged with semantic tokens
+- [x] Token audit + validation logged (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 669 token references across 66 files.`)
+
+**Validation Evidence (2026-01-10)**:
+- `go test ./filer/... -run "REQ_DIFF_SEARCH"` (darwin/arm64, Go 1.24.3) - 16 tests passing.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 798 token references across 69 files.`
+- Message routing alignment (2026-01-10): Added `SetMessage()`/`ClearMessage()` to `diffstatus` package; status messages now route to dedicated row instead of ephemeral `message` window per `[REQ:DIFF_SEARCH]` specification.
+- Bug fix (2026-01-10): Added `FindNextSubdirInAll` to respect `startAfter` during subdirectory descent, fixing search state loss when user manually navigates into subdirectories.
+
+**Priority Rationale**: P1 because this feature significantly improves directory comparison workflows but does not block core navigation.
 

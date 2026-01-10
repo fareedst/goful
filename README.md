@@ -68,6 +68,8 @@ key                  | function
 `C`                  | Toggle comparison colors
 `=`                  | Calculate file digest
 `L` or `M-l`             | Toggle linked navigation mode
+`[`                  | Start difference search
+`]`                  | Continue difference search
 `b`                  | Bookmark
 `e`                  | Editor
 `x`                  | Command
@@ -110,6 +112,37 @@ Linked navigation synchronizes directory navigation across all open panes. When 
 - Keeping workspace panes aligned when exploring mirrored folder hierarchies
 
 The mode is **off by default** and does not persist across restarts.
+
+### Difference search `[REQ:DIFF_SEARCH]`
+
+Difference search finds files and directories that differ across your workspace panes. It's designed for comparing similar directory structures—like backup copies, release versions, or synced folders—by highlighting entries that are missing or have different sizes.
+
+**Start search**: Press `[` to begin a new difference search. Goful records the current directories in all panes and starts scanning for differences alphabetically.
+
+**Continue search**: Press `]` to advance to the next difference. The search resumes from the current cursor position and finds the next entry that differs.
+
+**What counts as a difference**:
+- A file or directory that exists in some panes but is missing from others
+- A file that exists in all panes but has different sizes
+
+**How the search works**:
+1. Files are compared first, in alphabetical order
+2. When all files at the current level match, the search descends into subdirectories that exist in all panes
+3. Subdirectories that exist in only some panes are flagged as differences
+4. The search continues depth-first until returning to the starting directories
+
+**Status display**: While a search is active, the header shows a `[DIFF: ...]` indicator with either the current search progress or the last found difference.
+
+**Navigating during search**: You can freely navigate within panes between `]` presses. When you continue the search, it resumes from your current position and correctly traverses back through the directory tree to find the next difference.
+
+**Ending the search**: The search ends automatically when all directories have been checked. You can also start a new search with `[` at any time, which replaces the current search state.
+
+**Use cases**:
+- Finding files that failed to sync between backup and source directories
+- Locating additions or deletions between release versions
+- Identifying size mismatches that indicate incomplete copies or corruption
+
+**Tip**: Combine with **linked navigation mode** (`L`) to keep panes synchronized as you explore differences.
 
 ### Filename exclude list `[REQ:FILER_EXCLUDE_NAMES]`
 

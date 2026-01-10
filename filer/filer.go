@@ -35,6 +35,16 @@ func SetLinkedNavIndicator(fn func() bool) {
 	linkedNavIndicator = fn
 }
 
+// diffSearchStatusFn is a callback that returns the diff search status text.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+var diffSearchStatusFn func() string
+
+// SetDiffSearchStatusFn sets the callback used to get the diff search status text.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func SetDiffSearchStatusFn(fn func() string) {
+	diffSearchStatusFn = fn
+}
+
 // New creates a new filer based on specified size and coordinates.
 // Creates five workspaces and default path is home directory.
 func New(x, y, width, height int) *Filer {
@@ -281,6 +291,15 @@ func (f *Filer) drawHeader() {
 	if linkedNavIndicator != nil && linkedNavIndicator() {
 		x = widget.SetCells(x, y, "[LINKED]", look.Default().Reverse(true))
 		x = widget.SetCells(x, y, " ", look.Default())
+	}
+
+	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+	// Show diff search status when active
+	if diffSearchStatusFn != nil {
+		if status := diffSearchStatusFn(); status != "" {
+			x = widget.SetCells(x, y, status, look.Default().Reverse(true))
+			x = widget.SetCells(x, y, " ", look.Default())
+		}
 	}
 
 	ws := f.Workspace()

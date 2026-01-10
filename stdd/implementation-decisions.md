@@ -1189,3 +1189,106 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - Unit tests in `filer/compare_test.go` validate digest calculation and state propagation with `[REQ:FILE_COMPARISON_COLORS]`.
 
 **Cross-References**: [ARCH:FILE_COMPARISON_ENGINE], [REQ:FILE_COMPARISON_COLORS], [IMPL:FILE_COMPARISON_INDEX], [IMPL:COMPARISON_DRAW]
+
+## 33. Difference Search Implementation [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+
+### Decision: Implement a two-command difference search with state in Workspace, pure comparison logic in a dedicated module, and a persistent status display.
+**Rationale:**
+- Separating state (initial dirs, active flag, status fields) from comparison logic keeps the code testable per `[REQ:MODULE_VALIDATION]`.
+- Using cursor position as the implicit bookmark for "Continue" simplifies state and integrates naturally with existing navigation.
+- Alphabetic iteration (case-sensitive) matches user expectations for file sorting.
+- A dedicated persistent status line provides continuous feedback during long searches without auto-dismissing like regular messages.
+
+### Implementation Approach:
+- **State Management (`filer/diffsearch.go`)**:
+  - Add `DiffSearchState` struct with `InitialDirs []string`, `Active bool`, and status fields:
+    - `LastDiffName string` - Name of last found difference
+    - `LastDiffReason string` - Reason for last difference
+    - `CurrentPath string` - Current directory being searched
+    - `FilesChecked int` - Count of files checked
+    - `Searching bool` - Whether actively searching vs paused
+  - Add setter methods: `SetSearching()`, `SetCurrentPath()`, `IncrementFilesChecked()`, `SetLastDiff()`.
+  - Add `StatusText() string` that returns formatted status for display.
+  - Store state in `Workspace` struct as `diffSearch *DiffSearchState`.
+
+- **Core Comparison Logic (`filer/diffsearch.go`)**:
+  - Add `func CollectAllNames(dirs []*Directory) []string` that returns the union of all file/directory names (excluding `..`), sorted alphabetically.
+  - Add `func CheckDifference(name string, dirs []*Directory) (isDiff bool, reason string)`:
+    - Check presence in each directory.
+    - If missing from any, return `true, "missing in window N"`.
+    - If present in all, compare sizes. If sizes differ, return `true, "size mismatch"`.
+    - Otherwise return `false, ""`.
+  - Add `func FindNextDifference(dirs []*Directory, startAfter string) (name string, reason string, found bool)`:
+    - Call `CollectAllNames`, iterate from after `startAfter`.
+    - Return first difference found.
+
+- **Subdirectory Descent (`filer/diffsearch.go`)**:
+  - Add `func FindNextSubdir(dirs []*Directory, startAfter string) (name string, existsInAll bool, found bool)`:
+    - Collect subdirectory names only.
+    - Find next subdir after `startAfter`.
+    - Check if it exists in all directories.
+  - Add `func FindNextSubdirInAll(dirs []*Directory, startAfter string) (name string, found bool)`:
+    - Like `FirstSubdirInAll` but respects `startAfter` parameter.
+    - Iterates through subdirectories in alphabetical order starting after `startAfter`.
+    - Returns the first subdirectory that exists in ALL directories.
+    - Critical for maintaining search position when user manually navigates into subdirectories.
+  - Descent logic in command wrapper: if no file differences found, check subdirs. If subdir missing in any, treat as difference. If subdir exists in all, navigate all windows into it and repeat.
+  - **Bug Fix (2026-01-10)**: The original implementation used `FirstSubdirInAll` which always returned the first common subdirectory, ignoring the `startAfter` position. This caused the search to loop back to already-searched directories when the user manually navigated into a subdirectory. Fixed by using `FindNextSubdirInAll` which respects the current search position.
+
+- **Cursor Movement (`filer/workspace.go`)**:
+  - Add `func (w *Workspace) SetCursorByNameAll(name string)` that moves cursor to `name` in all directories where it exists.
+  - Reuses existing `Directory.SetCursorByName(name)` method.
+
+- **Persistent Status Display (`diffstatus/diffstatus.go`)**:
+  - New package providing a dedicated status line that persists while diff search is active.
+  - `Init()` creates the status window at height-3.
+  - `SetStatusFn(fn func() string)` and `SetActiveFn(fn func() bool)` wire up callbacks.
+  - `SetMessage(text string)` sets a custom status message that takes priority over the `statusFn` callback. Use this for persistent status updates like "Different: X - Y" that should not auto-dismiss.
+  - `ClearMessage()` clears the custom status message, reverting to `statusFn` callback.
+  - `IsActive() bool` checks if status line should be shown.
+  - `Draw()` renders the status line with reverse video styling, prioritizing `customMessage` over `statusFn()` result.
+  - `Resize()` adjusts position during window resize.
+  - Integrated into `app/goful.go` draw cycle and resize handling.
+  - **Message Routing**: Status messages like "Different: X - Y" are routed to `diffstatus.SetMessage()` instead of `message.Infof()` to ensure they persist in the dedicated row rather than auto-dismissing. Error messages and search completion messages still use the ephemeral `message` package since the diffstatus row disappears when the search ends.
+
+- **Periodic UI Refresh (`app/goful.go`)**:
+  - The `findNextDiff()` function starts a goroutine with a 1-second ticker.
+  - The ticker calls `g.Draw()` and `widget.Show()` to refresh the UI.
+  - The goroutine is stopped via `defer close(quit)` when search pauses or completes.
+
+- **Command Wrappers (`app/goful.go`)**:
+  - Add `func (g *Goful) StartDiffSearch()`:
+    - Record initial directories, set active and searching state.
+    - Call engine to find first difference.
+    - Move cursors, update status.
+  - Add `func (g *Goful) ContinueDiffSearch()`:
+    - Read cursor filename from active window.
+    - Set searching state.
+    - Call engine to find next difference after that name.
+    - Handle subdirectory descent if needed.
+    - Move cursors, update status or "No differences found".
+  - Add `func (g *Goful) DiffSearchStatus() string` for status callback.
+  - Add `func (g *Goful) IsDiffSearchActive() bool` for active callback.
+
+- **Keymap Integration (`main.go`)**:
+  - Bind `[` for start diff search, `]` for continue diff search.
+  - Wire `diffstatus.SetStatusFn(g.DiffSearchStatus)` and `diffstatus.SetActiveFn(g.IsDiffSearchActive)`.
+
+**Code Markers**:
+- `filer/diffsearch.go`: `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`
+- `filer/workspace.go`: `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`
+- `app/goful.go`: `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`
+- `diffstatus/diffstatus.go`: `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`
+- `main.go`: `[IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]`
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `filer/diffsearch.go`, `filer/workspace.go`, `app/goful.go`, `diffstatus/diffstatus.go`, `main.go`.
+- Tests: `filer/diffsearch_test.go` with tests named `Test*_REQ_DIFF_SEARCH`.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./filer/... -run "REQ_DIFF_SEARCH"` (darwin/arm64, Go 1.24.3) on 2026-01-10 validates diff search state and comparison logic (16 tests passing).
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-10) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 798 token references across 69 files.`
+- Message routing alignment: Status messages now route to dedicated `diffstatus` row per `[REQ:DIFF_SEARCH]` specification.
+- Bug fix (2026-01-10): Added `FindNextSubdirInAll` to respect `startAfter` during subdirectory descent, fixing search state loss when user manually navigates into subdirectories. Added 4 new unit tests: `TestFindNextSubdirInAll_REQ_DIFF_SEARCH`, `TestFindNextSubdirInAllSkipsNonCommon_REQ_DIFF_SEARCH`, `TestFindNextSubdirInAllNoCommon_REQ_DIFF_SEARCH`.
+
+**Cross-References**: [ARCH:DIFF_SEARCH], [REQ:DIFF_SEARCH], [REQ:MODULE_VALIDATION]
