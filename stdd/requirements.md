@@ -113,6 +113,26 @@ Each requirement includes:
 
 **Status**: ✅ Implemented
 
+### [REQ:BACKSPACE_BEHAVIOR] Backspace Navigation & Editing
+
+**Priority: P0 (Critical)**
+
+- **Description**: The physical Backspace/Delete key (as labeled on macOS keyboards) must consistently trigger the canonical `backspace` action across goful. In directory panes the action opens the parent directory (mirroring `C-h`), and in prompted input modes (cmdline, finder, completion, prompt dialogs) it must delete the character immediately before the cursor so users can edit text naturally.
+- **Rationale**: Backspace is a core navigation/editing shortcut. When tcell delivers different key codes per terminal/OS (`KeyBackspace` vs `KeyBackspace2`), failing to normalize them breaks both workspace navigation and prompt editing, forcing users to rely on obscure alternatives.
+- **Satisfaction Criteria**:
+  - `widget.EventToString` maps both `tcell.KeyBackspace` and `tcell.KeyBackspace2` to the canonical `backspace` symbol so all keymaps observe the same string regardless of terminal quirks.
+  - Filer keymaps keep the existing `backspace` binding that calls `Dir().Chdir("..")`, ensuring Backspace opens the parent directory from any pane.
+  - Prompted input widgets (cmdline, finder, completion) keep their `backspace` handlers that invoke `DeleteBackwardChar`, guaranteeing the key erases the prior rune.
+  - Documentation (`README`, baseline keymap tests) continues to list `backspace` as a required chord so regressions are caught quickly.
+- **Validation Criteria**:
+  - Unit tests for `widget.EventToString` cover both backspace key codes and assert the translated string equals `backspace`.
+  - Existing `main_keymap_test.go` baseline coverage ensures filer/cmdline keymaps expose the `backspace` chord, acting as a regression net for bindings.
+  - Manual smoke test confirms Backspace navigates upward in the filer view and deletes characters inside cmdline prompts on macOS and Linux terminals.
+- **Architecture**: See `architecture-decisions.md` § Backspace Key Translation [ARCH:BACKSPACE_TRANSLATION]
+- **Implementation**: See `implementation-decisions.md` § Backspace Key Translation [IMPL:BACKSPACE_TRANSLATION]
+
+**Status**: ✅ Implemented
+
 ### [REQ:GO_TOOLCHAIN_LTS] Modern Go Toolchain Baseline
 
 **Priority: P0 (Critical)**

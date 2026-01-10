@@ -190,6 +190,28 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P0 because users cannot exit the application using standard key flow, effectively trapping sessions.
 
+## P0: Backspace Navigation & Editing [REQ:BACKSPACE_BEHAVIOR] [ARCH:BACKSPACE_TRANSLATION] [IMPL:BACKSPACE_TRANSLATION]
+
+**Status**: ✅ Complete
+
+**Description**: Normalize Backspace/Delete key codes so filer panes continue to open the parent directory and prompted input widgets delete the prior character regardless of whether tcell delivers `KeyBackspace` or `KeyBackspace2`.
+
+**Dependencies**: [REQ:MODULE_VALIDATION]
+
+**Subtasks**:
+- [x] Update requirements/architecture/implementation docs plus semantic token registry for the new behavior [REQ:BACKSPACE_BEHAVIOR] [ARCH:BACKSPACE_TRANSLATION] [IMPL:BACKSPACE_TRANSLATION]
+- [x] Normalize `tcell.KeyBackspace` and `tcell.KeyBackspace2` to the canonical `backspace` string inside `widget.EventToString` with debug-ready annotations [IMPL:BACKSPACE_TRANSLATION]
+- [x] Add translator unit tests proving both key codes emit `backspace` and ensure baseline keymap coverage references the requirement [REQ:BACKSPACE_BEHAVIOR]
+- [x] Run `[PROC:TOKEN_AUDIT]` and `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` capturing the diagnostic output (`DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 520 token references across 66 files.` on 2026-01-09) [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] Docs/tokens updated with cross-references
+- [x] Translator change validated by unit tests and manual smoke checks
+- [x] Baseline keymaps retain the `backspace` chord, preventing regressions
+- [x] `[PROC:TOKEN_AUDIT]` / `[PROC:TOKEN_VALIDATION]` results recorded
+
+**Priority Rationale**: P0 because Backspace is a primary navigation/editing key; without normalization macOS users cannot ascend directories or edit prompts, blocking fundamental workflows.
+
 ## P0: CI & Static Analysis Foundation [REQ:CI_PIPELINE_CORE] [REQ:STATIC_ANALYSIS] [REQ:RACE_TESTING] [ARCH:CI_PIPELINE] [ARCH:STATIC_ANALYSIS_POLICY] [ARCH:RACE_TESTING_PIPELINE] [IMPL:CI_WORKFLOW] [IMPL:STATICCHECK_SETUP] [IMPL:RACE_JOB]
 
 **Status**: ✅ Complete

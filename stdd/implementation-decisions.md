@@ -748,6 +748,33 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:QUIT_DIALOG_KEYS], [REQ:QUIT_DIALOG_DEFAULT]
 
+## 21b. Backspace Key Translation [IMPL:BACKSPACE_TRANSLATION] [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]
+
+### Decision: Normalize both tcell backspace key codes so they emit the canonical `backspace` string consumed by filer and prompt keymaps
+**Rationale:**
+- macOS terminals often report Backspace as `tcell.KeyBackspace` while Linux/tmux sessions use `tcell.KeyBackspace2`. Only one entry existed in the translator map, so Backspace failed silently on half the platforms.
+- Mapping both key codes to the same string preserves historical behavior (Backspace opens parent directory, deletes the previous rune) without requiring duplicate keymap entries or user-specific configuration.
+- Keeping the normalization inside `widget.EventToString` satisfies `[REQ:MODULE_VALIDATION]` by addressing the issue within the pure translator module that already underpins cmdline/filer behavior.
+
+### Implementation Approach:
+- Extend `keyToSting` in `widget/widget.go` with a `tcell.KeyBackspace` entry pointing to `"backspace"` and annotate both entries with `[IMPL:BACKSPACE_TRANSLATION] [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]`.
+- Add table-driven unit test `TestEventToStringBackspace_REQ_BACKSPACE_BEHAVIOR` in `widget/widget_test.go` that creates events for both `tcell.KeyBackspace` and `tcell.KeyBackspace2` and asserts `EventToString` returns `backspace`.
+- Retain existing `main_keymap_test.go` baseline coverage so the `backspace` binding remains required in filer/cmdline/finder/completion keymaps.
+
+**Code Markers**:
+- `widget/widget.go` map entries for both backspace keys include `[IMPL:BACKSPACE_TRANSLATION] [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]`.
+- `widget/widget_test.go` test includes the same triplet and references `[REQ:BACKSPACE_BEHAVIOR]` in the function name.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Files: `widget/widget.go`, `widget/widget_test.go`, `main_keymap_test.go`.
+- Tests: `TestEventToStringBackspace_REQ_BACKSPACE_BEHAVIOR` plus existing keymap baseline cases referencing `[REQ:BACKSPACE_BEHAVIOR]` ensure cross-layer coverage.
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- `go test ./...` (darwin/arm64, Go 1.24.3) — 2026-01-09.
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-09) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 520 token references across 66 files.`
+
+**Cross-References**: [ARCH:BACKSPACE_TRANSLATION], [REQ:BACKSPACE_BEHAVIOR], [REQ:MODULE_VALIDATION]
+
 ## 22. Terminal Adapter Module [IMPL:TERMINAL_ADAPTER] [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
 
 ### Decision: Implement a `terminalcmd` package that encapsulates platform-aware terminal command creation plus the glue that registers it with `g.ConfigTerminal`.

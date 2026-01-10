@@ -566,6 +566,29 @@ func formatDirs(paths []string, quote bool) string {
 
 **Cross-References**: [REQ:QUIT_DIALOG_DEFAULT], [IMPL:QUIT_DIALOG_ENTER]
 
+## 25b. Backspace Key Translation [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]
+
+### Decision: Canonicalize Backspace key codes so every widget observes the same `backspace` symbol
+**Rationale:**
+- macOS keyboards label the Backspace key as “delete” and commonly emit `tcell.KeyBackspace`, while many Linux terminals emit `tcell.KeyBackspace2`. Without normalization, only one platform sees the `backspace` string, breaking filer navigation and prompt editing.
+- Centralizing the mapping in `widget.EventToString` mirrors the `KeyEnter` fix and guarantees every widget that depends on canonical key strings (filer, finder, completion, menu) inherits the behavior.
+- Keeping the canonical string aligned with the existing keymap entries preserves documentation (`README`) and `KeymapBaseline` coverage while satisfying `[REQ:MODULE_VALIDATION]`.
+
+**Module Boundaries & Contracts** `[REQ:MODULE_VALIDATION]`:
+- `InputEventTranslator` (existing `widget.EventToString`) MUST translate both `tcell.KeyBackspace` and `tcell.KeyBackspace2` into `backspace` while leaving other keys untouched. This ensures `filerKeymap`, `cmdlineKeymap`, `finderKeymap`, and `completionKeymap` receive the same symbol they already bind to parent navigation and `DeleteBackwardChar`.
+- `KeymapBaselineSuite` (tests in `main_keymap_test.go`) documents that `backspace` remains a required chord, providing regression coverage beyond the translator-specific tests.
+
+**Validation Plan:**
+- Add table-driven unit tests under `widget/widget_test.go` that create events for both `tcell.KeyBackspace` variants and assert `EventToString` returns `backspace`.
+- Continue running `KeymapBaselineSuite` so any accidental removal of the binding fails CI immediately.
+- Manual smoke test on macOS Terminal and Linux/tmux sessions to prove Backspace opens the parent directory in filer views and deletes characters in prompts.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `widget/widget.go` map entries for `tcell.KeyBackspace`/`tcell.KeyBackspace2` include `// [IMPL:BACKSPACE_TRANSLATION] [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]`.
+- `widget/widget_test.go` introduces `TestEventToStringBackspace_REQ_BACKSPACE_BEHAVIOR` with matching token references.
+
+**Cross-References**: [REQ:BACKSPACE_BEHAVIOR], [IMPL:BACKSPACE_TRANSLATION], [REQ:MODULE_VALIDATION]
+
 ## 26. Terminal Launcher Abstraction [ARCH:TERMINAL_LAUNCHER] [REQ:TERMINAL_PORTABILITY] [REQ:TERMINAL_CWD]
 
 ### Decision: Create a dedicated terminal launcher module that selects the correct command sequence for tmux, Linux desktops, and macOS Terminal.

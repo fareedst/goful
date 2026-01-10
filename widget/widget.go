@@ -220,7 +220,8 @@ var keyToSting = map[tcell.Key]string{
 	tcell.KeyCtrlRightSq:    "C-]",
 	tcell.KeyCtrlCarat:      "C-^",
 	tcell.KeyCtrlUnderscore: "C-_",
-	tcell.KeyBackspace2:     "backspace",
+	tcell.KeyBackspace:      "backspace", // [IMPL:BACKSPACE_TRANSLATION] [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]
+	tcell.KeyBackspace2:     "backspace", // [IMPL:BACKSPACE_TRANSLATION] [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]
 	tcell.KeyF1:             "f1",
 	tcell.KeyF2:             "f2",
 	tcell.KeyF3:             "f3",

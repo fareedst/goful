@@ -108,6 +108,7 @@ When referencing other tokens:
 - `[REQ:CONFIGURABLE_STATE_PATHS]` - Configurable state/history persistence
 - `[REQ:WORKSPACE_START_DIRS]` - Positional CLI directories seed workspace windows
 - `[REQ:EXTERNAL_COMMAND_CONFIG]` - External command menu definitions are configurable via files/overrides
+- `[REQ:BACKSPACE_BEHAVIOR]` - Backspace opens parent directory in filer views and deletes previous characters inside prompts across platforms
 - `[REQ:FILER_EXCLUDE_NAMES]` - Configurable basename exclusions with runtime toggles
 - `[REQ:WINDOW_MACRO_ENUMERATION]` - `%D@`/`%d@` enumerate other workspace directories (paths + basenames) for external commands
 - `[REQ:GO_TOOLCHAIN_LTS]` - Go toolchain tracks current LTS baseline
@@ -146,6 +147,7 @@ When referencing other tokens:
 - `[ARCH:MODULE_VALIDATION]` - Module validation strategy [REQ:MODULE_VALIDATION]
 - `[ARCH:STATE_PATH_SELECTION]` - Path precedence for persistence [REQ:CONFIGURABLE_STATE_PATHS]
 - `[ARCH:EXTERNAL_COMMAND_REGISTRY]` - External command config resolution/binding [REQ:EXTERNAL_COMMAND_CONFIG]
+- `[ARCH:BACKSPACE_TRANSLATION]` - Backspace key canonicalization in the input translator [REQ:BACKSPACE_BEHAVIOR]
 - `[ARCH:FILER_EXCLUDE_FILTER]` - Basename exclude filter + loader/toggle strategy [REQ:FILER_EXCLUDE_NAMES]
 - `[ARCH:WINDOW_MACRO_ENUMERATION]` - Workspace directory enumeration for `%D@` [REQ:WINDOW_MACRO_ENUMERATION]
 - `[ARCH:GO_RUNTIME_STRATEGY]` - Go LTS/toolchain policy [REQ:GO_TOOLCHAIN_LTS]
@@ -179,6 +181,7 @@ When referencing other tokens:
 - `[IMPL:MODULE_VALIDATION]` - Module validation implementation [ARCH:MODULE_VALIDATION] [REQ:MODULE_VALIDATION]
 - `[IMPL:STATE_PATH_RESOLVER]` - Resolver + bootstrap wiring [ARCH:STATE_PATH_SELECTION] [REQ:CONFIGURABLE_STATE_PATHS]
 - `[IMPL:EXTERNAL_COMMAND_LOADER]` - External command config loader/defaults [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
+- `[IMPL:BACKSPACE_TRANSLATION]` - Dual-key backspace normalization inside `widget.EventToString` [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]
 - `[IMPL:EXTERNAL_COMMAND_APPEND]` - Default inheritance (prepended custom entries) + replacement toggle for external command configs [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
 - `[IMPL:EXTERNAL_COMMAND_BINDER]` - Menu binding helpers for commands [ARCH:EXTERNAL_COMMAND_REGISTRY] [REQ:EXTERNAL_COMMAND_CONFIG]
 - `[IMPL:FILER_EXCLUDE_RULES]` - Centralized basename filtering + toggles [ARCH:FILER_EXCLUDE_FILTER] [REQ:FILER_EXCLUDE_NAMES]

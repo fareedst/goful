@@ -91,3 +91,22 @@ func TestEventToStringReturnKey_REQ_QUIT_DIALOG_DEFAULT(t *testing.T) {
 		})
 	}
 }
+
+func TestEventToStringBackspace_REQ_BACKSPACE_BEHAVIOR(t *testing.T) {
+	t.Helper()
+	// [IMPL:BACKSPACE_TRANSLATION] [ARCH:BACKSPACE_TRANSLATION] [REQ:BACKSPACE_BEHAVIOR]
+	for _, tc := range []struct {
+		name string
+		key  tcell.Key
+	}{
+		{name: "backspace", key: tcell.KeyBackspace},
+		{name: "backspace2", key: tcell.KeyBackspace2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ev := tcell.NewEventKey(tc.key, 0, tcell.ModNone)
+			if got := EventToString(ev); got != "backspace" {
+				t.Fatalf("EventToString(%s)=%q, want %q", tc.name, got, "backspace")
+			}
+		})
+	}
+}
