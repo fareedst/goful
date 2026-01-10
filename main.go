@@ -161,6 +161,21 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		g.Workspace().ReloadAll()
 	}
 
+	// [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+	calculateDigest := func() {
+		filename := g.File().Name()
+		if filename == ".." {
+			message.Info("[REQ:FILE_COMPARISON_COLORS] cannot calculate digest for parent directory")
+			return
+		}
+		count := g.Workspace().CalculateDigestForFile(filename)
+		if count > 0 {
+			message.Infof("[REQ:FILE_COMPARISON_COLORS] calculated digest for %d files named %q", count, filename)
+		} else {
+			message.Infof("[REQ:FILE_COMPARISON_COLORS] no matching files with equal size for %q", filename)
+		}
+	}
+
 	// Setup open command for C-m (when the enter key is pressed)
 	// The macro %f means expanded to a file name, for more see (spawn.go)
 	opener := "xdg-open %f %&"
@@ -247,10 +262,12 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		"n", "toggle filename excludes", func() { toggleExcludedNames() },
 		".", "toggle show hidden files", func() { filer.ToggleShowHiddens(); g.Workspace().ReloadAll() },
 		"c", "toggle comparison colors", func() { toggleComparisonColors() }, // [REQ:FILE_COMPARISON_COLORS]
+		"=", "calculate file digest   ", func() { calculateDigest() }, // [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
 	)
 	g.AddKeymap("v", func() { g.Menu("view") })
 	g.AddKeymap("E", toggleExcludedNames)
 	g.AddKeymap("C", toggleComparisonColors) // [REQ:FILE_COMPARISON_COLORS]
+	g.AddKeymap("=", calculateDigest)        // [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
 
 	menu.Add("layout",
 		"t", "tile       ", func() { g.Workspace().LayoutTile() },

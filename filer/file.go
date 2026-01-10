@@ -284,6 +284,7 @@ func (f *FileStat) DrawWithComparison(x, y, width int, focus bool, cmp *CompareS
 	}
 
 	// Draw size with comparison style
+	// [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 	if sizeStr != "" {
 		sizeStyle := baseStyle
 		if useCompare {
@@ -294,6 +295,13 @@ func (f *FileStat) DrawWithComparison(x, y, width int, focus bool, cmp *CompareS
 				sizeStyle = look.CompareSizeSmallest()
 			case SizeLargest:
 				sizeStyle = look.CompareSizeLargest()
+			}
+			// Apply digest comparison attributes
+			switch cmp.DigestState {
+			case DigestEqual:
+				sizeStyle = sizeStyle.Underline(true)
+			case DigestDifferent:
+				sizeStyle = sizeStyle.StrikeThrough(true)
 			}
 			if focus {
 				sizeStyle = sizeStyle.Reverse(true)

@@ -1101,3 +1101,37 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 **Cross-References**: [ARCH:FILE_COMPARISON_ENGINE], [REQ:FILE_COMPARISON_COLORS], [IMPL:FILE_COMPARISON_INDEX], [IMPL:COMPARE_COLOR_CONFIG]
 
+## 31. Digest Comparison [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+
+### Decision: On-demand xxHash64 digest calculation for files with equal sizes across directories
+**Rationale:**
+- Files may have identical sizes but different content; digest comparison provides content verification.
+- On-demand calculation avoids I/O overhead for files the user doesn't need to compare.
+- xxHash64 offers excellent speed for non-cryptographic hashing, suitable for file comparison.
+- Terminal attributes (underline/strikethrough) provide visual distinction without adding new color configuration.
+
+### Implementation Approach:
+- Add `DigestCompare` enum to `filer/compare.go` with states: `DigestUnknown`, `DigestEqual`, `DigestDifferent`, `DigestNA`.
+- Add `DigestState` field to `CompareState` struct.
+- Implement `CalculateFileDigest(path string) (uint64, error)` using `github.com/cespare/xxhash/v2` with streaming I/O.
+- Add `UpdateDigestStates(filename string, dirs []*Directory) int` method to `ComparisonIndex`:
+  - Only processes files with `SizeState == SizeEqual`.
+  - Calculates digests for all matching files across directories.
+  - Sets `DigestState` to `DigestEqual` if all digests match, `DigestDifferent` otherwise.
+- Add `CalculateDigestForFile(filename string) int` method to `Workspace` as public API.
+- Modify `FileStat.DrawWithComparison()` to apply terminal attributes to size field:
+  - `DigestEqual`: `tcell.AttrUnderline`
+  - `DigestDifferent`: `tcell.AttrStrikeThrough`
+- Bind `=` keystroke to trigger digest calculation for the file under cursor.
+- Add "calculate file digest" entry to View menu for discoverability.
+
+**Code Markers**:
+- `filer/compare.go`: `[IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`
+- `filer/workspace.go`: `[IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`
+- `filer/file.go`: `[IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`
+- `main.go`: `[IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]`
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Unit tests in `filer/compare_test.go` validate digest calculation and state propagation with `[REQ:FILE_COMPARISON_COLORS]`.
+
+**Cross-References**: [ARCH:FILE_COMPARISON_ENGINE], [REQ:FILE_COMPARISON_COLORS], [IMPL:FILE_COMPARISON_INDEX], [IMPL:COMPARISON_DRAW]

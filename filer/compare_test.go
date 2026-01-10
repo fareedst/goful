@@ -294,3 +294,300 @@ func TestTimeComparisonPrecision_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
 		t.Errorf("dir2 expected TimeEqual (same second), got %v", state2.TimeState)
 	}
 }
+
+// TestCalculateFileDigest tests digest calculation for a known file.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestCalculateFileDigest_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	// Create a temporary file with known content
+	tmpDir := t.TempDir()
+	tmpFile := tmpDir + "/test.txt"
+	content := []byte("Hello, World!")
+	if err := os.WriteFile(tmpFile, content, 0644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	digest, err := CalculateFileDigest(tmpFile)
+	if err != nil {
+		t.Fatalf("CalculateFileDigest failed: %v", err)
+	}
+
+	// Verify digest is non-zero
+	if digest == 0 {
+		t.Error("expected non-zero digest")
+	}
+
+	// Verify same content produces same digest
+	digest2, err := CalculateFileDigest(tmpFile)
+	if err != nil {
+		t.Fatalf("second CalculateFileDigest failed: %v", err)
+	}
+	if digest != digest2 {
+		t.Errorf("same file produced different digests: %d != %d", digest, digest2)
+	}
+}
+
+// TestCalculateFileDigest_DifferentContent tests that different content produces different digests.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestCalculateFileDigest_DifferentContent_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	file1 := tmpDir + "/file1.txt"
+	file2 := tmpDir + "/file2.txt"
+
+	// Same size, different content
+	if err := os.WriteFile(file1, []byte("AAAA"), 0644); err != nil {
+		t.Fatalf("failed to create file1: %v", err)
+	}
+	if err := os.WriteFile(file2, []byte("BBBB"), 0644); err != nil {
+		t.Fatalf("failed to create file2: %v", err)
+	}
+
+	digest1, err := CalculateFileDigest(file1)
+	if err != nil {
+		t.Fatalf("CalculateFileDigest file1 failed: %v", err)
+	}
+
+	digest2, err := CalculateFileDigest(file2)
+	if err != nil {
+		t.Fatalf("CalculateFileDigest file2 failed: %v", err)
+	}
+
+	if digest1 == digest2 {
+		t.Errorf("different content should produce different digests: both got %d", digest1)
+	}
+}
+
+// TestCalculateFileDigest_NonExistent tests error handling for non-existent files.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestCalculateFileDigest_NonExistent_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	_, err := CalculateFileDigest("/nonexistent/path/to/file.txt")
+	if err == nil {
+		t.Error("expected error for non-existent file")
+	}
+}
+
+// TestDigestCompare_States tests that DigestCompare constants are distinct.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestDigestCompare_States_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	states := []DigestCompare{DigestUnknown, DigestEqual, DigestDifferent, DigestNA}
+	seen := make(map[DigestCompare]bool)
+	for _, s := range states {
+		if seen[s] {
+			t.Errorf("duplicate DigestCompare value: %v", s)
+		}
+		seen[s] = true
+	}
+}
+
+// TestCompareState_DigestField tests that CompareState includes DigestState field.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestCompareState_DigestField_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	state := &CompareState{
+		NamePresent: true,
+		SizeState:   SizeEqual,
+		TimeState:   TimeEqual,
+		DigestState: DigestUnknown,
+	}
+
+	if state.DigestState != DigestUnknown {
+		t.Errorf("expected DigestUnknown, got %v", state.DigestState)
+	}
+
+	state.DigestState = DigestEqual
+	if state.DigestState != DigestEqual {
+		t.Errorf("expected DigestEqual, got %v", state.DigestState)
+	}
+}
+
+// TestUpdateDigestStates_NilIndex tests that nil index returns 0.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestUpdateDigestStates_NilIndex_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	var idx *ComparisonIndex
+	count := idx.UpdateDigestStates("file.txt", nil)
+	if count != 0 {
+		t.Errorf("expected 0 from nil index, got %d", count)
+	}
+}
+
+// TestUpdateDigestStates_NoMatchingFiles tests that missing files return 0.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestUpdateDigestStates_NoMatchingFiles_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	now := time.Now()
+	dir1 := mockDirectory(mockFileStat("file1.txt", 100, now))
+	dir2 := mockDirectory(mockFileStat("file2.txt", 100, now))
+
+	dirs := []*Directory{dir1, dir2}
+	idx := BuildComparisonIndex(dirs)
+
+	count := idx.UpdateDigestStates("nonexistent.txt", dirs)
+	if count != 0 {
+		t.Errorf("expected 0 for non-existent file, got %d", count)
+	}
+}
+
+// TestUpdateDigestStates_DifferentSizes tests that files with unique sizes get DigestNA.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestUpdateDigestStates_DifferentSizes_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	now := time.Now()
+	dir1 := mockDirectory(mockFileStat("file.txt", 100, now))
+	dir2 := mockDirectory(mockFileStat("file.txt", 200, now))
+
+	dirs := []*Directory{dir1, dir2}
+	idx := BuildComparisonIndex(dirs)
+
+	count := idx.UpdateDigestStates("file.txt", dirs)
+	// Each file has a unique size, so digest calculation should be skipped for both
+	if count != 0 {
+		t.Errorf("expected 0 for files with unique sizes, got %d", count)
+	}
+
+	// Both states should be DigestNA (each has unique size)
+	state1 := idx.Get(0, "file.txt")
+	state2 := idx.Get(1, "file.txt")
+
+	if state1.DigestState != DigestNA {
+		t.Errorf("dir1 expected DigestNA, got %v", state1.DigestState)
+	}
+	if state2.DigestState != DigestNA {
+		t.Errorf("dir2 expected DigestNA, got %v", state2.DigestState)
+	}
+}
+
+// TestUpdateDigestStates_MixedSizes tests that files are grouped by size for digest comparison.
+// Files with matching sizes get compared, files with unique sizes get DigestNA.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestUpdateDigestStates_MixedSizes_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	now := time.Now()
+	tmpDir := t.TempDir()
+
+	// Create actual files so digest calculation works
+	file1 := tmpDir + "/dir1/file.txt"
+	file2 := tmpDir + "/dir2/file.txt"
+	file3 := tmpDir + "/dir3/file.txt"
+
+	os.MkdirAll(tmpDir+"/dir1", 0755)
+	os.MkdirAll(tmpDir+"/dir2", 0755)
+	os.MkdirAll(tmpDir+"/dir3", 0755)
+
+	// dir1 and dir2 have same content (same size), dir3 has different size
+	os.WriteFile(file1, []byte("AAAA"), 0644)
+	os.WriteFile(file2, []byte("AAAA"), 0644)
+	os.WriteFile(file3, []byte("BBBBBBBB"), 0644) // 8 bytes vs 4 bytes
+
+	// Create mock file stats with correct sizes
+	fs1 := &FileStat{
+		FileInfo: &mockFileInfo{name: "file.txt", size: 4, modTime: now},
+		stat:     &mockFileInfo{name: "file.txt", size: 4, modTime: now},
+		path:     file1,
+		name:     "file.txt",
+	}
+	fs2 := &FileStat{
+		FileInfo: &mockFileInfo{name: "file.txt", size: 4, modTime: now},
+		stat:     &mockFileInfo{name: "file.txt", size: 4, modTime: now},
+		path:     file2,
+		name:     "file.txt",
+	}
+	fs3 := &FileStat{
+		FileInfo: &mockFileInfo{name: "file.txt", size: 8, modTime: now},
+		stat:     &mockFileInfo{name: "file.txt", size: 8, modTime: now},
+		path:     file3,
+		name:     "file.txt",
+	}
+
+	dir1 := mockDirectory(fs1)
+	dir2 := mockDirectory(fs2)
+	dir3 := mockDirectory(fs3)
+
+	dirs := []*Directory{dir1, dir2, dir3}
+	idx := BuildComparisonIndex(dirs)
+
+	count := idx.UpdateDigestStates("file.txt", dirs)
+	// dir1 and dir2 have same size and should be compared (2 files)
+	// dir3 has unique size and should get DigestNA
+	if count != 2 {
+		t.Errorf("expected 2 files processed, got %d", count)
+	}
+
+	state1 := idx.Get(0, "file.txt")
+	state2 := idx.Get(1, "file.txt")
+	state3 := idx.Get(2, "file.txt")
+
+	// dir1 and dir2 should have DigestEqual (same content)
+	if state1.DigestState != DigestEqual {
+		t.Errorf("dir1 expected DigestEqual, got %v", state1.DigestState)
+	}
+	if state2.DigestState != DigestEqual {
+		t.Errorf("dir2 expected DigestEqual, got %v", state2.DigestState)
+	}
+	// dir3 should have DigestNA (unique size)
+	if state3.DigestState != DigestNA {
+		t.Errorf("dir3 expected DigestNA, got %v", state3.DigestState)
+	}
+}
+
+// TestUpdateDigestStates_MixedSizesDifferentContent tests digest comparison with same size but different content.
+// [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
+func TestUpdateDigestStates_MixedSizesDifferentContent_REQ_FILE_COMPARISON_COLORS(t *testing.T) {
+	now := time.Now()
+	tmpDir := t.TempDir()
+
+	file1 := tmpDir + "/dir1/file.txt"
+	file2 := tmpDir + "/dir2/file.txt"
+	file3 := tmpDir + "/dir3/file.txt"
+
+	os.MkdirAll(tmpDir+"/dir1", 0755)
+	os.MkdirAll(tmpDir+"/dir2", 0755)
+	os.MkdirAll(tmpDir+"/dir3", 0755)
+
+	// dir1 and dir2 have same size but different content
+	os.WriteFile(file1, []byte("AAAA"), 0644)
+	os.WriteFile(file2, []byte("BBBB"), 0644) // Same size (4 bytes), different content
+	os.WriteFile(file3, []byte("CCCCCCCC"), 0644)
+
+	fs1 := &FileStat{
+		FileInfo: &mockFileInfo{name: "file.txt", size: 4, modTime: now},
+		stat:     &mockFileInfo{name: "file.txt", size: 4, modTime: now},
+		path:     file1,
+		name:     "file.txt",
+	}
+	fs2 := &FileStat{
+		FileInfo: &mockFileInfo{name: "file.txt", size: 4, modTime: now},
+		stat:     &mockFileInfo{name: "file.txt", size: 4, modTime: now},
+		path:     file2,
+		name:     "file.txt",
+	}
+	fs3 := &FileStat{
+		FileInfo: &mockFileInfo{name: "file.txt", size: 8, modTime: now},
+		stat:     &mockFileInfo{name: "file.txt", size: 8, modTime: now},
+		path:     file3,
+		name:     "file.txt",
+	}
+
+	dir1 := mockDirectory(fs1)
+	dir2 := mockDirectory(fs2)
+	dir3 := mockDirectory(fs3)
+
+	dirs := []*Directory{dir1, dir2, dir3}
+	idx := BuildComparisonIndex(dirs)
+
+	count := idx.UpdateDigestStates("file.txt", dirs)
+	if count != 2 {
+		t.Errorf("expected 2 files processed, got %d", count)
+	}
+
+	state1 := idx.Get(0, "file.txt")
+	state2 := idx.Get(1, "file.txt")
+	state3 := idx.Get(2, "file.txt")
+
+	// dir1 and dir2 should have DigestDifferent (same size, different content)
+	if state1.DigestState != DigestDifferent {
+		t.Errorf("dir1 expected DigestDifferent, got %v", state1.DigestState)
+	}
+	if state2.DigestState != DigestDifferent {
+		t.Errorf("dir2 expected DigestDifferent, got %v", state2.DigestState)
+	}
+	// dir3 should have DigestNA (unique size)
+	if state3.DigestState != DigestNA {
+		t.Errorf("dir3 expected DigestNA, got %v", state3.DigestState)
+	}
+}

@@ -3,8 +3,12 @@
 package filer
 
 import (
+	"io"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/cespare/xxhash/v2"
 )
 
 // SizeCompare represents the comparison state for file sizes.
@@ -31,12 +35,24 @@ const (
 	TimeMiddle               // This file is neither earliest nor latest
 )
 
+// DigestCompare represents the comparison state for file content digests.
+// [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+type DigestCompare int
+
+const (
+	DigestUnknown   DigestCompare = iota // Digest not yet calculated
+	DigestEqual                          // Same digest (content identical)
+	DigestDifferent                      // Different digest despite equal size
+	DigestNA                             // Not applicable (sizes differ)
+)
+
 // CompareState holds the comparison state for a single file in a directory.
 // [IMPL:FILE_COMPARISON_INDEX] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 type CompareState struct {
-	NamePresent bool        // File name appears in multiple directories
-	SizeState   SizeCompare // Size comparison state
-	TimeState   TimeCompare // Time comparison state
+	NamePresent bool          // File name appears in multiple directories
+	SizeState   SizeCompare   // Size comparison state
+	TimeState   TimeCompare   // Time comparison state
+	DigestState DigestCompare // Digest comparison state (on-demand calculation)
 }
 
 // fileEntry represents a file in a specific directory for comparison purposes.
@@ -217,4 +233,129 @@ func (idx *ComparisonIndex) Clear() {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 	idx.cache = make(map[string]map[int]*CompareState)
+}
+
+// CalculateFileDigest computes the xxHash64 digest of a file using streaming.
+// [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func CalculateFileDigest(path string) (uint64, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	h := xxhash.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return 0, err
+	}
+	return h.Sum64(), nil
+}
+
+// UpdateDigestStates calculates and updates digest states for a specific filename.
+// Groups files by actual size and compares digests within each size group.
+// Files with unique sizes (no other file shares the same size) get DigestNA.
+// Returns the number of files processed.
+// [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func (idx *ComparisonIndex) UpdateDigestStates(filename string, dirs []*Directory) int {
+	if idx == nil {
+		return 0
+	}
+
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	dirStates, ok := idx.cache[filename]
+	if !ok {
+		return 0
+	}
+
+	// Collect file info including actual size
+	type fileInfo struct {
+		dirIndex int
+		path     string
+		size     int64
+		state    *CompareState
+	}
+
+	var allFiles []fileInfo
+	for dirIdx, state := range dirStates {
+		if dirIdx >= len(dirs) || dirs[dirIdx] == nil {
+			continue
+		}
+		dir := dirs[dirIdx]
+		for _, item := range dir.List() {
+			fs, ok := item.(*FileStat)
+			if !ok || fs == nil {
+				continue
+			}
+			if fs.Name() == filename {
+				allFiles = append(allFiles, fileInfo{
+					dirIndex: dirIdx,
+					path:     fs.Path(),
+					size:     fs.Size(),
+					state:    state,
+				})
+				break
+			}
+		}
+	}
+
+	// Group files by size
+	sizeGroups := make(map[int64][]fileInfo)
+	for _, fi := range allFiles {
+		sizeGroups[fi.size] = append(sizeGroups[fi.size], fi)
+	}
+
+	// Process each size group
+	totalProcessed := 0
+	for _, group := range sizeGroups {
+		if len(group) < 2 {
+			// Only one file with this size, mark as DigestNA
+			for _, fi := range group {
+				fi.state.DigestState = DigestNA
+			}
+			continue
+		}
+
+		// Calculate digests for all files in this size group
+		digests := make(map[int]uint64)
+		for _, fi := range group {
+			digest, err := CalculateFileDigest(fi.path)
+			if err != nil {
+				fi.state.DigestState = DigestUnknown
+				continue
+			}
+			digests[fi.dirIndex] = digest
+		}
+
+		// Check if all digests in this group are equal
+		var firstDigest uint64
+		allEqual := true
+		first := true
+		for _, digest := range digests {
+			if first {
+				firstDigest = digest
+				first = false
+			} else if digest != firstDigest {
+				allEqual = false
+				break
+			}
+		}
+
+		// Update states based on comparison
+		for _, fi := range group {
+			if _, ok := digests[fi.dirIndex]; !ok {
+				// Digest calculation failed
+				continue
+			}
+			if allEqual {
+				fi.state.DigestState = DigestEqual
+			} else {
+				fi.state.DigestState = DigestDifferent
+			}
+			totalProcessed++
+		}
+	}
+
+	return totalProcessed
 }

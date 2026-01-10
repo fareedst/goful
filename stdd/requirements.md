@@ -576,8 +576,8 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: When multiple directories are displayed in a workspace, files with common names across windows shall be color-coded. The name, size, and modification time are independently color-coded based on comparison results. File name comparison is case-sensitive, and timestamp comparison is precise to the second. The color scheme is configurable via a global YAML file, and the feature can be toggled on/off via keystroke.
-- **Rationale**: Users often compare directories to identify matching, newer, or larger files. Visual color-coding enables instant recognition of file relationships across panes without manual comparison, improving workflow efficiency for file synchronization, backup verification, and duplicate detection tasks.
+- **Description**: When multiple directories are displayed in a workspace, files with common names across windows shall be color-coded. The name, size, and modification time are independently color-coded based on comparison results. File name comparison is case-sensitive, and timestamp comparison is precise to the second. The color scheme is configurable via a global YAML file, and the feature can be toggled on/off via keystroke. Additionally, users can trigger on-demand digest calculation (`=` key) for files with equal sizes to verify content identity; results are displayed with terminal attributes (underline for equal digests, strikethrough for different).
+- **Rationale**: Users often compare directories to identify matching, newer, or larger files. Visual color-coding enables instant recognition of file relationships across panes without manual comparison, improving workflow efficiency for file synchronization, backup verification, and duplicate detection tasks. Digest comparison provides definitive content verification for files with matching sizes.
 - **Satisfaction Criteria**:
   - File names appearing in multiple directories are highlighted; files unique to one directory use neutral colors.
   - For files with matching names across directories: sizes are color-coded as equal/smallest/largest; times are color-coded as equal/earliest/latest.
@@ -585,14 +585,17 @@ Each requirement includes:
   - A dedicated keystroke (and View menu entry) toggles comparison coloring on/off at runtime.
   - Progressive rendering: files display immediately with standard colors, then comparison colors apply once all directories finish loading.
   - Single-directory workspaces or disabled mode show standard file-type colors only.
+  - Pressing `=` on a file calculates xxHash64 digests for same-named files with equal sizes across directories.
+  - Files with equal digests display size with underline attribute; files with different digests display size with strikethrough attribute.
 - **Validation Criteria**:
   - Unit tests cover the comparison index builder for various window counts and file combinations.
   - Unit tests cover YAML config loading with defaults for missing/invalid files.
   - Integration tests prove color-coding applies correctly after directory loading completes.
   - Toggle behavior verified via runtime state checks.
+  - Unit tests cover digest calculation and state propagation for equal/different content.
   - Token validation confirms `[REQ:FILE_COMPARISON_COLORS]`, `[ARCH:FILE_COMPARISON_ENGINE]`, and `[IMPL:*]` references exist across docs, code, and tests.
 - **Architecture**: See `architecture-decisions.md` § File Comparison Engine [ARCH:FILE_COMPARISON_ENGINE]
-- **Implementation**: See `implementation-decisions.md` § Comparison Color Config [IMPL:COMPARE_COLOR_CONFIG], File Comparison Index [IMPL:FILE_COMPARISON_INDEX], Comparison Draw [IMPL:COMPARISON_DRAW]
+- **Implementation**: See `implementation-decisions.md` § Comparison Color Config [IMPL:COMPARE_COLOR_CONFIG], File Comparison Index [IMPL:FILE_COMPARISON_INDEX], Comparison Draw [IMPL:COMPARISON_DRAW], Digest Comparison [IMPL:DIGEST_COMPARISON]
 
 **Status**: ⏳ Planned
 

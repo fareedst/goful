@@ -65,6 +65,8 @@ key                  | function
 `s`                  | Sort
 `v`                  | View
 `E`                  | Toggle filename excludes
+`C`                  | Toggle comparison colors
+`=`                  | Calculate file digest
 `b`                  | Bookmark
 `e`                  | Editor
 `x`                  | Command
@@ -258,6 +260,36 @@ Examples of customizing:
 - Names present in more than one pane render in bold yellow so duplicates stand out even before you inspect metadata.
 - Size column colors: cyan when sizes match, red for the smallest copy, green for the largest copy.
 - Time column colors: cyan for matching timestamps, red for the earliest copy, green for the latest copy.
+
+### Digest comparison (`=` key)
+
+`[IMPL:DIGEST_COMPARISON]` extends the comparison feature with on-demand content verification. When you need to confirm whether files with identical names **and** sizes contain the same data, press `=` on any file to calculate xxHash64 digests.
+
+**How it works**
+
+1. Press `=` on a file (or use `View → calculate file digest`).
+2. Goful finds all files with the **same name** (case-sensitive) across loaded directory panes.
+3. Files are grouped by their **actual size**:
+   - Files that share the same size with at least one other file participate in digest calculation.
+   - Files with a unique size (no other same-named file has that size) are skipped and continue displaying their normal size comparison colors (smallest/largest/middle).
+4. Within each size group (where at least two files share the same size), goful computes xxHash64 digests and compares them:
+   - **Equal digests** (identical content): the size field displays with an **underline** attribute.
+   - **Different digests** (different content despite same size): the size field displays with a **strikethrough** attribute.
+5. Files with unique sizes or unique names show no digest indicator—their standard comparison colors remain.
+
+**Example**: If you have `backup.zip` in three directories with sizes 100MB, 100MB, and 150MB, pressing `=` will compare the two 100MB copies (showing underline if identical, strikethrough if different) while the 150MB copy keeps its normal "largest" color with no digest indicator.
+
+**Use cases**
+
+- Verify backup integrity by confirming copies match the original.
+- Detect silent corruption where file sizes match but content differs.
+- Quickly identify duplicates that can be safely removed.
+
+**Notes**
+
+- Digest calculation reads the entire file, so very large files may take noticeable time.
+- Results persist until the comparison index is rebuilt (e.g., toggling comparison colors off/on or reloading directories).
+- Terminal support for underline and strikethrough varies; most modern terminals (iTerm2, gnome-terminal, Windows Terminal) render both attributes correctly.
 
 **Configure the palette**
 

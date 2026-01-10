@@ -160,6 +160,17 @@ func (w *Workspace) GetCompareState(dirIndex int, filename string) *CompareState
 	return w.comparisonIndex.Get(dirIndex, filename)
 }
 
+// CalculateDigestForFile calculates and updates digest states for files with the given name.
+// Only computes digests for files with equal sizes across directories.
+// Returns the number of files that had their digest calculated.
+// [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+func (w *Workspace) CalculateDigestForFile(filename string) int {
+	if w.comparisonIndex == nil {
+		return 0
+	}
+	return w.comparisonIndex.UpdateDigestStates(filename, w.Dirs)
+}
+
 // Dir returns the focused directory.
 func (w *Workspace) Dir() *Directory {
 	return w.Dirs[w.Focus]

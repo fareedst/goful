@@ -24,3 +24,5 @@ require (
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 )
+
+require github.com/cespare/xxhash/v2 v2.3.0 // indirect

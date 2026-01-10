@@ -209,6 +209,7 @@ When referencing other tokens:
 - `[IMPL:COMPARE_COLOR_CONFIG]` - Comparison color YAML configuration loader [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 - `[IMPL:FILE_COMPARISON_INDEX]` - Cached index of cross-directory file comparison states [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 - `[IMPL:COMPARISON_DRAW]` - Draw integration for comparison colors [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+- `[IMPL:DIGEST_COMPARISON]` - On-demand xxHash64 digest calculation for files with equal sizes [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 - Add your implementation tokens here
 
 ## Test Tokens Registry
