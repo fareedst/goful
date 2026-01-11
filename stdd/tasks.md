@@ -734,3 +734,38 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P1 because this feature significantly improves directory comparison workflows but does not block core navigation.
 
+## P1: Multi-Target Copy/Move via nsync [REQ:NSYNC_MULTI_TARGET] [ARCH:NSYNC_INTEGRATION] [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
+
+**Status**: ⏳ Pending
+
+**Description**: Integrate the nsync SDK from neighboring `../nsync` directory to provide multi-target copy/move operations where files sync to all visible workspace panes simultaneously with parallel execution and progress monitoring.
+
+**Dependencies**: [REQ:MODULE_VALIDATION], [REQ:WINDOW_MACRO_ENUMERATION] (for `otherWindowDirPaths` helper)
+
+**Module Boundaries**:
+- `NsyncObserver` (Module 1 – `app/nsync.go`): Adapter implementing `nsync.Observer` to bridge progress events to goful's `progress` widget.
+- `SyncCopy/SyncMove` (Module 2 – `app/nsync.go`): Wrapper functions configuring nsync and executing within `asyncFilectrl` pattern.
+- `CopyAll/MoveAll` (Module 3 – `app/nsync.go`): Functions collecting destinations from workspace and delegating to nsync wrappers.
+
+**Subtasks**:
+- [x] Update requirements with `[REQ:NSYNC_MULTI_TARGET]` [REQ:NSYNC_MULTI_TARGET]
+- [x] Update architecture decisions with `[ARCH:NSYNC_INTEGRATION]` [ARCH:NSYNC_INTEGRATION]
+- [x] Update implementation decisions with `[IMPL:NSYNC_OBSERVER]` and `[IMPL:NSYNC_COPY_MOVE]` [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
+- [x] Register tokens in `semantic-tokens.md`
+- [ ] Add nsync dependency with local replace directive in `go.mod`
+- [ ] Implement `NsyncObserver` adapter in `app/nsync.go` [IMPL:NSYNC_OBSERVER]
+- [ ] Implement `syncCopy`/`syncMove` wrappers in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
+- [x] Add `CopyAll`/`MoveAll` functions in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
+- [ ] Wire keybindings (`C`/`M`) and View menu entries in `main.go` [IMPL:NSYNC_COPY_MOVE]
+- [ ] Add unit tests for observer adapter [REQ:MODULE_VALIDATION]
+- [ ] Add integration tests for multi-target sync [REQ:MODULE_VALIDATION]
+- [ ] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [ ] NsyncObserver module validated independently before integration
+- [ ] SyncCopy/SyncMove wrappers validated with temp directory tests
+- [ ] CopyAll/MoveAll modes work with 2+ panes and fall back gracefully with 1 pane
+- [ ] Progress display updates during multi-file operations
+- [ ] Token audit + validation logged
+
+**Priority Rationale**: P1 because multi-target copy/move significantly improves file distribution workflows but does not block core single-target operations.

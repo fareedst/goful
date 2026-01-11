@@ -2,9 +2,7 @@ module github.com/anmitsu/goful
 
 // [IMPL:GO_MOD_UPDATE] [ARCH:GO_RUNTIME_STRATEGY] [REQ:GO_TOOLCHAIN_LTS]
 // Adopt the Go 1.24 LTS baseline for consistent local + CI builds.
-go 1.24.0
-
-toolchain go1.24.3
+go 1.24.3
 
 // [IMPL:DEP_BUMP] [ARCH:DEPENDENCY_POLICY] [REQ:DEPENDENCY_REFRESH]
 require (
@@ -13,6 +11,10 @@ require (
 	github.com/mattn/go-runewidth v0.0.19
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+// [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
+// Local replace directive to use neighboring nsync directory for multi-target copy/move.
+replace github.com/nsync/nsync => ../nsync
 
 // [IMPL:DEP_BUMP] [ARCH:DEPENDENCY_POLICY] [REQ:DEPENDENCY_REFRESH]
 require (
@@ -25,4 +27,14 @@ require (
 	golang.org/x/text v0.32.0 // indirect
 )
 
-require github.com/cespare/xxhash/v2 v2.3.0 // indirect
+require (
+	github.com/cespare/xxhash/v2 v2.3.0
+	github.com/nsync/nsync v0.0.0-00010101000000-000000000000
+)
+
+require (
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
+	github.com/zeebo/blake3 v0.2.4 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+)

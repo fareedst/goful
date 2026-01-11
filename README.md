@@ -65,7 +65,9 @@ key                  | function
 `s`                  | Sort
 `v`                  | View
 `E`                  | Toggle filename excludes
-`C`                  | Toggle comparison colors
+`` ` ``              | Toggle comparison colors
+`C`                  | Copy All (to all visible panes)
+`M`                  | Move All (to all visible panes)
 `=`                  | Calculate file digest
 `L` or `M-l`             | Toggle linked navigation mode
 `[`                  | Start difference search
@@ -306,9 +308,9 @@ Examples of customizing:
 * Adding bookmarks
 * Setting colors and looks
 
-### File comparison colors (`C` toggle)
+### File comparison colors (`` ` `` toggle)
 
-`[REQ:FILE_COMPARISON_COLORS]` (implemented via `[ARCH:FILE_COMPARISON_ENGINE]` + `[IMPL:COMPARE_COLOR_CONFIG]`) adds a per-column palette that highlights files with the same name across multiple windows. The feature is **off by default** so large directory scans stay unobstructed; press uppercase `C` at any time (or use `View → toggle comparison colors`) to enable it, and tap `C` again to return to the standard theme. When enabled, goful rebuilds its comparison index and redraws each pane so you can immediately spot duplicates, newer backups, or size mismatches.
+`[REQ:FILE_COMPARISON_COLORS]` (implemented via `[ARCH:FILE_COMPARISON_ENGINE]` + `[IMPL:COMPARE_COLOR_CONFIG]`) adds a per-column palette that highlights files with the same name across multiple windows. The feature is **off by default** so large directory scans stay unobstructed; press `` ` `` (backtick) at any time (or use `View → toggle comparison colors`) to enable it, and tap `` ` `` again to return to the standard theme. When enabled, goful rebuilds its comparison index and redraws each pane so you can immediately spot duplicates, newer backups, or size mismatches.
 
 **Default palette**
 
@@ -348,7 +350,7 @@ Examples of customizing:
 
 **Configure the palette**
 
-The palette loads from a YAML file resolved in the usual precedence order: the `-compare-colors /path/to/colors.yaml` flag wins, next `GOFUL_COMPARE_COLORS=/path/to/colors.yaml`, then the default `~/.goful/compare_colors.yaml`. Edit or create the file, restart goful so the config is reloaded during startup, and press `C` to see the new scheme:
+The palette loads from a YAML file resolved in the usual precedence order: the `-compare-colors /path/to/colors.yaml` flag wins, next `GOFUL_COMPARE_COLORS=/path/to/colors.yaml`, then the default `~/.goful/compare_colors.yaml`. Edit or create the file, restart goful so the config is reloaded during startup, and press `` ` `` to see the new scheme:
 
 ```yaml
 # ~/.goful/compare_colors.yaml
@@ -365,6 +367,26 @@ time:
 ```
 
 All entries accept tcell color names (`red`, `cyan`, `magenta`, etc.) or hex values. Leave a field blank to fall back to the default. Combine this file with the runtime toggle to tailor comparison cues to whichever terminal theme you use.
+
+### Multi-target copy/move (`C` / `M` keys)
+
+`[REQ:NSYNC_MULTI_TARGET]` (implemented via `[ARCH:NSYNC_INTEGRATION]`) provides parallel copy/move to all visible workspace panes simultaneously using the nsync SDK.
+
+**How it works**
+
+1. Mark files with `Space` (or use the cursor file if nothing is marked).
+2. Press `C` (Copy All) or `M` (Move All).
+3. Files are copied/moved in parallel to **all other visible directory panes**.
+4. Progress is displayed via goful's standard progress bar.
+5. When only one pane is visible, these commands fall back to the regular single-target `c`/`m` behavior.
+
+**Use cases**
+
+- Deploy files to multiple directories at once (e.g., syncing assets across project folders).
+- Create backups to multiple destinations simultaneously.
+- Distribute configuration files to several locations.
+
+The nsync SDK handles parallel execution, content verification, and move semantics (source deletion only after successful sync to all destinations).
 
 Recommend remain original `main.go` and copy to own `main.go` for example:
 

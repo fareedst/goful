@@ -325,14 +325,14 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		"L", "look menu    ", func() { g.Menu("look") },
 		"n", "toggle filename excludes", func() { toggleExcludedNames() },
 		".", "toggle show hidden files", func() { filer.ToggleShowHiddens(); g.Workspace().ReloadAll() },
-		"c", "toggle comparison colors", func() { toggleComparisonColors() }, // [REQ:FILE_COMPARISON_COLORS]
+		"`", "toggle comparison colors", func() { toggleComparisonColors() }, // [REQ:FILE_COMPARISON_COLORS]
 		"=", "calculate file digest   ", func() { calculateDigest() }, // [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
 		"[", "start diff search       ", func() { g.StartDiffSearch() }, // [REQ:DIFF_SEARCH] [IMPL:DIFF_SEARCH]
 		"]", "continue diff search    ", func() { g.ContinueDiffSearch() }, // [REQ:DIFF_SEARCH] [IMPL:DIFF_SEARCH]
 	)
 	g.AddKeymap("v", func() { g.Menu("view") })
 	g.AddKeymap("E", toggleExcludedNames)
-	g.AddKeymap("C", toggleComparisonColors) // [REQ:FILE_COMPARISON_COLORS]
+	g.AddKeymap("`", toggleComparisonColors) // [REQ:FILE_COMPARISON_COLORS]
 	g.AddKeymap("=", calculateDigest)        // [REQ:FILE_COMPARISON_COLORS] [IMPL:DIGEST_COMPARISON]
 
 	menu.Add("layout",
@@ -363,17 +363,19 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 	)
 
 	menu.Add("command",
-		"c", "copy         ", func() { g.Copy() },
-		"m", "move         ", func() { g.Move() },
-		"D", "delete       ", func() { g.Remove() },
-		"k", "mkdir        ", func() { g.Mkdir() },
-		"n", "newfile      ", func() { g.Touch() },
-		"M", "chmod        ", func() { g.Chmod() },
-		"r", "rename       ", func() { g.Rename() },
-		"R", "bulk rename  ", func() { g.BulkRename() },
-		"d", "chdir        ", func() { g.Chdir() },
-		"g", "glob         ", func() { g.Glob() },
-		"G", "globdir      ", func() { g.Globdir() },
+		"c", "copy              ", func() { g.Copy() },
+		"C", "copy all (multi)  ", func() { g.CopyAll() }, // [REQ:NSYNC_MULTI_TARGET] [IMPL:NSYNC_COPY_MOVE]
+		"m", "move              ", func() { g.Move() },
+		"M", "move all (multi)  ", func() { g.MoveAll() }, // [REQ:NSYNC_MULTI_TARGET] [IMPL:NSYNC_COPY_MOVE]
+		"D", "delete            ", func() { g.Remove() },
+		"k", "mkdir             ", func() { g.Mkdir() },
+		"n", "newfile           ", func() { g.Touch() },
+		"H", "chmod             ", func() { g.Chmod() },
+		"r", "rename            ", func() { g.Rename() },
+		"R", "bulk rename       ", func() { g.BulkRename() },
+		"d", "chdir             ", func() { g.Chdir() },
+		"g", "glob              ", func() { g.Glob() },
+		"G", "globdir           ", func() { g.Globdir() },
 	)
 	g.AddKeymap("x", func() { g.Menu("command") })
 
@@ -692,7 +694,9 @@ func filerKeymap(g *app.Goful) widget.Keymap {
 		"n":    func() { g.Touch() },
 		"K":    func() { g.Mkdir() },
 		"c":    func() { g.Copy() },
+		"C":    func() { g.CopyAll() }, // [REQ:NSYNC_MULTI_TARGET] [IMPL:NSYNC_COPY_MOVE] Copy to all panes
 		"m":    func() { g.Move() },
+		"M":    func() { g.MoveAll() }, // [REQ:NSYNC_MULTI_TARGET] [IMPL:NSYNC_COPY_MOVE] Move to all panes
 		"r":    func() { g.Rename() },
 		"R":    func() { g.BulkRename() },
 		"D":    func() { g.Remove() },

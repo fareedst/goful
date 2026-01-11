@@ -29,6 +29,7 @@ Each requirement includes:
 
 | Token | Requirement | Priority | Status | Architecture | Implementation |
 |-------|------------|----------|--------|--------------|----------------|
+| [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ⏳ Planned | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
 
 ### Non-Functional Requirements
 
@@ -663,6 +664,31 @@ Each requirement includes:
 - Dedicated `diffstatus` package provides persistent status line during search.
 - Periodic UI refresh (1 second ticker) updates status during active search.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 756 token references across 68 files.`
+
+### [REQ:NSYNC_MULTI_TARGET] Multi-Target Copy/Move via nsync SDK
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must provide a multi-target copy/move capability that leverages the nsync SDK to sync files to all visible workspace panes simultaneously. When the user invokes a "Copy All" or "Move All" command, the selected files (marked or cursor) are copied/moved in parallel to all other directories visible in the workspace. The existing single-target copy/move commands remain unchanged for single-destination operations.
+- **Rationale**: Users frequently need to distribute files across multiple directories at once (e.g., deploying to multiple servers, creating backups across drives, distributing assets to multiple project folders). The builtin single-target copy forces repetitive operations. The nsync SDK provides parallel multi-destination sync with progress monitoring, content verification, and move semantics—features that would be complex to implement from scratch.
+- **Satisfaction Criteria**:
+  - `CopyAll` command copies selected files (marked or cursor) to all other visible workspace directories in parallel using nsync.
+  - `MoveAll` command moves selected files to all other visible workspace directories, deleting the source only after successful sync to all destinations.
+  - Progress display integrates with goful's existing `progress` widget showing total bytes, per-item updates, and throughput.
+  - When only one pane is visible, these commands fall back to the single-target builtin operation with an informative message.
+  - Keybindings (`C` for Copy All, `M` for Move All) and command menu entries provide discoverability.
+  - Context cancellation (Ctrl-C during operation) stops the nsync operation gracefully.
+  - Errors for specific destinations are reported without aborting the entire operation.
+- **Validation Criteria**:
+  - Unit tests cover the nsync observer adapter with mocked progress calls.
+  - Integration tests verify multi-destination sync to temp directories with file verification.
+  - Tests verify fallback to builtin when only one pane exists.
+  - Manual verification confirms progress display updates during multi-file operations.
+  - Token validation confirms `[REQ:NSYNC_MULTI_TARGET]`, `[ARCH:NSYNC_INTEGRATION]`, and `[IMPL:*]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § nsync Integration [ARCH:NSYNC_INTEGRATION]
+- **Implementation**: See `implementation-decisions.md` § nsync Observer [IMPL:NSYNC_OBSERVER], nsync Copy/Move [IMPL:NSYNC_COPY_MOVE]
+
+**Status**: ⏳ Planned
 
 ### [REQ:EVENT_LOOP_SHUTDOWN] Event Poller Shutdown Control
 

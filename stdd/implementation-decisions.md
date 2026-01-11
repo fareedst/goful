@@ -1292,3 +1292,88 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - Bug fix (2026-01-10): Added `FindNextSubdirInAll` to respect `startAfter` during subdirectory descent, fixing search state loss when user manually navigates into subdirectories. Added 4 new unit tests: `TestFindNextSubdirInAll_REQ_DIFF_SEARCH`, `TestFindNextSubdirInAllSkipsNonCommon_REQ_DIFF_SEARCH`, `TestFindNextSubdirInAllNoCommon_REQ_DIFF_SEARCH`.
 
 **Cross-References**: [ARCH:DIFF_SEARCH], [REQ:DIFF_SEARCH], [REQ:MODULE_VALIDATION]
+
+## 34. nsync Observer Adapter [IMPL:NSYNC_OBSERVER] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
+
+### Decision: Implement an observer adapter that bridges nsync progress events to goful's progress widget.
+**Rationale:**
+- nsync uses the Observer pattern for progress notifications with callbacks like `OnStart`, `OnProgress`, `OnFinish`.
+- goful has an existing `progress` package with `Start()`, `Update()`, `Finish()` functions that render a progress bar.
+- An adapter bridges these two systems without modifying either one.
+
+### Implementation Approach:
+- Create `type gofulObserver struct` implementing `nsync.Observer` interface in `app/nsync.go`.
+- `OnStart(plan)`: Call `progress.Start(float64(plan.TotalBytes))` and `progress.StartTaskCount(plan.TotalItems)`.
+- `OnProgress(stats)`: Call `progress.Update(float64(stats.BytesCopied - lastBytes))` with delta tracking.
+- `OnItemComplete(item, result)`: Call `progress.FinishTask()` per item, emit `message.Infof` for errors.
+- `OnFinish(result)`: Call `progress.Finish()`, emit summary message.
+- Observer must be thread-safe; use mutex for byte tracking since nsync calls from multiple goroutines.
+
+**Code Markers**:
+- `app/nsync.go` includes `// [IMPL:NSYNC_OBSERVER] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]` in the observer struct and methods.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `app/nsync.go`.
+- Tests: `app/nsync_test.go` with tests named `TestGofulObserver_REQ_NSYNC_MULTI_TARGET`.
+
+**Cross-References**: [ARCH:NSYNC_INTEGRATION], [REQ:NSYNC_MULTI_TARGET], [REQ:MODULE_VALIDATION]
+
+## 35. nsync Copy/Move Wrappers [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
+
+### Decision: Provide wrapper functions that configure and execute nsync sync operations within goful's async file control pattern.
+**Rationale:**
+- nsync's `Syncer.Sync()` is synchronous and blocks until complete; goful needs to run it in a background goroutine.
+- The `asyncFilectrl` pattern handles UI resizing, progress widget space, and workspace reload after completion.
+- Wrapper functions encapsulate nsync configuration (sources, destinations, recursive, move mode) for clean call sites.
+
+### Implementation Approach:
+- `func (g *Goful) syncCopy(sources []string, destinations []string)`:
+  - Resolves absolute paths for all sources.
+  - Configures `nsync.Config{Sources, Destinations, Recursive: true, Move: false, Jobs: 4}`.
+  - Creates syncer with `nsync.WithObserver(gofulObserver)`.
+  - Calls within `asyncFilectrl` goroutine pattern.
+  - Reports result via `message.Infof`/`message.Error`.
+- `func (g *Goful) syncMove(sources []string, destinations []string)`:
+  - Same as `syncCopy` but with `Move: true` in config.
+  - nsync handles source deletion after successful sync to all destinations.
+- Context cancellation: Create `context.WithCancel` that listens for user interrupt (future enhancement).
+
+**Code Markers**:
+- `app/nsync.go` includes `// [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]` in wrapper functions.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `app/nsync.go`.
+- Tests: `app/nsync_test.go` with tests named `TestSyncCopy_REQ_NSYNC_MULTI_TARGET`, `TestSyncMove_REQ_NSYNC_MULTI_TARGET`.
+
+**Cross-References**: [ARCH:NSYNC_INTEGRATION], [REQ:NSYNC_MULTI_TARGET], [IMPL:NSYNC_OBSERVER], [REQ:MODULE_VALIDATION]
+
+## 36. CopyAll/MoveAll Functions [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
+
+### Decision: Add new cmdline modes that collect all visible workspace directories as destinations and delegate to nsync wrappers.
+**Rationale:**
+- Users expect symmetry with existing `Copy`/`Move` commands.
+- Using `otherWindowDirPaths()` (existing helper for `%D@` macro) provides consistent destination enumeration.
+- Fallback to builtin single-target operation when only one pane is visible prevents confusing behavior.
+
+### Implementation Approach:
+- `func (g *Goful) CopyAll()`:
+  - If only one directory visible: delegate to `g.Copy()` with message explaining fallback.
+  - Collect sources: if marks exist, use `g.Dir().MarkfilePaths()`; else use cursor file `g.File().Path()`.
+  - Collect destinations: `otherWindowDirPaths(g.Workspace())`.
+  - Call `g.syncCopy(sources, destinations)`.
+- `func (g *Goful) MoveAll()`:
+  - Same pattern as `CopyAll` but calls `g.syncMove`.
+- No cmdline text input needed—operation is immediate after command invocation.
+- Add to `main.go` keybindings: `C` for CopyAll, `M` for MoveAll.
+- Add command menu entries for discoverability.
+- Note: `` ` `` (backtick) is used for toggle comparison colors (changed from `C` to avoid conflict).
+
+**Code Markers**:
+- `app/nsync.go` includes `// [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]` in `CopyAll`/`MoveAll` functions.
+- `main.go` keybindings include `// [IMPL:NSYNC_COPY_MOVE] [REQ:NSYNC_MULTI_TARGET]`.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `app/mode.go`, `main.go`.
+- Tests: Integration tests in `app/` verifying destination enumeration and fallback behavior with `[REQ:NSYNC_MULTI_TARGET]`.
+
+**Cross-References**: [ARCH:NSYNC_INTEGRATION], [REQ:NSYNC_MULTI_TARGET], [IMPL:NSYNC_OBSERVER], [REQ:MODULE_VALIDATION]

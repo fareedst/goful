@@ -878,3 +878,33 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 **Cross-References**: [REQ:FILER_EXCLUDE_NAMES], [IMPL:FILER_EXCLUDE_RULES], [IMPL:FILER_EXCLUDE_LOADER], [REQ:MODULE_VALIDATION]
 
+## 34. nsync SDK Integration [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
+
+### Decision: Integrate the external nsync SDK to provide parallel multi-destination file synchronization as an alternative to the builtin single-target copy/move.
+**Rationale:**
+- The builtin `copy`/`move` functions in `app/filectrl.go` work with a single destination, requiring users to repeat operations for each target pane.
+- The nsync SDK (`github.com/nsync/nsync/pkg/nsync`) provides production-ready parallel multi-destination sync with progress monitoring, content verification, and move semantics.
+- A hybrid approach keeps the existing single-target operations unchanged (muscle memory preserved) while adding explicit "Copy All"/"Move All" commands for multi-destination workflows.
+- Using all visible workspace panes as implicit targets aligns with goful's visual paradigm—users see all destinations on screen before invoking the command.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `NsyncObserver` (Module 1 – `app/nsync.go`): Implements `nsync.Observer` interface to bridge nsync progress events to goful's `progress` widget and `message` package. Translates `OnStart`/`OnProgress`/`OnFinish` callbacks to `progress.Start()`/`progress.Update()`/`progress.Finish()` calls. Thread-safe for concurrent goroutine callbacks.
+- `SyncCopy`/`SyncMove` (Module 2 – `app/nsync.go`): Wrapper functions that configure `nsync.Config` with sources/destinations, create a `Syncer` with the observer, and execute `Sync()` within `asyncFilectrl` for UI integration. Handle context cancellation for user interrupts and aggregate errors per destination.
+- `CopyAll`/`MoveAll` (Module 3 – `app/nsync.go`): Functions that enumerate destination directories from `otherWindowDirPaths()` (reusing the existing `%D@` macro helper), collect source files from marks or cursor, and delegate to `syncCopy`/`syncMove`. Fall back to builtin operations when only one pane exists.
+
+**Dependency Management:**
+- nsync is added as a local dependency via `replace` directive pointing to `../nsync` to use the neighboring directory version.
+- Transitive dependencies (xxhash, blake3, uuid, x/sync) are already compatible with goful's Go 1.24 toolchain.
+
+**Alternatives Considered:**
+- **Extend builtin walker for multiple destinations**: Rejected because it duplicates the parallelism, verification, and progress machinery that nsync already provides.
+- **External shell command with `%D@`**: Rejected because it bypasses goful's progress display and error handling.
+- **Always use nsync for all copy/move**: Rejected to preserve backward compatibility and avoid regression risk for single-target operations.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `app/nsync.go` includes `[IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]`.
+- `app/nsync.go` `CopyAll`/`MoveAll` functions include `[IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]`.
+- `main.go` keybinding wiring includes `[IMPL:NSYNC_COPY_MOVE] [REQ:NSYNC_MULTI_TARGET]`.
+- Tests reference `[REQ:NSYNC_MULTI_TARGET]` in names/comments.
+
+**Cross-References**: [REQ:NSYNC_MULTI_TARGET], [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE], [REQ:MODULE_VALIDATION]
