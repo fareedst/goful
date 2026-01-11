@@ -604,7 +604,7 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: Goful must support a toggleable "linked" navigation mode where directory navigation in the focused window propagates to all other directory windows in the current workspace. When enabled and the user navigates into a subdirectory, all other windows that contain a matching subdirectory also navigate to it. When the user presses backspace (parent directory), all windows navigate to their respective parent directories. The mode is off by default.
+- **Description**: Goful must support a toggleable "linked" navigation mode where directory navigation in the focused window propagates to all other directory windows in the current workspace. When enabled and the user navigates into a subdirectory, all other windows that contain a matching subdirectory also navigate to it. When the user presses backspace (parent directory), all windows navigate to their respective parent directories. The mode is on by default.
 - **Rationale**: Operators comparing similar directory structures (e.g., syncing folder hierarchies, comparing release versions) benefit from synchronized navigation across panes. Manual navigation in each pane is tedious and error-prone when directory structures mirror each other.
 - **Satisfaction Criteria**:
   - A toggle mechanism (`L` uppercase or `M-l` Alt+l) enables/disables linked navigation mode.

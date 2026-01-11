@@ -46,6 +46,7 @@ func NewGoful(path string) *Goful {
 		callback:  make(chan func()),
 		task:      make(chan int, 1),
 		exit:      false,
+		linkedNav: true, // [IMPL:LINKED_NAVIGATION] Enabled by default
 	}
 	return goful
 }

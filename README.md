@@ -113,7 +113,7 @@ Linked navigation synchronizes directory navigation across all open panes. When 
 - Navigating release versions side-by-side (`v1.0/`, `v2.0/`)
 - Keeping workspace panes aligned when exploring mirrored folder hierarchies
 
-The mode is **off by default** and does not persist across restarts.
+The mode is **on by default** and does not persist across restarts. Press `L` to toggle it off if you prefer independent navigation.
 
 ### Difference search `[REQ:DIFF_SEARCH]`
 

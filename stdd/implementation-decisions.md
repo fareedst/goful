@@ -1111,7 +1111,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 ### Implementation Approach:
 - **State Management (`app/goful.go`)**:
-  - Add `linkedNav bool` field to `Goful` struct (default `false`).
+  - Add `linkedNav bool` field to `Goful` struct (default `true`).
   - Add `func (g *Goful) ToggleLinkedNav() bool` that flips the state and returns new value.
   - Add `func (g *Goful) IsLinkedNav() bool` getter.
   - Export `LinkedNavEnabled` callback type for header rendering.
