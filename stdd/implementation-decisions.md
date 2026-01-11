@@ -1377,3 +1377,41 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - Tests: Integration tests in `app/` verifying destination enumeration and fallback behavior with `[REQ:NSYNC_MULTI_TARGET]`.
 
 **Cross-References**: [ARCH:NSYNC_INTEGRATION], [REQ:NSYNC_MULTI_TARGET], [IMPL:NSYNC_OBSERVER], [REQ:MODULE_VALIDATION]
+
+## 37. nsync Confirmation Modes [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+
+### Decision: Implement confirmation prompts for CopyAll/MoveAll using cmdline modes similar to quitMode/removeMode.
+**Rationale:**
+- Multi-target operations are high-risk and users expect confirmation before files are synced to multiple destinations.
+- Reusing the existing cmdline mode pattern keeps implementation simple and UX consistent with other confirmation dialogs.
+- The confirmation displays source count and destination count so users understand the scope of the operation.
+
+### Implementation Approach:
+- **Add `copyAllMode` struct to `app/mode.go`**:
+  - Fields: `*Goful`, `sources []string`, `destinations []string`
+  - `String()`: returns `"copyall"`
+  - `Prompt()`: returns `fmt.Sprintf("Copy %d file(s) to %d destinations? [Y/n] ", len(sources), len(destinations))`
+  - `Draw()`: calls `c.DrawLine()`
+  - `Run()`: on `Y`/`y`/empty calls `m.doCopyAll(sources, destinations)` and `c.Exit()`; on `n`/`N` calls `c.Exit()`; else clears text
+
+- **Add `moveAllMode` struct to `app/mode.go`**:
+  - Same pattern as `copyAllMode` but with "Move" label and calls `m.doMoveAll()`
+
+- **Refactor `app/nsync.go`**:
+  - Rename current `syncCopy`/`syncMove` internals to `doCopyAll()`/`doMoveAll()` (private execution methods)
+  - New public `CopyAll()` collects sources/destinations, then starts `copyAllMode` if valid
+  - New public `MoveAll()` collects sources/destinations, then starts `moveAllMode` if valid
+  - Single-pane fallback logic (`g.Copy()`/`g.Move()`) remains in the public methods before mode creation
+
+**Code Markers**:
+- `app/mode.go` confirmation mode structs include `// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]`
+- `app/nsync.go` refactored public/private methods include `// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]`
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `app/mode.go`, `app/nsync.go`
+- Tests: `app/nsync_test.go` with tests named `TestCopyAllConfirmation_REQ_NSYNC_CONFIRMATION`, `TestMoveAllConfirmation_REQ_NSYNC_CONFIRMATION`
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]`:
+- To be captured after implementation with `./scripts/validate_tokens.sh` output
+
+**Cross-References**: [ARCH:NSYNC_CONFIRMATION], [REQ:NSYNC_CONFIRMATION], [REQ:NSYNC_MULTI_TARGET], [REQ:MODULE_VALIDATION]

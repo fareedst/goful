@@ -908,3 +908,37 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 - Tests reference `[REQ:NSYNC_MULTI_TARGET]` in names/comments.
 
 **Cross-References**: [REQ:NSYNC_MULTI_TARGET], [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE], [REQ:MODULE_VALIDATION]
+
+## 35. nsync Confirmation Mode [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+
+### Decision: Add confirmation prompts before multi-target copy/move operations using existing cmdline mode pattern.
+**Rationale:**
+- Multi-target operations (`CopyAll`/`MoveAll`) affect multiple directories simultaneously and are not easily reversible.
+- Users need to verify their intent before files are copied or moved to all visible panes.
+- Move operations are particularly risky since source files are deleted after successful sync.
+- Reusing the existing cmdline mode pattern (`quitMode`/`removeMode`) keeps implementation simple and UX consistent.
+
+**Architecture Outline:**
+- Create `copyAllMode` and `moveAllMode` structs in `app/mode.go` following the `quitMode`/`removeMode` pattern.
+- Each mode implements `cmdline.Mode` interface with `String()`, `Prompt()`, `Draw()`, and `Run()` methods.
+- The `Prompt()` method displays source count and destination count (e.g., `Copy 3 file(s) to 2 destinations? [Y/n]`).
+- The `Run()` method handles user input: `Y`/`y`/empty confirms, `n`/`N` cancels, other input clears.
+- Confirmation mode stores sources, destinations, and a reference to `*Goful` to execute the operation.
+- Public `CopyAll()`/`MoveAll()` functions collect sources/destinations first, then start the confirmation mode.
+- Actual sync execution is deferred to private `doCopyAll()`/`doMoveAll()` methods called only after confirmation.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `copyAllMode`/`moveAllMode` (Module 1 – `app/mode.go`): Confirmation modes that display prompts and handle user input. No side effects until confirmed.
+- `doCopyAll()`/`doMoveAll()` (Module 2 – `app/nsync.go`): Private execution methods containing the actual nsync sync logic, called only after user confirmation.
+
+**Alternatives Considered:**
+- **No confirmation**: Rejected because multi-target operations are high-risk and users expect confirmation for destructive operations.
+- **Synchronous dialog()**: Rejected because it blocks the event loop; cmdline modes integrate better with the existing UI.
+- **Confirmation only for moves**: Rejected because copy operations to multiple destinations are also significant and merit confirmation.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `app/mode.go` confirmation modes include `[IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]`.
+- `app/nsync.go` refactored methods include `[IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]`.
+- Tests reference `[REQ:NSYNC_CONFIRMATION]` in names/comments.
+
+**Cross-References**: [REQ:NSYNC_CONFIRMATION], [IMPL:NSYNC_CONFIRMATION], [REQ:NSYNC_MULTI_TARGET], [REQ:MODULE_VALIDATION]

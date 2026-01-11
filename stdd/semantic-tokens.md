@@ -132,6 +132,7 @@ When referencing other tokens:
 - `[REQ:LINKED_NAVIGATION]` - Linked navigation mode that propagates directory changes across workspace windows
 - `[REQ:DIFF_SEARCH]` - Cross-window difference search for finding missing or size-mismatched files
 - `[REQ:NSYNC_MULTI_TARGET]` - Multi-target copy/move via nsync SDK to all visible workspace panes
+- `[REQ:NSYNC_CONFIRMATION]` - Confirmation prompts before multi-target copy/move operations
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -176,6 +177,7 @@ When referencing other tokens:
 - `[ARCH:LINKED_NAVIGATION]` - Linked navigation mode architecture [REQ:LINKED_NAVIGATION]
 - `[ARCH:DIFF_SEARCH]` - Difference search engine architecture [REQ:DIFF_SEARCH]
 - `[ARCH:NSYNC_INTEGRATION]` - nsync SDK integration for multi-target copy/move [REQ:NSYNC_MULTI_TARGET]
+- `[ARCH:NSYNC_CONFIRMATION]` - Confirmation prompts before multi-target operations [REQ:NSYNC_CONFIRMATION]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -220,6 +222,7 @@ When referencing other tokens:
 - `[IMPL:DIFF_SEARCH]` - Difference search implementation [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 - `[IMPL:NSYNC_OBSERVER]` - Observer adapter bridging nsync to goful progress widget [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
 - `[IMPL:NSYNC_COPY_MOVE]` - nsync copy/move wrappers and CopyAll/MoveAll modes [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
+- `[IMPL:NSYNC_CONFIRMATION]` - Confirmation prompts for multi-target copy/move operations [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

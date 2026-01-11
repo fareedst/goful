@@ -30,6 +30,7 @@ Each requirement includes:
 | Token | Requirement | Priority | Status | Architecture | Implementation |
 |-------|------------|----------|--------|--------------|----------------|
 | [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ⏳ Planned | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
+| [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ⏳ Planned | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
 
 ### Non-Functional Requirements
 
@@ -687,6 +688,29 @@ Each requirement includes:
   - Token validation confirms `[REQ:NSYNC_MULTI_TARGET]`, `[ARCH:NSYNC_INTEGRATION]`, and `[IMPL:*]` references exist across docs, code, and tests.
 - **Architecture**: See `architecture-decisions.md` § nsync Integration [ARCH:NSYNC_INTEGRATION]
 - **Implementation**: See `implementation-decisions.md` § nsync Observer [IMPL:NSYNC_OBSERVER], nsync Copy/Move [IMPL:NSYNC_COPY_MOVE]
+
+**Status**: ⏳ Planned
+
+### [REQ:NSYNC_CONFIRMATION] Multi-Target Copy/Move Confirmation
+
+**Priority: P1 (Important)**
+
+- **Description**: Before executing a multi-target copy (`CopyAll`) or move (`MoveAll`) operation, goful must display a confirmation prompt showing the number of source files and destination directories, and wait for explicit user confirmation before proceeding.
+- **Rationale**: Multi-target operations affect multiple directories simultaneously and are not easily reversible. Users need to verify their intent before files are copied or moved to all visible panes, especially for move operations where source files are deleted after sync.
+- **Satisfaction Criteria**:
+  - `CopyAll` displays a prompt like `Copy N file(s) to M destinations? [Y/n]` before executing.
+  - `MoveAll` displays a prompt like `Move N file(s) to M destinations? [Y/n]` before executing.
+  - Pressing `Y`, `y`, or Enter (empty input) confirms and proceeds with the operation.
+  - Pressing `n` or `N` cancels the operation and returns to normal mode.
+  - Any other input clears the text field and awaits valid input.
+  - The confirmation prompt follows the existing cmdline mode pattern used by `removeMode` and `quitMode`.
+- **Validation Criteria**:
+  - Unit tests verify the confirmation mode accepts valid inputs and rejects invalid ones.
+  - Integration tests verify the operation only executes after confirmation.
+  - Manual verification confirms the prompt displays correct source/destination counts.
+  - Token validation confirms `[REQ:NSYNC_CONFIRMATION]`, `[ARCH:NSYNC_CONFIRMATION]`, and `[IMPL:NSYNC_CONFIRMATION]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § nsync Confirmation [ARCH:NSYNC_CONFIRMATION]
+- **Implementation**: See `implementation-decisions.md` § nsync Confirmation Modes [IMPL:NSYNC_CONFIRMATION]
 
 **Status**: ⏳ Planned
 

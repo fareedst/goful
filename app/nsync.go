@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anmitsu/goful/cmdline"
 	"github.com/anmitsu/goful/message"
 	"github.com/anmitsu/goful/progress"
 	"github.com/anmitsu/goful/widget"
@@ -245,8 +246,9 @@ func (g *Goful) syncMove(sources []string, destinations []string) {
 	})
 }
 
-// CopyAll copies selected files to all other visible workspace directories.
+// CopyAll prompts for confirmation then copies selected files to all other visible workspace directories.
 // [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
 func (g *Goful) CopyAll() {
 	destinations := otherWindowDirPaths(g.Workspace())
 
@@ -276,11 +278,20 @@ func (g *Goful) CopyAll() {
 		return
 	}
 
+	// Start confirmation mode instead of executing immediately
+	// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+	g.next = cmdline.New(&copyAllMode{g, sources, destinations}, g)
+}
+
+// doCopyAll executes the multi-target copy after confirmation.
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+func (g *Goful) doCopyAll(sources, destinations []string) {
 	g.syncCopy(sources, destinations)
 }
 
-// MoveAll moves selected files to all other visible workspace directories.
+// MoveAll prompts for confirmation then moves selected files to all other visible workspace directories.
 // [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
 func (g *Goful) MoveAll() {
 	destinations := otherWindowDirPaths(g.Workspace())
 
@@ -310,5 +321,13 @@ func (g *Goful) MoveAll() {
 		return
 	}
 
+	// Start confirmation mode instead of executing immediately
+	// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+	g.next = cmdline.New(&moveAllMode{g, sources, destinations}, g)
+}
+
+// doMoveAll executes the multi-target move after confirmation.
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+func (g *Goful) doMoveAll(sources, destinations []string) {
 	g.syncMove(sources, destinations)
 }

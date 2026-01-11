@@ -174,6 +174,56 @@ func (m quitMode) Run(c *cmdline.Cmdline) {
 	}
 }
 
+// copyAllMode prompts for confirmation before multi-target copy.
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+type copyAllMode struct {
+	*Goful
+	sources      []string
+	destinations []string
+}
+
+func (m *copyAllMode) String() string { return "copyall" }
+func (m *copyAllMode) Prompt() string {
+	return fmt.Sprintf("Copy %d file(s) to %d destinations? [Y/n] ", len(m.sources), len(m.destinations))
+}
+func (m *copyAllMode) Draw(c *cmdline.Cmdline) { c.DrawLine() }
+func (m *copyAllMode) Run(c *cmdline.Cmdline) {
+	switch c.String() {
+	case "Y", "y", "":
+		m.doCopyAll(m.sources, m.destinations)
+		c.Exit()
+	case "n", "N":
+		c.Exit()
+	default:
+		c.SetText("")
+	}
+}
+
+// moveAllMode prompts for confirmation before multi-target move.
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+type moveAllMode struct {
+	*Goful
+	sources      []string
+	destinations []string
+}
+
+func (m *moveAllMode) String() string { return "moveall" }
+func (m *moveAllMode) Prompt() string {
+	return fmt.Sprintf("Move %d file(s) to %d destinations? [Y/n] ", len(m.sources), len(m.destinations))
+}
+func (m *moveAllMode) Draw(c *cmdline.Cmdline) { c.DrawLine() }
+func (m *moveAllMode) Run(c *cmdline.Cmdline) {
+	switch c.String() {
+	case "Y", "y", "":
+		m.doMoveAll(m.sources, m.destinations)
+		c.Exit()
+	case "n", "N":
+		c.Exit()
+	default:
+		c.SetText("")
+	}
+}
+
 // Copy starts the copy mode.
 func (g *Goful) Copy() {
 	c := cmdline.New(&copyMode{g, ""}, g)
