@@ -659,7 +659,6 @@ func filerKeymap(g *app.Goful) widget.Keymap {
 			message.Infof("[REQ:LINKED_NAVIGATION] linked navigation %s", state)
 		},
 		"~":    func() { g.Dir().Chdir("~") },
-		"\\":   func() { g.Dir().Chdir("/") },
 		"C-n":  func() { g.Dir().MoveCursor(1) },
 		"C-p":  func() { g.Dir().MoveCursor(-1) },
 		"down": func() { g.Dir().MoveCursor(1) },
