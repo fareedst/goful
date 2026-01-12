@@ -12,7 +12,8 @@ import (
 var (
 	comparisonMu sync.RWMutex
 	// comparisonEnabled tracks whether comparison coloring is active.
-	comparisonEnabled bool
+	// [REQ:FILE_COMPARISON_COLORS] Enabled by default for immediate visual feedback.
+	comparisonEnabled bool = true
 	// comparisonStyles holds the parsed comparison color styles.
 	comparisonStyles *comparecolors.ParsedConfig
 )

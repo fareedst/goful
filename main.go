@@ -464,9 +464,14 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 	linkedEnterDir := func() {
 		if g.IsLinkedNav() {
 			name := g.File().Name()
-			g.Workspace().ChdirAllToSubdir(name)
+			// Navigate other directories but DON'T rebuild index yet
+			g.Workspace().ChdirAllToSubdirNoRebuild(name)
 		}
 		g.Dir().EnterDir()
+		// Rebuild comparison index AFTER all directories have navigated
+		if g.IsLinkedNav() {
+			g.Workspace().RebuildComparisonIndex()
+		}
 	}
 
 	var associate widget.Keymap

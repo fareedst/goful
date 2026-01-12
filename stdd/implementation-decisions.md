@@ -1078,6 +1078,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - Minimal change to existing draw path—comparison is optional context.
 - Independent color application means name, size, and time can each show different comparison states.
 - Respects existing file-type colors when comparison is disabled or file is unique.
+- **Default State (2026-01-11)**: Comparison coloring is **enabled by default** (`comparisonEnabled = true` in `look/comparison.go`) so users immediately see color-coded file listings without manual toggle. Press `` ` `` (backtick) to disable if desired.
 
 ### Implementation Approach:
 - Add `look/comparison.go` with:
@@ -1415,3 +1416,44 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - To be captured after implementation with `./scripts/validate_tokens.sh` output
 
 **Cross-References**: [ARCH:NSYNC_CONFIRMATION], [REQ:NSYNC_CONFIRMATION], [REQ:NSYNC_MULTI_TARGET], [REQ:MODULE_VALIDATION]
+
+## 37. Linked Navigation Comparison Index Timing Fix [IMPL:LINKED_NAVIGATION] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
+
+### Issue: Digest comparison decoration missing from focused window after linked navigation
+
+**Rationale:**
+When navigating into a subdirectory with linked navigation enabled, pressing `=` to calculate file digests would only decorate OTHER windows - the SOURCE (focused) window was not decorated correctly. This caused the message to report "calculated digest for 2 files" instead of 3, and the focused window showed no underline decoration.
+
+**Root Cause Analysis (via runtime instrumentation):**
+The comparison index was being rebuilt inside `ChdirAllToSubdir()` BEFORE the focused directory navigated via `EnterDir()`. When the index was built, the focused directory (`dirIdx:0`) still pointed to the parent directory contents, so files only present in the subdirectory were not indexed for the focused window.
+
+**Log Evidence (2026-01-11):**
+```
+{"message":"BEFORE RebuildComparisonIndex","data":{"paths":[".../notes_git", ".../notes_git/dev", ".../notes_git/dev"]}}
+{"message":"scanning dir","data":{"dirIdx":0,"path":".../notes_git","listLen":13}}  // ← OLD PATH!
+{"message":"cache lookup","data":{"filename":"tror.txt","cachedDirIndices":[1,2]}}  // ← NO 0!
+```
+
+### Fix Approach:
+1. Added `ChdirAllToSubdirNoRebuild()` method to `filer.Workspace` that navigates non-focused directories WITHOUT rebuilding the comparison index.
+2. Modified `linkedEnterDir` in `main.go` to:
+   - Call `ChdirAllToSubdirNoRebuild()` to navigate other directories
+   - Call `EnterDir()` to navigate the focused directory
+   - Call `RebuildComparisonIndex()` AFTER all directories have navigated
+
+This ensures the comparison index is built with the correct file lists from all directories after they've all navigated to the new location.
+
+**Code Markers**:
+- `filer/workspace.go`: `ChdirAllToSubdirNoRebuild()` with `// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]`
+- `main.go`: `linkedEnterDir` function with comments documenting the navigation sequence
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `filer/workspace.go`, `main.go`
+- Existing tests cover linked navigation behavior; manual verification confirmed fix
+
+**Validation Evidence** `[PROC:TOKEN_VALIDATION]` (2026-01-11):
+- `go test ./...` passes on darwin/arm64, Go 1.24.3
+- Manual verification: pressing `=` after linked navigation now reports "calculated digest for 3 files" and all windows show underline decoration
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 905 token references across 71 files.`
+
+**Cross-References**: [ARCH:LINKED_NAVIGATION], [REQ:LINKED_NAVIGATION], [ARCH:FILE_COMPARISON_ENGINE], [REQ:FILE_COMPARISON_COLORS], [IMPL:DIGEST_COMPARISON]

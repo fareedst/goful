@@ -747,6 +747,8 @@ func formatDirs(paths []string, quote bool) string {
 3. Subsequent draws use cached comparison results.
 4. Cache invalidated on: `Chdir`, `reload`, `ReloadAll`, `CreateDir`, `CloseDir`, toggle on.
 
+**Default State**: Comparison coloring is **enabled by default** so users immediately benefit from color-coded file comparisons without manual activation. The backtick toggle (`` ` ``) disables the feature when standard colors are preferred.
+
 **Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
 - `CompareColorLoader` (Module 1): Parses YAML config, validates color names, provides defaults. Independently testable with mock file readers.
 - `FileComparisonIndex` (Module 2): Pure function that takes workspace directories and returns comparison state map. No side effects, independently testable.
@@ -883,7 +885,7 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 ### Decision: Integrate the external nsync SDK to provide parallel multi-destination file synchronization as an alternative to the builtin single-target copy/move.
 **Rationale:**
 - The builtin `copy`/`move` functions in `app/filectrl.go` work with a single destination, requiring users to repeat operations for each target pane.
-- The nsync SDK (`github.com/nsync/nsync/pkg/nsync`) provides production-ready parallel multi-destination sync with progress monitoring, content verification, and move semantics.
+- The nsync SDK (`github.com/fareedst/nsync/pkg/nsync`) provides production-ready parallel multi-destination sync with progress monitoring, content verification, and move semantics.
 - A hybrid approach keeps the existing single-target operations unchanged (muscle memory preserved) while adding explicit "Copy All"/"Move All" commands for multi-destination workflows.
 - Using all visible workspace panes as implicit targets aligns with goful's visual paradigm—users see all destinations on screen before invoking the command.
 
@@ -893,7 +895,7 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 - `CopyAll`/`MoveAll` (Module 3 – `app/nsync.go`): Functions that enumerate destination directories from `otherWindowDirPaths()` (reusing the existing `%D@` macro helper), collect source files from marks or cursor, and delegate to `syncCopy`/`syncMove`. Fall back to builtin operations when only one pane exists.
 
 **Dependency Management:**
-- nsync is added as a local dependency via `replace` directive pointing to `../nsync` to use the neighboring directory version.
+- nsync is added as a dependency from the public repository `github.com/fareedst/nsync`.
 - Transitive dependencies (xxhash, blake3, uuid, x/sync) are already compatible with goful's Go 1.24 toolchain.
 
 **Alternatives Considered:**

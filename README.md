@@ -310,7 +310,7 @@ Examples of customizing:
 
 ### File comparison colors (`` ` `` toggle)
 
-`[REQ:FILE_COMPARISON_COLORS]` (implemented via `[ARCH:FILE_COMPARISON_ENGINE]` + `[IMPL:COMPARE_COLOR_CONFIG]`) adds a per-column palette that highlights files with the same name across multiple windows. The feature is **off by default** so large directory scans stay unobstructed; press `` ` `` (backtick) at any time (or use `View → toggle comparison colors`) to enable it, and tap `` ` `` again to return to the standard theme. When enabled, goful rebuilds its comparison index and redraws each pane so you can immediately spot duplicates, newer backups, or size mismatches.
+`[REQ:FILE_COMPARISON_COLORS]` (implemented via `[ARCH:FILE_COMPARISON_ENGINE]` + `[IMPL:COMPARE_COLOR_CONFIG]`) adds a per-column palette that highlights files with the same name across multiple windows. The feature is **on by default** so you immediately see color-coded file listings; press `` ` `` (backtick) at any time (or use `View → toggle comparison colors`) to disable it if you prefer the standard theme, and tap `` ` `` again to re-enable. When enabled, goful rebuilds its comparison index and redraws each pane so you can immediately spot duplicates, newer backups, or size mismatches.
 
 **Default palette**
 

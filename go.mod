@@ -12,10 +12,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-// [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
-// Local replace directive to use neighboring nsync directory for multi-target copy/move.
-replace github.com/nsync/nsync => ../nsync
-
 // [IMPL:DEP_BUMP] [ARCH:DEPENDENCY_POLICY] [REQ:DEPENDENCY_REFRESH]
 require (
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
@@ -27,9 +23,10 @@ require (
 	golang.org/x/text v0.32.0 // indirect
 )
 
+// [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
 require (
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/nsync/nsync v0.0.0-00010101000000-000000000000
+	github.com/fareedst/nsync v0.0.0-20260112011700-5c4fcad3ab47 // nsync SDK from public repo
 )
 
 require (

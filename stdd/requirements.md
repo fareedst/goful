@@ -578,13 +578,14 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: When multiple directories are displayed in a workspace, files with common names across windows shall be color-coded. The name, size, and modification time are independently color-coded based on comparison results. File name comparison is case-sensitive, and timestamp comparison is precise to the second. The color scheme is configurable via a global YAML file, and the feature can be toggled on/off via keystroke. Additionally, users can trigger on-demand digest calculation (`=` key) for files with equal sizes to verify content identity; results are displayed with terminal attributes (underline for equal digests, strikethrough for different).
+- **Description**: When multiple directories are displayed in a workspace, files with common names across windows shall be color-coded. The name, size, and modification time are independently color-coded based on comparison results. File name comparison is case-sensitive, and timestamp comparison is precise to the second. The color scheme is configurable via a global YAML file. The feature is **enabled by default** and can be toggled on/off via keystroke (`` ` `` backtick). Additionally, users can trigger on-demand digest calculation (`=` key) for files with equal sizes to verify content identity; results are displayed with terminal attributes (underline for equal digests, strikethrough for different).
 - **Rationale**: Users often compare directories to identify matching, newer, or larger files. Visual color-coding enables instant recognition of file relationships across panes without manual comparison, improving workflow efficiency for file synchronization, backup verification, and duplicate detection tasks. Digest comparison provides definitive content verification for files with matching sizes.
 - **Satisfaction Criteria**:
+  - Comparison coloring is enabled by default on startup.
   - File names appearing in multiple directories are highlighted; files unique to one directory use neutral colors.
   - For files with matching names across directories: sizes are color-coded as equal/smallest/largest; times are color-coded as equal/earliest/latest.
   - Color scheme is configurable via YAML file at flag/env/default path (`-compare-colors`, `GOFUL_COMPARE_COLORS`, default `~/.goful/compare_colors.yaml`).
-  - A dedicated keystroke (and View menu entry) toggles comparison coloring on/off at runtime.
+  - A dedicated keystroke (`` ` ``) and View menu entry toggle comparison coloring on/off at runtime.
   - Progressive rendering: files display immediately with standard colors, then comparison colors apply once all directories finish loading.
   - Single-directory workspaces or disabled mode show standard file-type colors only.
   - Pressing `=` on a file calculates xxHash64 digests for same-named files with equal sizes across directories.

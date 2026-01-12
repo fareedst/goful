@@ -225,6 +225,22 @@ func (w *Workspace) SetTitle(title string) {
 	w.Title = title
 }
 
+// ChdirAllToSubdirNoRebuild navigates all non-focused directories to a subdirectory with the given name,
+// if that subdirectory exists in each directory's current path.
+// Does NOT rebuild the comparison index - caller is responsible for calling RebuildComparisonIndex().
+// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (w *Workspace) ChdirAllToSubdirNoRebuild(name string) {
+	for i, d := range w.Dirs {
+		if i == w.Focus {
+			continue // Skip focused directory; caller handles it
+		}
+		targetPath := filepath.Join(d.Path, name)
+		if info, err := os.Stat(targetPath); err == nil && info.IsDir() {
+			d.Chdir(name)
+		}
+	}
+}
+
 // ChdirAllToSubdir navigates all non-focused directories to a subdirectory with the given name,
 // if that subdirectory exists in each directory's current path.
 // [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]

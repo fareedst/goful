@@ -14,7 +14,7 @@ import (
 	"github.com/anmitsu/goful/message"
 	"github.com/anmitsu/goful/progress"
 	"github.com/anmitsu/goful/widget"
-	"github.com/nsync/nsync/pkg/nsync"
+	"github.com/fareedst/nsync/pkg/nsync"
 )
 
 // gofulObserver implements nsync.Observer to bridge nsync progress events

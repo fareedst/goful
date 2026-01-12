@@ -738,7 +738,7 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Status**: ⏳ Pending
 
-**Description**: Integrate the nsync SDK from neighboring `../nsync` directory to provide multi-target copy/move operations where files sync to all visible workspace panes simultaneously with parallel execution and progress monitoring.
+**Description**: Integrate the nsync SDK from `github.com/fareedst/nsync` to provide multi-target copy/move operations where files sync to all visible workspace panes simultaneously with parallel execution and progress monitoring.
 
 **Dependencies**: [REQ:MODULE_VALIDATION], [REQ:WINDOW_MACRO_ENUMERATION] (for `otherWindowDirPaths` helper)
 
@@ -752,7 +752,7 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [x] Update architecture decisions with `[ARCH:NSYNC_INTEGRATION]` [ARCH:NSYNC_INTEGRATION]
 - [x] Update implementation decisions with `[IMPL:NSYNC_OBSERVER]` and `[IMPL:NSYNC_COPY_MOVE]` [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
 - [x] Register tokens in `semantic-tokens.md`
-- [ ] Add nsync dependency with local replace directive in `go.mod`
+- [x] Add nsync dependency from public repo `github.com/fareedst/nsync` in `go.mod`
 - [ ] Implement `NsyncObserver` adapter in `app/nsync.go` [IMPL:NSYNC_OBSERVER]
 - [ ] Implement `syncCopy`/`syncMove` wrappers in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
 - [x] Add `CopyAll`/`MoveAll` functions in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
@@ -769,3 +769,24 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - [ ] Token audit + validation logged
 
 **Priority Rationale**: P1 because multi-target copy/move significantly improves file distribution workflows but does not block core single-target operations.
+
+## P0: Linked Navigation Comparison Index Timing Fix [REQ:LINKED_NAVIGATION] [REQ:FILE_COMPARISON_COLORS] [IMPL:LINKED_NAVIGATION]
+
+**Status**: ✅ Complete
+
+**Description**: Fix digest comparison decoration not applying to the focused window after navigating to a subdirectory with linked navigation enabled. The comparison index was being rebuilt before the focused directory finished navigating, causing stale index entries.
+
+**Dependencies**: None (bug fix)
+
+**Completion Criteria**:
+- [x] Root cause identified via runtime instrumentation
+- [x] `ChdirAllToSubdirNoRebuild()` method added to defer index rebuild
+- [x] `linkedEnterDir` sequence corrected: navigate all directories THEN rebuild index
+- [x] All tests pass
+- [x] Manual verification confirms 3-window digest comparison works correctly
+
+**Validation Evidence** (2026-01-11):
+- `go test ./...` passes on darwin/arm64, Go 1.24.3
+- Manual verification: `=` key now calculates digests for all windows including the focused window
+
+**Priority Rationale**: P0 because the bug broke a core feature (file digest comparison) when using linked navigation, making the comparison results incomplete and misleading.

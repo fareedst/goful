@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	"github.com/nsync/nsync/pkg/nsync"
+	"github.com/fareedst/nsync/pkg/nsync"
 )
 
 // TestGofulObserver_StateTracking_REQ_NSYNC_MULTI_TARGET verifies observer state initialization.
