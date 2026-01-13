@@ -208,6 +208,12 @@ func (g *Goful) IsLinkedNav() bool {
 	return g.linkedNav
 }
 
+// SetLinkedNav sets the linked navigation mode state.
+// [IMPL:LINKED_NAVIGATION_AUTO_DISABLE] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (g *Goful) SetLinkedNav(enabled bool) {
+	g.linkedNav = enabled
+}
+
 // DiffSearchStatus returns the current diff search status text for the header.
 // [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 func (g *Goful) DiffSearchStatus() string {

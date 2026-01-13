@@ -219,6 +219,7 @@ When referencing other tokens:
 - `[IMPL:COMPARISON_DRAW]` - Draw integration for comparison colors [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 - `[IMPL:DIGEST_COMPARISON]` - On-demand xxHash64 digest calculation for files with equal sizes [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 - `[IMPL:LINKED_NAVIGATION]` - Linked navigation mode implementation [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+- `[IMPL:LINKED_NAVIGATION_AUTO_DISABLE]` - Auto-disable linked navigation on partial subdirectory navigation failure [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 - `[IMPL:DIFF_SEARCH]` - Difference search implementation [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 - `[IMPL:NSYNC_OBSERVER]` - Observer adapter bridging nsync to goful progress widget [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
 - `[IMPL:NSYNC_COPY_MOVE]` - nsync copy/move wrappers and CopyAll/MoveAll modes [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]

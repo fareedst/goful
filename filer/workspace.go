@@ -227,9 +227,11 @@ func (w *Workspace) SetTitle(title string) {
 
 // ChdirAllToSubdirNoRebuild navigates all non-focused directories to a subdirectory with the given name,
 // if that subdirectory exists in each directory's current path.
+// Returns (navigated, skipped) counts: navigated is the number of non-focused windows that successfully
+// navigated, skipped is the number where the subdirectory does not exist.
 // Does NOT rebuild the comparison index - caller is responsible for calling RebuildComparisonIndex().
-// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
-func (w *Workspace) ChdirAllToSubdirNoRebuild(name string) {
+// [IMPL:LINKED_NAVIGATION] [IMPL:LINKED_NAVIGATION_AUTO_DISABLE] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (w *Workspace) ChdirAllToSubdirNoRebuild(name string) (navigated, skipped int) {
 	for i, d := range w.Dirs {
 		if i == w.Focus {
 			continue // Skip focused directory; caller handles it
@@ -237,8 +239,12 @@ func (w *Workspace) ChdirAllToSubdirNoRebuild(name string) {
 		targetPath := filepath.Join(d.Path, name)
 		if info, err := os.Stat(targetPath); err == nil && info.IsDir() {
 			d.Chdir(name)
+			navigated++
+		} else {
+			skipped++
 		}
 	}
+	return navigated, skipped
 }
 
 // ChdirAllToSubdir navigates all non-focused directories to a subdirectory with the given name,

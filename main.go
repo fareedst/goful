@@ -459,13 +459,19 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		"v", "vlc     ", func() { g.Spawn("vlc %f %&") },
 	)
 
-	// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
-	// Helper for linked directory entry
+	// [IMPL:LINKED_NAVIGATION] [IMPL:LINKED_NAVIGATION_AUTO_DISABLE] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+	// Helper for linked directory entry with auto-disable on partial failure
 	linkedEnterDir := func() {
 		if g.IsLinkedNav() {
 			name := g.File().Name()
 			// Navigate other directories but DON'T rebuild index yet
-			g.Workspace().ChdirAllToSubdirNoRebuild(name)
+			navigated, skipped := g.Workspace().ChdirAllToSubdirNoRebuild(name)
+			// [IMPL:LINKED_NAVIGATION_AUTO_DISABLE] Auto-disable if any window couldn't navigate
+			if skipped > 0 {
+				g.SetLinkedNav(false)
+				message.Infof("linked navigation disabled: %d window(s) missing '%s'", skipped, name)
+			}
+			_ = navigated // Used for documentation; skipped > 0 implies divergence
 		}
 		g.Dir().EnterDir()
 		// Rebuild comparison index AFTER all directories have navigated

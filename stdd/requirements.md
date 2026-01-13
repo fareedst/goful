@@ -616,9 +616,11 @@ Each requirement includes:
   - When enabled, changing sort order applies the same sort type to all windows in the workspace.
   - A visual indicator (`[LINKED]`) appears in the filer header when the mode is active.
   - The mode state is per-session and does not persist across restarts.
+  - When enabled and subdirectory navigation cannot complete in one or more windows (subdirectory missing) but succeeds in at least one window, linked navigation is automatically disabled with a message informing the user of the divergent directory structures.
 - **Validation Criteria**:
   - Unit tests cover the workspace navigation helpers (`ChdirAllToSubdir`, `ChdirAllToParent`) independently with `[REQ:LINKED_NAVIGATION]` references.
   - Integration tests prove the toggle state affects navigation behavior correctly.
+  - Integration tests verify auto-disable behavior when subdirectory navigation partially fails.
   - Manual verification confirms the header indicator displays correctly and navigation propagates as expected.
 - **Architecture**: See `architecture-decisions.md` § Linked Navigation Mode [ARCH:LINKED_NAVIGATION]
 - **Implementation**: See `implementation-decisions.md` § Linked Navigation Implementation [IMPL:LINKED_NAVIGATION]
