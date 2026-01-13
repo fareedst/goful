@@ -944,3 +944,35 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 - Tests reference `[REQ:NSYNC_CONFIRMATION]` in names/comments.
 
 **Cross-References**: [REQ:NSYNC_CONFIRMATION], [IMPL:NSYNC_CONFIRMATION], [REQ:NSYNC_MULTI_TARGET], [REQ:MODULE_VALIDATION]
+
+## 36. Help Widget [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
+
+### Decision: Create a Help widget based on the existing ListBox/Menu pattern to display a scrollable keystroke catalog.
+**Rationale:**
+- Users need quick access to keystroke documentation without leaving the application.
+- Reusing the existing `widget.ListBox` pattern ensures consistent UI behavior and reduces implementation complexity.
+- The popup model (connect via `g.next`, disconnect on exit) integrates naturally with goful's widget chain.
+
+**Architecture Outline:**
+- Create package `help` with a `Help` struct that embeds `*widget.ListBox`.
+- `New(filer widget.Widget)` constructor creates a popup sized to ~80% of screen dimensions, centered visually.
+- The keystroke catalog is maintained as a Go slice within the help package for easy updates.
+- `Input(key string)` handles navigation (`C-n`, `C-p`, `up`, `down`, `pgup`, `pgdn`) and exit (`?`, `q`, `C-g`, `C-[`).
+- `Exit()` disconnects from the widget chain via `filer.Disconnect()`.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `HelpWidget` (Module 1 – `help/help.go`): Encapsulates the ListBox, keystroke data, and input handling. No external dependencies beyond `widget` package.
+- `HelpCommand` (Module 2 – `app/goful.go`): `Help()` method that creates the widget and connects it to the widget chain.
+- `HelpKeyBinding` (Module 3 – `main.go`): Wires `?` keystroke to `g.Help()`.
+
+**Alternatives Considered:**
+- **External documentation only**: Rejected because users must leave the application to find help.
+- **Modal overlay with raw text**: Rejected because ListBox provides scrolling and consistent styling for free.
+- **Separate help command/menu**: Rejected because `?` is the universal help convention.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `help/help.go` includes `[IMPL:HELP_POPUP] [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]`.
+- `app/goful.go` `Help()` method includes `[IMPL:HELP_POPUP] [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]`.
+- `main.go` keystroke binding includes `[IMPL:HELP_POPUP] [REQ:HELP_POPUP]`.
+
+**Cross-References**: [REQ:HELP_POPUP], [IMPL:HELP_POPUP], [REQ:MODULE_VALIDATION]

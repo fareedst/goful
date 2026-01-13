@@ -7,6 +7,7 @@ import (
 
 	"github.com/anmitsu/goful/diffstatus"
 	"github.com/anmitsu/goful/filer"
+	"github.com/anmitsu/goful/help"
 	"github.com/anmitsu/goful/info"
 	"github.com/anmitsu/goful/menu"
 	"github.com/anmitsu/goful/message"
@@ -150,6 +151,13 @@ func (g *Goful) Menu(name string) {
 		return
 	}
 	g.next = m
+}
+
+// Help opens the Help popup displaying the keystroke catalog.
+// [IMPL:HELP_POPUP] [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
+func (g *Goful) Help() {
+	h := help.New(g)
+	g.next = h
 }
 
 // Run the goful client.

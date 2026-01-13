@@ -698,6 +698,7 @@ func filerKeymap(g *app.Goful) widget.Keymap {
 		"/":    func() { g.Dir().Finder() },
 		"q":    func() { g.Quit() },
 		"Q":    func() { g.Quit() },
+		"?":    func() { g.Help() }, // [IMPL:HELP_POPUP] [REQ:HELP_POPUP]
 		";":    func() { g.Shell("") },
 		":":    func() { g.ShellSuspend("") },
 		"M-W":  func() { g.ChangeWorkspaceTitle() },

@@ -31,6 +31,7 @@ Each requirement includes:
 |-------|------------|----------|--------|--------------|----------------|
 | [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ⏳ Planned | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
 | [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ⏳ Planned | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
+| [REQ:HELP_POPUP] | Help popup displays keystroke catalog on ? key | P2 | ⏳ Planned | [ARCH:HELP_WIDGET] | [IMPL:HELP_POPUP] |
 
 ### Non-Functional Requirements
 
@@ -734,6 +735,29 @@ Each requirement includes:
   - Debt log item D1 is updated with mitigation notes referencing this requirement once validation passes.
 - **Architecture**: See `architecture-decisions.md` § Event Loop Shutdown [ARCH:EVENT_LOOP_SHUTDOWN]
 - **Implementation**: See `implementation-decisions.md` § Event Loop Shutdown Controller [IMPL:EVENT_LOOP_SHUTDOWN]
+
+**Status**: ⏳ Planned
+
+### [REQ:HELP_POPUP] Help Popup Keystroke Catalog
+
+**Priority: P2 (Nice-to-have)**
+
+- **Description**: Goful must provide a Help popup that displays the full keystroke catalog when the user presses `?`. The popup is a scrollable list showing all available key bindings organized by function. Pressing `?` again (toggle), `q`, `C-g`, or `C-[` dismisses the popup and returns to normal filer operation.
+- **Rationale**: New users and occasional users need a quick reference for available keystrokes without consulting external documentation. A built-in help system improves discoverability and reduces the learning curve.
+- **Satisfaction Criteria**:
+  - Pressing `?` in the filer view opens a scrollable popup listing all keybindings.
+  - The popup displays key combinations and their functions in a readable format.
+  - Pressing `?` again dismisses the popup (toggle behavior).
+  - Standard exit keys (`q`, `C-g`, `C-[`) also dismiss the popup.
+  - Navigation keys (`C-n`/`C-p`/`up`/`down`/`pgup`/`pgdn`) scroll through the help content.
+  - The popup follows the existing menu widget pattern for consistent UI behavior.
+- **Validation Criteria**:
+  - Manual verification that `?` opens the popup with all keystrokes visible.
+  - Manual verification that scrolling works correctly.
+  - Manual verification that all exit methods (`?`, `q`, `C-g`, `C-[`) dismiss the popup.
+  - Token validation confirms `[REQ:HELP_POPUP]`, `[ARCH:HELP_WIDGET]`, and `[IMPL:HELP_POPUP]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Help Widget [ARCH:HELP_WIDGET]
+- **Implementation**: See `implementation-decisions.md` § Help Popup Implementation [IMPL:HELP_POPUP]
 
 **Status**: ⏳ Planned
 

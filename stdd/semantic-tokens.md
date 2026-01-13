@@ -133,6 +133,7 @@ When referencing other tokens:
 - `[REQ:DIFF_SEARCH]` - Cross-window difference search for finding missing or size-mismatched files
 - `[REQ:NSYNC_MULTI_TARGET]` - Multi-target copy/move via nsync SDK to all visible workspace panes
 - `[REQ:NSYNC_CONFIRMATION]` - Confirmation prompts before multi-target copy/move operations
+- `[REQ:HELP_POPUP]` - Help popup displays keystroke catalog on `?` key
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -178,6 +179,7 @@ When referencing other tokens:
 - `[ARCH:DIFF_SEARCH]` - Difference search engine architecture [REQ:DIFF_SEARCH]
 - `[ARCH:NSYNC_INTEGRATION]` - nsync SDK integration for multi-target copy/move [REQ:NSYNC_MULTI_TARGET]
 - `[ARCH:NSYNC_CONFIRMATION]` - Confirmation prompts before multi-target operations [REQ:NSYNC_CONFIRMATION]
+- `[ARCH:HELP_WIDGET]` - Help widget architecture based on ListBox pattern [REQ:HELP_POPUP]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -224,6 +226,7 @@ When referencing other tokens:
 - `[IMPL:NSYNC_OBSERVER]` - Observer adapter bridging nsync to goful progress widget [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
 - `[IMPL:NSYNC_COPY_MOVE]` - nsync copy/move wrappers and CopyAll/MoveAll modes [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
 - `[IMPL:NSYNC_CONFIRMATION]` - Confirmation prompts for multi-target copy/move operations [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+- `[IMPL:HELP_POPUP]` - Help popup implementation with keystroke catalog [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

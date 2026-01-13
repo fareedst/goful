@@ -90,6 +90,7 @@ key                  | function
 `g`                  | Glob
 `G`                  | Glob recursive
 `C-g` `C-[`          | Cancel
+`?`                  | Help (keystroke catalog)
 `q` `Q`              | Quit
 
 For more see [main.go](main.go)
