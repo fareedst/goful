@@ -827,10 +827,11 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
     names := collectAllNames(dirs)  // Union of all file/dir names
     sort.Strings(names)              // Case-sensitive alphabetic
     
-    started := (startAfter == "")
     for _, name := range names {
-        if !started {
-            if name == startAfter { started = true }
+        // Skip entries that come before or equal to startAfter alphabetically.
+        // Using alphabetical comparison (not exact match) allows startAfter to be
+        // a name not in the current list (e.g., a filename when searching subdirs).
+        if startAfter != "" && name <= startAfter {
             continue
         }
         if isDifferent, reason := checkDifference(name, dirs); isDifferent {
@@ -840,6 +841,8 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
     return "", "", false  // No more differences at this level
 }
 ```
+
+**Important**: The alphabetical comparison (`name <= startAfter`) instead of exact match (`name == startAfter`) is critical. When continuing a search from a file position (e.g., "date.key"), the subdirectory search needs to find directories that come AFTER that file alphabetically (e.g., "dev", "org", "temp"). Since "date.key" is not in the subdirectory list, exact match would fail to set `started=true`, skipping all subdirectories.
 
 **Alternatives Considered:**
 - **Skip set for tracking inspected files**: Rejected; cursor position provides implicit tracking with no extra state.

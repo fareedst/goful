@@ -297,6 +297,7 @@ func CheckDifference(name string, dirs []*Directory) (isDiff bool, reason string
 
 // FindNextDifference searches for the next different entry starting after startAfter.
 // If startAfter is empty, starts from the beginning.
+// Uses alphabetical comparison so startAfter can be a name not in the current list.
 // Returns the result of the search.
 // [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 func FindNextDifference(dirs []*Directory, startAfter string, filesOnly bool) DiffResult {
@@ -307,12 +308,9 @@ func FindNextDifference(dirs []*Directory, startAfter string, filesOnly bool) Di
 		names = CollectAllNames(dirs)
 	}
 
-	started := (startAfter == "")
 	for _, name := range names {
-		if !started {
-			if name == startAfter {
-				started = true
-			}
+		// Skip entries that come before or equal to startAfter alphabetically
+		if startAfter != "" && name <= startAfter {
 			continue
 		}
 
@@ -332,16 +330,14 @@ func FindNextDifference(dirs []*Directory, startAfter string, filesOnly bool) Di
 
 // FindNextSubdir finds the next subdirectory after startAfter.
 // Returns the name, whether it exists in all directories, and whether any was found.
+// Uses alphabetical comparison so startAfter can be a filename not in the subdirs list.
 // [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 func FindNextSubdir(dirs []*Directory, startAfter string) (name string, existsInAll bool, found bool) {
 	subdirs := CollectSubdirNames(dirs)
 
-	started := (startAfter == "")
 	for _, subdir := range subdirs {
-		if !started {
-			if subdir == startAfter {
-				started = true
-			}
+		// Skip entries that come before or equal to startAfter alphabetically
+		if startAfter != "" && subdir <= startAfter {
 			continue
 		}
 
@@ -386,16 +382,15 @@ func FirstSubdirInAll(dirs []*Directory) (name string, found bool) {
 // FindNextSubdirInAll returns the next subdirectory after startAfter that exists in all directories.
 // If startAfter is empty, behaves like FirstSubdirInAll.
 // This is used during diff search traversal to respect the current search position.
+// Uses alphabetical comparison so startAfter can be a filename not in the subdirs list.
 // [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 func FindNextSubdirInAll(dirs []*Directory, startAfter string) (name string, found bool) {
 	subdirs := CollectSubdirNames(dirs)
 
-	started := (startAfter == "")
 	for _, subdir := range subdirs {
-		if !started {
-			if subdir == startAfter {
-				started = true
-			}
+		// Skip entries that come before or equal to startAfter alphabetically
+		// This handles the case where startAfter is a filename not in the subdirs list
+		if startAfter != "" && subdir <= startAfter {
 			continue
 		}
 
