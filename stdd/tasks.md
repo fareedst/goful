@@ -731,6 +731,7 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 798 token references across 69 files.`
 - Message routing alignment (2026-01-10): Added `SetMessage()`/`ClearMessage()` to `diffstatus` package; status messages now route to dedicated row instead of ephemeral `message` window per `[REQ:DIFF_SEARCH]` specification.
 - Bug fix (2026-01-10): Added `FindNextSubdirInAll` to respect `startAfter` during subdirectory descent, fixing search state loss when user manually navigates into subdirectories.
+- Bug fix (2026-01-12): Fixed `startAfter` assignment after ascending from child directories. After `Chdir("..")`, code was using `ws.Dir().Base()` which returned the PARENT directory name instead of the CHILD we exited. This caused `FindNextSubdirInAll` to skip all siblings because the parent name wasn't in the subdirectory list. Fix: Save child name before ascending, use it for `startAfter`.
 
 **Priority Rationale**: P1 because this feature significantly improves directory comparison workflows but does not block core navigation.
 

@@ -349,14 +349,15 @@ func (g *Goful) findNextDiff(startAfter string) {
 		}
 
 		// Go back to parent in all directories and continue
+		childDirName := ws.Dir().Base() // Save the child directory name BEFORE going up
 		for _, d := range ws.Dirs {
 			d.Chdir("..")
 		}
 		ws.RebuildComparisonIndex()
 
-		// Find the current directory name (what we just came out of)
-		// and continue searching from there
-		startAfter = ws.Dir().Base()
+		// Continue searching from the child directory we just exited
+		// so FindNextSubdirInAll can find the next sibling
+		startAfter = childDirName
 
 		// If we're back at initial dirs after going up, we're done
 		if state.AtInitialDirs(ws.Dirs) {

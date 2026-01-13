@@ -1291,6 +1291,7 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 - `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` (2026-01-10) → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 798 token references across 69 files.`
 - Message routing alignment: Status messages now route to dedicated `diffstatus` row per `[REQ:DIFF_SEARCH]` specification.
 - Bug fix (2026-01-10): Added `FindNextSubdirInAll` to respect `startAfter` during subdirectory descent, fixing search state loss when user manually navigates into subdirectories. Added 4 new unit tests: `TestFindNextSubdirInAll_REQ_DIFF_SEARCH`, `TestFindNextSubdirInAllSkipsNonCommon_REQ_DIFF_SEARCH`, `TestFindNextSubdirInAllNoCommon_REQ_DIFF_SEARCH`.
+- Bug fix (2026-01-12): Fixed `startAfter` assignment after ascending from child directories. The code incorrectly used `ws.Dir().Base()` (parent directory name) instead of the child directory name we just exited. This caused `FindNextSubdirInAll` to fail finding sibling directories because the parent's name isn't in the subdirectory list. Fix: Save `childDirName := ws.Dir().Base()` BEFORE calling `Chdir("..")`, then use `startAfter = childDirName`. This ensures alphabetically-later siblings (e.g., `os_x` after `organization`) are correctly visited during tree comparison.
 
 **Cross-References**: [ARCH:DIFF_SEARCH], [REQ:DIFF_SEARCH], [REQ:MODULE_VALIDATION]
 
