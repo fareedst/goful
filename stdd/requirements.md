@@ -763,6 +763,35 @@ Each requirement includes:
 
 **Status**: ⏳ Planned
 
+### [REQ:SYNC_COMMANDS] Sync Command Operations
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must provide a sync command mode activated by pressing `S`, which allows executing file operations (copy, delete, rename) sequentially across all workspace panes on files with the same name as the cursor file in the focused pane. The user presses `S` followed by an operation key (`c` for copy, `d` for delete, `r` for rename). A single prompt gathers necessary input (new filename for copy/rename) or confirmation (for delete), then the operation executes in each pane starting with the focused pane, finding files with the same name in each pane's current directory. By default, the operation aborts on first failure. Pressing `!` while in sync mode toggles "ignore failures" mode that continues through all panes, reporting failures at the end.
+- **Rationale**: Users frequently need to perform identical operations across synchronized directory structures (e.g., renaming a file that exists in multiple mirrored directories). Without sync commands, users must repeat the same operation manually in each pane, which is tedious and error-prone. This feature complements the existing linked navigation mode by providing batch operations.
+- **Satisfaction Criteria**:
+  - Pressing `S` activates sync command mode and displays a prompt indicating the mode.
+  - After `S`, pressing `c`, `d`, or `r` initiates the corresponding operation. Pressing `!` toggles ignore-failures mode.
+  - For copy: user is prompted for a new filename (default: current filename); the file at cursor (and same-named files in other panes) are copied to the new filename within each pane's directory. User must specify a different name than the original.
+  - For rename: user is prompted for new name once; the file at cursor (and same-named files in other panes) are renamed to the new name in each pane.
+  - For delete: user confirms once; the file at cursor (and same-named files in other panes) are deleted in each pane.
+  - Operations execute sequentially starting from the focused pane, then proceeding through other panes.
+  - If a file with the target name doesn't exist in a pane, that pane is skipped (not treated as failure).
+  - Default behavior: abort on first actual failure, report which pane failed.
+  - Ignore-failures mode (toggle with `!`): continue through all panes even on failures, report all failures at the end.
+  - Single-pane workspaces: behave exactly like the regular single-file operation.
+  - User can cancel the prompt to abort before any changes are made.
+- **Validation Criteria**:
+  - Unit tests cover the file-by-name lookup helper in directories.
+  - Unit tests cover the execution engine for success, failure, and skip scenarios.
+  - Integration tests verify sequential execution across multiple panes.
+  - Manual verification confirms the UI flow (prefix key → operation key → prompt → execution).
+  - Token validation confirms `[REQ:SYNC_COMMANDS]`, `[ARCH:SYNC_MODE]`, and `[IMPL:SYNC_EXECUTE]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Sync Mode [ARCH:SYNC_MODE]
+- **Implementation**: See `implementation-decisions.md` § Sync Execute [IMPL:SYNC_EXECUTE]
+
+**Status**: ✅ Implemented
+
 ### [REQ:IDENTIFIER] Requirement Name
 
 **Priority: P0 (Critical) | P1 (Important) | P2 (Nice-to-have) | P3 (Future)**

@@ -68,6 +68,7 @@ key                  | function
 `` ` ``              | Toggle comparison colors
 `C`                  | Copy All (to all visible panes)
 `M`                  | Move All (to all visible panes)
+`S`                  | Sync command mode (synchronized ops)
 `=`                  | Calculate file digest
 `L` or `M-l`             | Toggle linked navigation mode
 `[`                  | Start difference search
@@ -388,6 +389,48 @@ All entries accept tcell color names (`red`, `cyan`, `magenta`, etc.) or hex val
 - Distribute configuration files to several locations.
 
 The nsync SDK handles parallel execution, content verification, and move semantics (source deletion only after successful sync to all destinations).
+
+> **Note**: `C`/`M` copy/move files **from the focused pane to other panes**. For synchronized operations on **same-named files across all panes**, see Sync commands below.
+
+### Sync operations (`S` prefix) `[REQ:SYNC_COMMANDS]`
+
+Sync commands execute copy, delete, or rename operations **simultaneously across all workspace panes** on files with the **same name** as the cursor file. This is designed for managing synchronized directory structures where you need to perform identical operations on matching files in every pane.
+
+**How it works**
+
+1. Position the cursor on the target file in any pane.
+2. Press `S` to enter sync mode. The prompt shows: `Sync [c]opy [d]elete [r]ename [!]ignore:`
+3. Optionally press `!` to toggle "ignore failures" mode (continues through all panes even on errors).
+4. Press an operation key:
+   - `c` – **Copy**: prompts for a new filename (default: current name); you must enter a different name. The file is copied to the new name in each pane's directory.
+   - `d` – **Delete**: confirms with `y/n`; deletes the same-named file in each pane.
+   - `r` – **Rename**: prompts for a new name; renames the same-named file in each pane.
+5. The operation executes sequentially starting from the focused pane, then proceeding through other panes in order.
+
+**Example**: You have `config.yaml` in three panes (`~/project-a/`, `~/project-b/`, `~/project-c/`). Press `S`, then `r`, enter `config.yaml.bak`, and all three files are renamed to `config.yaml.bak` in one action.
+
+**Failure handling**
+
+- By default, the operation **aborts on first failure** and reports which pane failed.
+- Press `!` before the operation key to enable **ignore failures** mode, which continues through all panes and reports all failures at the end.
+- If a file with the target name doesn't exist in a pane, that pane is **skipped** (not treated as a failure).
+
+**Comparison with `C`/`M` (multi-target copy/move)**
+
+| Feature | `C`/`M` (Multi-target) | `S` (Sync) |
+|---------|------------------------|------------|
+| **Source** | Marked files or cursor file in focused pane | Same-named file in **every** pane |
+| **Destination** | All other visible panes | Same directory (copy to new name) or in-place (rename/delete) |
+| **Use case** | Distribute files from one pane to others | Synchronized operations on matching files across panes |
+| **Execution** | Parallel (nsync SDK) | Sequential |
+
+**Use cases**
+
+- Rename a file that exists in multiple mirrored directories with a single command.
+- Delete a generated file across all project folders at once.
+- Create a backup copy of a config file in every workspace pane simultaneously.
+
+**Tip**: Combine with **linked navigation mode** (`L`) to keep panes synchronized as you navigate, then use `S` commands to batch-operate on matching files.
 
 Recommend remain original `main.go` and copy to own `main.go` for example:
 

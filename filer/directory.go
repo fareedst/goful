@@ -299,6 +299,19 @@ func (d *Directory) File() *FileStat {
 // Base returns the directory name.
 func (d *Directory) Base() string { return filepath.Base(d.Path) }
 
+// FindFileByName searches for a file with the given name in the directory's file list.
+// Returns the FileStat if found, nil otherwise.
+// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
+func (d *Directory) FindFileByName(name string) *FileStat {
+	for _, e := range d.List() {
+		fs := e.(*FileStat)
+		if fs.Name() == name {
+			return fs
+		}
+	}
+	return nil
+}
+
 // SortBy applies the given sort type to the directory.
 // [IMPL:LINKED_NAVIGATION] Exported for linked sort synchronization.
 func (d *Directory) SortBy(typ SortType) {

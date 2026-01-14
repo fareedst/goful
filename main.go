@@ -718,6 +718,10 @@ func filerKeymap(g *app.Goful) widget.Keymap {
 		// Difference search commands
 		"[": func() { g.StartDiffSearch() },    // Start difference search
 		"]": func() { g.ContinueDiffSearch() }, // Continue to next difference
+		// [IMPL:SYNC_EXECUTE] [REQ:SYNC_COMMANDS]
+		// Sync command mode - synchronized operations across all panes
+		// After pressing S, use c/d/r for operations. Press ! first to enable ignore-failures mode.
+		"S": func() { g.SyncMode(false) },
 	}
 }
 

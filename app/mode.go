@@ -618,3 +618,82 @@ func (m *globdirMode) Run(c *cmdline.Cmdline) {
 		c.Exit()
 	}
 }
+
+// syncCopyMode prompts for new filename before sync copy.
+// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
+type syncCopyMode struct {
+	*Goful
+	filename       string
+	ignoreFailures bool
+}
+
+func (m *syncCopyMode) String() string { return "synccopy" }
+func (m *syncCopyMode) Prompt() string {
+	return fmt.Sprintf("Copy '%s' in %s to: ", m.filename, m.panesWithFile(m.filename))
+}
+func (m *syncCopyMode) Draw(c *cmdline.Cmdline) { c.DrawLine() }
+func (m *syncCopyMode) Run(c *cmdline.Cmdline) {
+	newName := c.String()
+	if newName == "" {
+		return
+	}
+	// User must enter a different name
+	if newName == m.filename {
+		message.Errorf("Must specify a different filename")
+		c.SetText("")
+		return
+	}
+	c.Exit()
+	m.executeSyncCopy(m.filename, newName, m.ignoreFailures)
+}
+
+// syncDeleteMode prompts for confirmation before sync delete.
+// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
+type syncDeleteMode struct {
+	*Goful
+	filename       string
+	ignoreFailures bool
+}
+
+func (m *syncDeleteMode) String() string { return "syncdelete" }
+func (m *syncDeleteMode) Prompt() string {
+	suffix := ""
+	if m.ignoreFailures {
+		suffix = " (ignore failures)"
+	}
+	return fmt.Sprintf("Delete '%s' in %s?%s [y/n] ", m.filename, m.panesWithFile(m.filename), suffix)
+}
+func (m *syncDeleteMode) Draw(c *cmdline.Cmdline) { c.DrawLine() }
+func (m *syncDeleteMode) Run(c *cmdline.Cmdline) {
+	switch c.String() {
+	case "y", "Y":
+		c.Exit()
+		m.executeSyncDelete(m.filename, m.ignoreFailures)
+	case "n", "N":
+		c.Exit()
+	default:
+		c.SetText("")
+	}
+}
+
+// syncRenameMode prompts for new name before sync rename.
+// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
+type syncRenameMode struct {
+	*Goful
+	filename       string
+	ignoreFailures bool
+}
+
+func (m *syncRenameMode) String() string { return "syncrename" }
+func (m *syncRenameMode) Prompt() string {
+	return fmt.Sprintf("Rename '%s' in %s to: ", m.filename, m.panesWithFile(m.filename))
+}
+func (m *syncRenameMode) Draw(c *cmdline.Cmdline) { c.DrawLine() }
+func (m *syncRenameMode) Run(c *cmdline.Cmdline) {
+	newName := c.String()
+	if newName == "" || newName == m.filename {
+		return
+	}
+	c.Exit()
+	m.executeSyncRename(m.filename, newName, m.ignoreFailures)
+}

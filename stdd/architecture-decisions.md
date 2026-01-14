@@ -1013,3 +1013,73 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 - `main.go` keystroke binding includes `[IMPL:HELP_POPUP] [REQ:HELP_POPUP]`.
 
 **Cross-References**: [REQ:HELP_POPUP], [IMPL:HELP_POPUP], [REQ:MODULE_VALIDATION]
+
+## 37. Sync Mode [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
+
+### Decision: Implement a two-stage prefix mode for executing synchronized file operations across all workspace panes.
+**Rationale:**
+- Users managing synchronized directory structures need batch operations on same-named files across all panes.
+- A prefix key pattern (similar to `X` for external commands) keeps the keymap organized and discoverable.
+- Separating the mode activation (`S`) from the operation key (`c`/`d`/`r`) allows a single prompt to apply to all panes.
+- "Ignore failures" mode (toggled with `!`) accommodates divergent directory structures where not all operations will succeed.
+
+**Architecture Outline:**
+- **Sync Mode Activation**: `S` keypress enters a transient mode that waits for an operation key.
+- **Operation Dispatch**: After `S`, pressing `c`, `d`, or `r` starts the corresponding sync operation mode.
+- **Prompt Phase**: Each operation mode prompts once for input/confirmation using the existing cmdline mode pattern.
+- **Execution Phase**: Sequential iteration through panes, finding files by name, executing the operation.
+- **Failure Handling**: Two modes controlled by a boolean flag toggled with `!`.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `SyncMode` (Module 1 – `app/window_wide.go`): Transient prefix mode implementing `cmdline.Mode`. Captures `ignoreFailures bool` from toggle and waits for operation key.
+- `SyncCopyMode`/`SyncDeleteMode`/`SyncRenameMode` (Module 2 – `app/mode.go`): Operation-specific modes that prompt for input and call the execution engine. Copy and rename prompt for a new filename (copy defaults to original name, user must change it); delete prompts for y/n confirmation.
+- `SyncExecutor` (Module 3 – `app/window_wide.go`): Pure execution engine that iterates panes, finds files by name, and applies operations with configurable failure handling. Returns structured results (success/failure counts, error details).
+- `FindFileByName` (Module 4 – `filer/directory.go`): Helper method on `Directory` that searches the file list for an exact name match.
+- `Keymap Integration` (Module 5 – `main.go`): Wires `S` key to `g.SyncMode(false)`.
+
+**Algorithm Sketch:**
+```text
+// [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
+func executeSync(ws *Workspace, filename string, newName string, op Operation, ignoreFailures bool) Results {
+    results := Results{}
+    // Start with focused pane, then wrap through others
+    for i := 0; i < len(ws.Dirs); i++ {
+        idx := (ws.Focus + i) % len(ws.Dirs)
+        dir := ws.Dirs[idx]
+        
+        file := dir.FindFileByName(filename)
+        if file == nil {
+            results.Skipped++
+            continue
+        }
+        
+        // For copy: copy to newName in same directory
+        // For rename: rename to newName
+        // For delete: remove file
+        err := op.Execute(dir.Path, file, newName)
+        if err != nil {
+            results.Failures = append(results.Failures, SyncFailure{idx, err})
+            if !ignoreFailures {
+                return results  // Abort on first failure
+            }
+        } else {
+            results.Succeeded++
+        }
+    }
+    return results
+}
+```
+
+**Alternatives Considered:**
+- **Menu-based approach**: Rejected because it adds an extra interaction step; prefix key is more efficient.
+- **Automatic all-pane detection**: Rejected; explicit `S` prefix makes the scope clear to the user.
+- **Parallel execution**: Rejected to avoid race conditions and to provide predictable, debuggable ordering.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `app/window_wide.go` includes `[IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]`.
+- `app/mode.go` operation modes include `[IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]`.
+- `filer/directory.go` helper includes `[IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]`.
+- `main.go` keybindings include `[IMPL:SYNC_EXECUTE] [REQ:SYNC_COMMANDS]`.
+- Tests reference `[REQ:SYNC_COMMANDS]` in names/comments.
+
+**Cross-References**: [REQ:SYNC_COMMANDS], [IMPL:SYNC_EXECUTE], [REQ:MODULE_VALIDATION]
