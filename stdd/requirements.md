@@ -638,16 +638,18 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: Goful must provide two commands for iteratively searching for file/directory differences across all windows in the current workspace. Command 1 (Start) records the "initial directories" for each window, then iterates through files in alphabetic order (case-sensitive) looking for entries that are "different" (missing from any window OR have different sizes across windows). When a difference is found, the search stops, cursors move to that entry in all windows (where present), and a message explains why the search stopped. If no file differences exist, the search descends into subdirectories. Command 2 (Continue) reads the cursor position in the active window, skips that file, and continues the search from the next alphabetic entry.
+- **Description**: Goful must provide two commands for iteratively searching for file/directory differences across all windows in the current workspace. Command 1 (Start) records the "initial directories" for each window, then iterates through entries in alphabetic order (case-sensitive) with **files first, then directories** at each level. Entries are "different" if missing from any window OR have different sizes across windows. When a difference is found, the search stops, cursors move to that entry in all windows (where present), and a message explains why the search stopped. The difference name and type are recorded in state. If no file differences exist at a level, subdirectories at that level are checked. If a subdirectory exists in all windows, the search descends into it recursively. Command 2 (Continue) uses the recorded difference name from state (not cursor position) to skip the last found difference and continue from the next entry. This ensures correct continuation even when the cursor cannot be set (e.g., when a subdirectory is missing in some windows).
 - **Rationale**: Users comparing similar directory structures need an efficient way to find differences without manually inspecting each file. This feature provides guided navigation through differences, allowing users to quickly identify mismatches, missing files, or size discrepancies across workspace windows.
 - **Satisfaction Criteria**:
   - Command 1 records initial directory paths for all windows and begins comparison from the first alphabetic entry.
+  - **Files first, then directories**: At each level, ALL files are processed in alphabetic order before ANY directories are processed. This ensures a consistent, predictable search order.
   - Files are compared across all windows: "different" means missing from any window OR having different sizes in any window.
-  - When a difference is found, cursors move to that entry in all windows where it exists, and a descriptive message appears (e.g., "Different: file.txt missing in window 2" or "Different: file.txt size mismatch").
-  - If no file differences are found, subdirectories are processed in alphabetic order; missing subdirs are treated as differences.
-  - Descending into a subdir that exists in all windows continues the comparison recursively.
-  - If all entries are processed back to initial directories, a "No differences found" message appears.
-  - Command 2 reads the filename at the cursor position in the active window, skips it, and continues from the next alphabetic entry.
+  - When a difference is found, cursors move to that entry in all windows where it exists, and a descriptive message appears (e.g., "Different: file.txt missing in window 2" or "Different: file.txt size mismatch"). The difference name (with "/" suffix for directories) and reason are recorded in state.
+  - If no file differences are found at a level, subdirectories at that level are processed in alphabetic order; missing subdirs are treated as differences.
+  - Descending into a subdir that exists in all windows continues the comparison recursively at the next level.
+  - When ascending from a subdirectory, if at root level and there are no more subdirectories after the one ascended from, the search is complete.
+  - If all entries are processed back to initial directories, a "Difference search complete - all differences found" message appears.
+  - Command 2 uses the recorded difference name from state (with "/" suffix removed for directories) to skip the last found difference and continue from the next entry. This ensures correct continuation even when the cursor cannot be set (e.g., when a subdirectory is missing in some windows).
   - The search state (initial directories, active flag) persists across commands until a new search is started.
   - A dedicated persistent status line appears when diff search is active, showing the current search status (path being searched, files checked, or last difference found).
   - The status line persists until the search is completed or cleared, and does not auto-dismiss like regular messages.

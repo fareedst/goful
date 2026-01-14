@@ -357,6 +357,33 @@ func FindNextSubdir(dirs []*Directory, startAfter string) (name string, existsIn
 	return "", false, false
 }
 
+// FindNextSubdirDifference searches for the next subdirectory that differs across directories.
+// This is separate from FindNextDifference to ensure subdirectories are checked independently
+// of files, per the requirement "files first, then dirs".
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func FindNextSubdirDifference(dirs []*Directory, startAfter string) DiffResult {
+	subdirs := CollectSubdirNames(dirs)
+
+	for _, subdir := range subdirs {
+		// Skip entries that come before or equal to startAfter alphabetically
+		if startAfter != "" && subdir <= startAfter {
+			continue
+		}
+
+		isDiff, reason, isDir := CheckDifference(subdir, dirs)
+		if isDiff {
+			return DiffResult{
+				Name:   subdir,
+				Reason: reason,
+				Found:  true,
+				IsDir:  isDir,
+			}
+		}
+	}
+
+	return DiffResult{Found: false}
+}
+
 // FirstSubdirInAll returns the first subdirectory that exists in all directories.
 // [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 func FirstSubdirInAll(dirs []*Directory) (name string, found bool) {

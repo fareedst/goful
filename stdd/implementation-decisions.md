@@ -1271,7 +1271,12 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
     - Returns the first subdirectory that exists in ALL directories.
     - Critical for maintaining search position when user manually navigates into subdirectories.
   - Descent logic in command wrapper: if no file differences found, check subdirs. If subdir missing in any, treat as difference. If subdir exists in all, navigate all windows into it and repeat.
-  - **Bug Fix (2026-01-10)**: The original implementation used `FirstSubdirInAll` which always returned the first common subdirectory, ignoring the `startAfter` position. This caused the search to loop back to already-searched directories when the user manually navigated into a subdirectory. Fixed by using `FindNextSubdirInAll` which respects the current search position.
+  - **Bug Fixes (2026-01-10)**:
+    - The original implementation used `FirstSubdirInAll` which always returned the first common subdirectory, ignoring the `startAfter` position. Fixed by using `FindNextSubdirInAll` which respects the current search position.
+    - The algorithm now correctly implements "files first, then dirs": when `startAfter` is a subdirectory name, file check is skipped (all files at that level have already been processed).
+    - When continuing after a difference, the algorithm uses `lastDiffName` from state (with "/" suffix removed for directories) instead of cursor position, ensuring correct continuation even when the cursor cannot be set (e.g., when a subdirectory is missing in some windows).
+    - When ascending from a subdirectory to root level, if there are no more subdirectories after the one ascended from, the search properly completes instead of restarting from the first subdirectory.
+    - Added `FindNextSubdirDifference` function to check only subdirectories (not files), ensuring subdirectories are checked independently per the "files first, then dirs" requirement.
 
 - **Cursor Movement (`filer/workspace.go`)**:
   - Add `func (w *Workspace) SetCursorByNameAll(name string)` that moves cursor to `name` in all directories where it exists.
