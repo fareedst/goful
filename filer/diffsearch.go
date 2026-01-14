@@ -437,3 +437,210 @@ func FindNextSubdirInAll(dirs []*Directory, startAfter string) (name string, fou
 
 	return "", false
 }
+
+// Navigator abstracts directory operations for tree traversal.
+// This interface allows the TreeWalker to be tested with mock implementations.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+type Navigator interface {
+	// GetDirs returns the current directories being compared.
+	GetDirs() []*Directory
+	// ChdirAll changes to the named subdirectory in all directories.
+	ChdirAll(name string)
+	// ChdirParentAll changes to parent directory in all directories.
+	ChdirParentAll()
+	// CurrentPath returns the path of the first directory.
+	CurrentPath() string
+	// RebuildComparisonIndex rebuilds the comparison index after directory changes.
+	RebuildComparisonIndex()
+}
+
+// StepType represents the type of navigation step result.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+type StepType int
+
+const (
+	// StepFoundDiff indicates a difference was found, search pauses.
+	StepFoundDiff StepType = iota
+	// StepComplete indicates the search is complete, no more differences.
+	StepComplete
+)
+
+// Step represents a result from the tree walker.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+type Step struct {
+	Type   StepType // Type of result (found diff or complete)
+	Name   string   // Name of the difference (if StepFoundDiff)
+	Reason string   // Reason for difference
+	IsDir  bool     // Whether the difference is a directory
+}
+
+// TreeWalker handles the tree traversal algorithm for difference search.
+// It abstracts the navigation logic from TUI concerns.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+type TreeWalker struct {
+	nav        Navigator
+	state      *DiffSearchState
+	startAfter string
+}
+
+// NewTreeWalker creates a walker for the given navigator and state.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func NewTreeWalker(nav Navigator, state *DiffSearchState, startAfter string) *TreeWalker {
+	return &TreeWalker{
+		nav:        nav,
+		state:      state,
+		startAfter: startAfter,
+	}
+}
+
+// Run executes the traversal until a difference is found or search completes.
+// Calls progressFn after each directory is processed (for UI updates).
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (w *TreeWalker) Run(progressFn func()) Step {
+	startAfter := w.startAfter
+
+	for {
+		// Call progress callback for UI updates
+		if progressFn != nil {
+			progressFn()
+		}
+
+		dirs := w.nav.GetDirs()
+
+		// First, check files for differences
+		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+		// Architecture: "files first, then dirs" means:
+		// 1. Process ALL files in alphabetical order at this level
+		// 2. Then process ALL directories in alphabetical order at this level
+		// When resuming after a difference, skip the recorded name and continue from the next entry.
+		// If startAfter is a subdirectory name, we've already processed all files at this level,
+		// so skip file check and go straight to subdirectories.
+		subdirNamesForFileCheck := CollectSubdirNames(dirs)
+		isSubdirName := false
+		for _, subdirName := range subdirNamesForFileCheck {
+			if subdirName == startAfter {
+				isSubdirName = true
+				break
+			}
+		}
+
+		var result DiffResult
+		if !isSubdirName {
+			// startAfter is a filename or empty - check files first (files first, then dirs)
+			result = FindNextDifference(dirs, startAfter, true)
+		} else {
+			// startAfter is a subdirectory name - we've already processed all files at this level,
+			// so skip file check (set Found=false to proceed to subdirectory check)
+			result = DiffResult{Found: false}
+		}
+		if result.Found {
+			// Found a file difference - pause search
+			return Step{
+				Type:   StepFoundDiff,
+				Name:   result.Name,
+				Reason: result.Reason,
+				IsDir:  result.IsDir,
+			}
+		}
+
+		// No file differences, check subdirectories
+		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+		// Determine subdirStartAfter: if startAfter is a subdirectory name, use it (to skip it and find next).
+		// If startAfter is a filename, check all subdirectories from the beginning (files first, then dirs).
+		subdirStartAfter := ""
+		subdirNames := CollectSubdirNames(dirs)
+		// Check if startAfter is a subdirectory name
+		for _, subdirName := range subdirNames {
+			if subdirName == startAfter {
+				// startAfter is a subdirectory name - we've already processed all files,
+				// so check subdirectories starting from this one (to skip it and find next)
+				subdirStartAfter = startAfter
+				break
+			}
+		}
+		// If startAfter is not a subdirectory name (it's a filename or empty),
+		// subdirStartAfter remains "" to check all subdirectories from the beginning
+		// Use FindNextSubdirDifference to check ONLY subdirectories (not files)
+		// This ensures subdirectories are checked independently per the "files first, then dirs" requirement
+		subdirResult := FindNextSubdirDifference(dirs, subdirStartAfter)
+		// Only return if we found a directory difference (not a file)
+		if subdirResult.Found && subdirResult.IsDir {
+			// Found a subdir that differs (missing in some window)
+			return Step{
+				Type:   StepFoundDiff,
+				Name:   subdirResult.Name + "/",
+				Reason: subdirResult.Reason,
+				IsDir:  true,
+			}
+		}
+
+		// No differences at this level, try to descend into a subdir that exists in all
+		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+		// CRITICAL FIX: When descending into subdirectories, we must use a subdirectory-specific
+		// startAfter position, not the file startAfter. If startAfter is a filename, we should
+		// check all subdirectories from the beginning. If startAfter is a subdirectory name,
+		// we should start from that subdirectory.
+		subdirStartAfterForDescent := ""
+		// Check if startAfter is a subdirectory name
+		subdirNamesForDescent := CollectSubdirNames(dirs)
+		for _, subdirName := range subdirNamesForDescent {
+			if subdirName == startAfter {
+				subdirStartAfterForDescent = startAfter
+				break
+			}
+		}
+		// Use subdirectory-specific startAfter for descent
+		subdir, found := FindNextSubdirInAll(dirs, subdirStartAfterForDescent)
+		if found {
+			// Descend into this subdir in all windows
+			w.nav.ChdirAll(subdir)
+			startAfter = "" // Start from beginning in new directory
+			continue
+		}
+
+		// No more subdirs to descend into
+		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+		// Check if we're back at initial dirs (root level)
+		// If we are, the search is complete - all differences have been found
+		if w.state.AtInitialDirs(dirs) {
+			// We've completed the search - all differences have been found
+			return Step{Type: StepComplete}
+		}
+
+		// Go back to parent in all directories and continue
+		childDirName := dirs[0].Base() // Save the child directory name BEFORE going up
+		w.nav.ChdirParentAll()
+		w.nav.RebuildComparisonIndex()
+
+		// Continue searching from the child directory we just exited
+		// so FindNextSubdirInAll can find the next sibling
+		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+		// After ascending, startAfter is set to the child directory name.
+		// When checking files, we should check all files from the beginning (files first, then dirs).
+		// When checking subdirectories, we should start from childDirName to find the next sibling.
+		startAfter = childDirName
+
+		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+		// After ascending, if we're at root level, check if there are any more subdirectories
+		// after the one we just ascended from. If not, the search is complete.
+		dirs = w.nav.GetDirs() // Refresh dirs after ascending
+		if w.state.AtInitialDirs(dirs) {
+			// We're at root level after ascending
+			// Check if there are any more subdirectories after childDirName
+			subdirNamesAtRoot := CollectSubdirNames(dirs)
+			hasMoreSubdirs := false
+			for _, subdirName := range subdirNamesAtRoot {
+				if subdirName > childDirName {
+					hasMoreSubdirs = true
+					break
+				}
+			}
+			if !hasMoreSubdirs {
+				// No more subdirectories at root level - search is complete
+				return Step{Type: StepComplete}
+			}
+			// Continue search from where we left off at this level
+			continue
+		}
+	}
+}

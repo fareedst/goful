@@ -547,3 +547,257 @@ func TestAlphabeticSorting_REQ_DIFF_SEARCH(t *testing.T) {
 		}
 	}
 }
+
+// ============================================================================
+// MockNavigator and TreeWalker Tests
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+// ============================================================================
+
+// MockNavigator simulates a virtual filesystem for testing TreeWalker.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+type MockNavigator struct {
+	t           *testing.T
+	currentPath string
+	// Mock directory data: path -> entries
+	// Each entry is a list of file/dir names in that path
+	entries map[string][]*Directory
+}
+
+// NewMockNavigator creates a mock navigator for testing.
+func NewMockNavigator(t *testing.T, basePath string) *MockNavigator {
+	return &MockNavigator{
+		t:           t,
+		currentPath: basePath,
+		entries:     make(map[string][]*Directory),
+	}
+}
+
+// SetDirs sets the mock directories for a given path.
+func (m *MockNavigator) SetDirs(path string, dirs []*Directory) {
+	m.entries[path] = dirs
+}
+
+func (m *MockNavigator) GetDirs() []*Directory {
+	if dirs, ok := m.entries[m.currentPath]; ok {
+		return dirs
+	}
+	return nil
+}
+
+func (m *MockNavigator) ChdirAll(name string) {
+	m.currentPath = filepath.Join(m.currentPath, name)
+	// Navigate all mock directories to the subdirectory
+	if dirs, ok := m.entries[m.currentPath]; ok {
+		for _, d := range dirs {
+			d.Chdir(name)
+		}
+	}
+}
+
+func (m *MockNavigator) ChdirParentAll() {
+	m.currentPath = filepath.Dir(m.currentPath)
+}
+
+func (m *MockNavigator) CurrentPath() string {
+	return m.currentPath
+}
+
+func (m *MockNavigator) RebuildComparisonIndex() {
+	// No-op for mock
+}
+
+// TestTreeWalkerFilesFirst_REQ_DIFF_SEARCH tests that files are checked before directories.
+func TestTreeWalkerFilesFirst_REQ_DIFF_SEARCH(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1Path := filepath.Join(tmpDir, "dir1")
+	dir2Path := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1Path, 0755)
+	os.MkdirAll(dir2Path, 0755)
+
+	// Create a file difference and a directory difference
+	// Files: alpha.txt (same), beta.txt (different size)
+	// Dirs: subdir (missing in dir2)
+	os.WriteFile(filepath.Join(dir1Path, "alpha.txt"), []byte("a"), 0644)
+	os.WriteFile(filepath.Join(dir2Path, "alpha.txt"), []byte("a"), 0644)
+	os.WriteFile(filepath.Join(dir1Path, "beta.txt"), []byte("short"), 0644)
+	os.WriteFile(filepath.Join(dir2Path, "beta.txt"), []byte("much longer"), 0644)
+	os.MkdirAll(filepath.Join(dir1Path, "subdir"), 0755) // only in dir1
+
+	dir1 := NewDirectory(0, 0, 10, 10)
+	dir1.Chdir(dir1Path)
+	dir2 := NewDirectory(0, 0, 10, 10)
+	dir2.Chdir(dir2Path)
+
+	dirs := []*Directory{dir1, dir2}
+	state := NewDiffSearchState(dirs)
+
+	nav := NewMockNavigator(t, dir1Path)
+	nav.SetDirs(dir1Path, dirs)
+
+	walker := NewTreeWalker(nav, state, "")
+	progressCalled := 0
+	step := walker.Run(func() { progressCalled++ })
+
+	// Should find beta.txt first (file difference comes before dir difference)
+	if step.Type != StepFoundDiff {
+		t.Fatalf("Expected StepFoundDiff, got %v", step.Type)
+	}
+	if step.Name != "beta.txt" {
+		t.Errorf("Expected first diff to be 'beta.txt' (file), got '%s'", step.Name)
+	}
+	if step.IsDir {
+		t.Error("Expected file difference, got directory")
+	}
+	if progressCalled == 0 {
+		t.Error("Progress callback should have been called")
+	}
+}
+
+// TestTreeWalkerSubdirDiff_REQ_DIFF_SEARCH tests that subdirectory differences are found after files.
+func TestTreeWalkerSubdirDiff_REQ_DIFF_SEARCH(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1Path := filepath.Join(tmpDir, "dir1")
+	dir2Path := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1Path, 0755)
+	os.MkdirAll(dir2Path, 0755)
+
+	// Create identical files
+	os.WriteFile(filepath.Join(dir1Path, "file.txt"), []byte("same"), 0644)
+	os.WriteFile(filepath.Join(dir2Path, "file.txt"), []byte("same"), 0644)
+	// Create subdir only in dir1
+	os.MkdirAll(filepath.Join(dir1Path, "missing_subdir"), 0755)
+
+	dir1 := NewDirectory(0, 0, 10, 10)
+	dir1.Chdir(dir1Path)
+	dir2 := NewDirectory(0, 0, 10, 10)
+	dir2.Chdir(dir2Path)
+
+	dirs := []*Directory{dir1, dir2}
+	state := NewDiffSearchState(dirs)
+
+	nav := NewMockNavigator(t, dir1Path)
+	nav.SetDirs(dir1Path, dirs)
+
+	walker := NewTreeWalker(nav, state, "")
+	step := walker.Run(func() {})
+
+	// Should find missing_subdir (directory difference)
+	if step.Type != StepFoundDiff {
+		t.Fatalf("Expected StepFoundDiff, got %v", step.Type)
+	}
+	if step.Name != "missing_subdir/" {
+		t.Errorf("Expected diff to be 'missing_subdir/', got '%s'", step.Name)
+	}
+	if !step.IsDir {
+		t.Error("Expected directory difference, got file")
+	}
+}
+
+// TestTreeWalkerComplete_REQ_DIFF_SEARCH tests that complete step is returned when no differences.
+func TestTreeWalkerComplete_REQ_DIFF_SEARCH(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1Path := filepath.Join(tmpDir, "dir1")
+	dir2Path := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1Path, 0755)
+	os.MkdirAll(dir2Path, 0755)
+
+	// Create identical files
+	os.WriteFile(filepath.Join(dir1Path, "file.txt"), []byte("same"), 0644)
+	os.WriteFile(filepath.Join(dir2Path, "file.txt"), []byte("same"), 0644)
+
+	dir1 := NewDirectory(0, 0, 10, 10)
+	dir1.Chdir(dir1Path)
+	dir2 := NewDirectory(0, 0, 10, 10)
+	dir2.Chdir(dir2Path)
+
+	dirs := []*Directory{dir1, dir2}
+	state := NewDiffSearchState(dirs)
+
+	nav := NewMockNavigator(t, dir1Path)
+	nav.SetDirs(dir1Path, dirs)
+
+	walker := NewTreeWalker(nav, state, "")
+	step := walker.Run(func() {})
+
+	// Should return complete (no differences)
+	if step.Type != StepComplete {
+		t.Fatalf("Expected StepComplete, got %v (Name: %s, Reason: %s)", step.Type, step.Name, step.Reason)
+	}
+}
+
+// TestTreeWalkerResumeFromFile_REQ_DIFF_SEARCH tests resuming from a file position.
+func TestTreeWalkerResumeFromFile_REQ_DIFF_SEARCH(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1Path := filepath.Join(tmpDir, "dir1")
+	dir2Path := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1Path, 0755)
+	os.MkdirAll(dir2Path, 0755)
+
+	// Create files: alpha (same), beta (diff), gamma (diff)
+	os.WriteFile(filepath.Join(dir1Path, "alpha.txt"), []byte("a"), 0644)
+	os.WriteFile(filepath.Join(dir2Path, "alpha.txt"), []byte("a"), 0644)
+	os.WriteFile(filepath.Join(dir1Path, "beta.txt"), []byte("b1"), 0644)
+	os.WriteFile(filepath.Join(dir2Path, "beta.txt"), []byte("b22"), 0644)
+	os.WriteFile(filepath.Join(dir1Path, "gamma.txt"), []byte("g1"), 0644)
+	os.WriteFile(filepath.Join(dir2Path, "gamma.txt"), []byte("g22"), 0644)
+
+	dir1 := NewDirectory(0, 0, 10, 10)
+	dir1.Chdir(dir1Path)
+	dir2 := NewDirectory(0, 0, 10, 10)
+	dir2.Chdir(dir2Path)
+
+	dirs := []*Directory{dir1, dir2}
+	state := NewDiffSearchState(dirs)
+
+	nav := NewMockNavigator(t, dir1Path)
+	nav.SetDirs(dir1Path, dirs)
+
+	// Resume after beta.txt - should find gamma.txt
+	walker := NewTreeWalker(nav, state, "beta.txt")
+	step := walker.Run(func() {})
+
+	if step.Type != StepFoundDiff {
+		t.Fatalf("Expected StepFoundDiff, got %v", step.Type)
+	}
+	if step.Name != "gamma.txt" {
+		t.Errorf("Expected next diff after beta.txt to be 'gamma.txt', got '%s'", step.Name)
+	}
+}
+
+// TestTreeWalkerResumeFromSubdir_REQ_DIFF_SEARCH tests resuming from a subdirectory position.
+func TestTreeWalkerResumeFromSubdir_REQ_DIFF_SEARCH(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1Path := filepath.Join(tmpDir, "dir1")
+	dir2Path := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1Path, 0755)
+	os.MkdirAll(dir2Path, 0755)
+
+	// Create files (all same)
+	os.WriteFile(filepath.Join(dir1Path, "file.txt"), []byte("same"), 0644)
+	os.WriteFile(filepath.Join(dir2Path, "file.txt"), []byte("same"), 0644)
+	// Create subdirs: aaa (missing in dir2), bbb (missing in dir2)
+	os.MkdirAll(filepath.Join(dir1Path, "aaa"), 0755)
+	os.MkdirAll(filepath.Join(dir1Path, "bbb"), 0755)
+
+	dir1 := NewDirectory(0, 0, 10, 10)
+	dir1.Chdir(dir1Path)
+	dir2 := NewDirectory(0, 0, 10, 10)
+	dir2.Chdir(dir2Path)
+
+	dirs := []*Directory{dir1, dir2}
+	state := NewDiffSearchState(dirs)
+
+	nav := NewMockNavigator(t, dir1Path)
+	nav.SetDirs(dir1Path, dirs)
+
+	// Resume after aaa - should find bbb (skipping file check since startAfter is a subdir)
+	walker := NewTreeWalker(nav, state, "aaa")
+	step := walker.Run(func() {})
+
+	if step.Type != StepFoundDiff {
+		t.Fatalf("Expected StepFoundDiff, got %v", step.Type)
+	}
+	if step.Name != "bbb/" {
+		t.Errorf("Expected next diff after aaa to be 'bbb/', got '%s'", step.Name)
+	}
+}

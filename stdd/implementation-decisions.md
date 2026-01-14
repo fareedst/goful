@@ -1299,19 +1299,43 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
   - The ticker calls `g.Draw()` and `widget.Show()` to refresh the UI.
   - The goroutine is stopped via `defer close(quit)` when search pauses or completes.
 
+- **Navigator Interface (`filer/diffsearch.go`) - Refactored 2026-01-13**:
+  - Interface `Navigator` abstracts directory operations for tree traversal:
+    - `GetDirs() []*Directory` - Returns current directories being compared
+    - `ChdirAll(name string)` - Descends into subdirectory in all directories
+    - `ChdirParentAll()` - Ascends to parent in all directories
+    - `CurrentPath() string` - Returns path of first directory
+    - `RebuildComparisonIndex()` - Refreshes comparison index after directory changes
+  - Enables testing TreeWalker with MockNavigator (no real filesystem needed)
+
+- **TreeWalker (`filer/diffsearch.go`) - Added 2026-01-13**:
+  - `type TreeWalker struct` - Handles tree traversal algorithm
+  - `NewTreeWalker(nav Navigator, state *DiffSearchState, startAfter string)` - Creates walker
+  - `Run(progressFn func()) Step` - Executes traversal, returns Step result
+  - `type StepType int` with constants `StepFoundDiff` and `StepComplete`
+  - `type Step struct` - Result with Type, Name, Reason, IsDir fields
+  - Separates pure traversal logic from TUI concerns
+
+- **WorkspaceNavigator (`filer/workspace.go`) - Added 2026-01-13**:
+  - `type WorkspaceNavigator struct` - Adapter implementing Navigator for Workspace
+  - `NewWorkspaceNavigator(ws *Workspace)` - Creates adapter
+  - Bridges TreeWalker to real filesystem operations via Workspace methods
+
 - **Command Wrappers (`app/goful.go`)**:
   - Add `func (g *Goful) StartDiffSearch()`:
     - Record initial directories, set active and searching state.
-    - Call engine to find first difference.
-    - Move cursors, update status.
+    - Create WorkspaceNavigator and TreeWalker.
+    - Call `walker.Run()` to find first difference.
+    - Handle Step result: move cursors, update status.
   - Add `func (g *Goful) ContinueDiffSearch()`:
-    - Read cursor filename from active window.
+    - Use `lastDiffName` from state (not cursor position).
     - Set searching state.
-    - Call engine to find next difference after that name.
-    - Handle subdirectory descent if needed.
-    - Move cursors, update status or "No differences found".
+    - Create WorkspaceNavigator and TreeWalker.
+    - Call `walker.Run()` to find next difference.
+    - Handle Step result: move cursors, update status or "all differences found".
   - Add `func (g *Goful) DiffSearchStatus() string` for status callback.
   - Add `func (g *Goful) IsDiffSearchActive() bool` for active callback.
+  - `findNextDiff()` is now a thin wrapper that creates TreeWalker and handles the Step result with TUI concerns (periodic refresh, status messages, resize).
 
 - **Keymap Integration (`main.go`)**:
   - Bind `[` for start diff search, `]` for continue diff search.

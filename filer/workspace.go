@@ -501,3 +501,49 @@ func (w *Workspace) draw() {
 		d.drawWithComparisonIndex(i == w.Focus, i, w.comparisonIndex)
 	}
 }
+
+// WorkspaceNavigator adapts Workspace to the Navigator interface.
+// This allows the TreeWalker to operate on a Workspace while keeping
+// the navigation logic decoupled from TUI concerns.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+type WorkspaceNavigator struct {
+	ws *Workspace
+}
+
+// NewWorkspaceNavigator creates a navigator adapter for the given workspace.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func NewWorkspaceNavigator(ws *Workspace) *WorkspaceNavigator {
+	return &WorkspaceNavigator{ws: ws}
+}
+
+// GetDirs returns the current directories being compared.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (n *WorkspaceNavigator) GetDirs() []*Directory {
+	return n.ws.Dirs
+}
+
+// ChdirAll changes to the named subdirectory in all directories.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (n *WorkspaceNavigator) ChdirAll(name string) {
+	n.ws.ChdirAll(name)
+}
+
+// ChdirParentAll changes to parent directory in all directories.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (n *WorkspaceNavigator) ChdirParentAll() {
+	for _, d := range n.ws.Dirs {
+		d.Chdir("..")
+	}
+}
+
+// CurrentPath returns the path of the first directory.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (n *WorkspaceNavigator) CurrentPath() string {
+	return n.ws.Dir().Path
+}
+
+// RebuildComparisonIndex rebuilds the comparison index after directory changes.
+// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+func (n *WorkspaceNavigator) RebuildComparisonIndex() {
+	n.ws.RebuildComparisonIndex()
+}

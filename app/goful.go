@@ -299,10 +299,12 @@ func (g *Goful) ContinueDiffSearch() {
 }
 
 // findNextDiff is the core search loop that finds the next difference.
+// Uses the TreeWalker to handle traversal logic, keeping TUI concerns separate.
 // [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 func (g *Goful) findNextDiff(startAfter string) {
 	ws := g.Workspace()
 	state := ws.DiffSearchState()
+	nav := filer.NewWorkspaceNavigator(ws)
 
 	// Start periodic UI refresh goroutine (updates once per second)
 	// [IMPL:DIFF_SEARCH] Periodic refresh for progress display
@@ -322,157 +324,30 @@ func (g *Goful) findNextDiff(startAfter string) {
 		}
 	}()
 
-	for {
-		// Update current path being searched
-		state.SetCurrentPath(ws.Dir().Path)
+	// Create and run the tree walker
+	walker := filer.NewTreeWalker(nav, state, startAfter)
+	step := walker.Run(func() {
 		state.IncrementFilesChecked()
+		state.SetCurrentPath(nav.CurrentPath())
+	})
 
-		// First, check files for differences
-		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
-		// Architecture: "files first, then dirs" means:
-		// 1. Process ALL files in alphabetical order at this level
-		// 2. Then process ALL directories in alphabetical order at this level
-		// When resuming after a difference, skip the recorded name and continue from the next entry.
-		// If startAfter is a subdirectory name, we've already processed all files at this level,
-		// so skip file check and go straight to subdirectories.
-		subdirNamesForFileCheck := filer.CollectSubdirNames(ws.Dirs)
-		isSubdirName := false
-		for _, subdirName := range subdirNamesForFileCheck {
-			if subdirName == startAfter {
-				isSubdirName = true
-				break
-			}
-		}
-		
-		var result filer.DiffResult
-		if !isSubdirName {
-			// startAfter is a filename or empty - check files first (files first, then dirs)
-			result = filer.FindNextDifference(ws.Dirs, startAfter, true)
-		} else {
-			// startAfter is a subdirectory name - we've already processed all files at this level,
-			// so skip file check (set Found=false to proceed to subdirectory check)
-			result = filer.DiffResult{Found: false}
-		}
-		if result.Found {
-			// Found a file difference - pause search and record result
-			// [IMPL:DIFF_SEARCH] Route status to dedicated diffstatus row, not ephemeral message
-			state.SetLastDiff(result.Name, result.Reason)
-			ws.SetCursorByNameAll(result.Name)
-			diffstatus.SetMessage(fmt.Sprintf("Different: %s - %s", result.Name, result.Reason))
-			return
-		}
-
-		// No file differences, check subdirectories
-		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
-		// Determine subdirStartAfter: if startAfter is a subdirectory name, use it (to skip it and find next).
-		// If startAfter is a filename, check all subdirectories from the beginning (files first, then dirs).
-		subdirStartAfter := ""
-		subdirNames := filer.CollectSubdirNames(ws.Dirs)
-		// Check if startAfter is a subdirectory name
-		for _, subdirName := range subdirNames {
-			if subdirName == startAfter {
-				// startAfter is a subdirectory name - we've already processed all files,
-				// so check subdirectories starting from this one (to skip it and find next)
-				subdirStartAfter = startAfter
-				break
-			}
-		}
-		// If startAfter is not a subdirectory name (it's a filename or empty),
-		// subdirStartAfter remains "" to check all subdirectories from the beginning
-		// Use FindNextSubdirDifference to check ONLY subdirectories (not files)
-		// This ensures subdirectories are checked independently per the "files first, then dirs" requirement
-		subdirResult := filer.FindNextSubdirDifference(ws.Dirs, subdirStartAfter)
-		// Only return if we found a directory difference (not a file)
-		if subdirResult.Found && subdirResult.IsDir {
-			// Found a subdir that differs (missing in some window)
-			// [IMPL:DIFF_SEARCH] Route status to dedicated diffstatus row, not ephemeral message
-			state.SetLastDiff(subdirResult.Name+"/", subdirResult.Reason)
-			ws.SetCursorByNameAll(subdirResult.Name)
-			diffstatus.SetMessage(fmt.Sprintf("Different: %s/ - %s", subdirResult.Name, subdirResult.Reason))
-			return
-		}
-
-		// No differences at this level, try to descend into a subdir that exists in all
-		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
-		// CRITICAL FIX: When descending into subdirectories, we must use a subdirectory-specific
-		// startAfter position, not the file startAfter. If startAfter is a filename, we should
-		// check all subdirectories from the beginning. If startAfter is a subdirectory name,
-		// we should start from that subdirectory.
-		subdirStartAfterForDescent := ""
-		// Check if startAfter is a subdirectory name
-		subdirNamesForDescent := filer.CollectSubdirNames(ws.Dirs)
-		for _, subdirName := range subdirNamesForDescent {
-			if subdirName == startAfter {
-				subdirStartAfterForDescent = startAfter
-				break
-			}
-		}
-		// Use subdirectory-specific startAfter for descent
-		subdir, found := filer.FindNextSubdirInAll(ws.Dirs, subdirStartAfterForDescent)
-		if found {
-			// Descend into this subdir in all windows
-			ws.ChdirAll(subdir)
-			startAfter = "" // Start from beginning in new directory
-			continue
-		}
-
-		// No more subdirs to descend into
-		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
-		// Check if we're back at initial dirs (root level)
-		// If we are, the search is complete - all differences have been found
-		if state.AtInitialDirs(ws.Dirs) {
-			// We've completed the search - all differences have been found
-			// [IMPL:DIFF_SEARCH] Use ephemeral message for completion since diffstatus row disappears
-			ws.ClearDiffSearch()
-			diffstatus.ClearMessage()
-			message.Info("Difference search complete - all differences found")
-			// Resize to reclaim space from diff status line
-			width, height := widget.Size()
-			g.Resize(0, 0, width, height)
-			return
-		}
-
-		// Go back to parent in all directories and continue
-		childDirName := ws.Dir().Base() // Save the child directory name BEFORE going up
-		for _, d := range ws.Dirs {
-			d.Chdir("..")
-		}
-		ws.RebuildComparisonIndex()
-
-		// Continue searching from the child directory we just exited
-		// so FindNextSubdirInAll can find the next sibling
-		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
-		// After ascending, startAfter is set to the child directory name.
-		// When checking files, we should check all files from the beginning (files first, then dirs).
-		// When checking subdirectories, we should start from childDirName to find the next sibling.
-		startAfter = childDirName
-
-		// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
-		// After ascending, if we're at root level, check if there are any more subdirectories
-		// after the one we just ascended from. If not, the search is complete.
-		if state.AtInitialDirs(ws.Dirs) {
-			// We're at root level after ascending
-			// Check if there are any more subdirectories after childDirName
-			subdirNamesAtRoot := filer.CollectSubdirNames(ws.Dirs)
-			hasMoreSubdirs := false
-			for _, subdirName := range subdirNamesAtRoot {
-				if subdirName > childDirName {
-					hasMoreSubdirs = true
-					break
-				}
-			}
-			if !hasMoreSubdirs {
-				// No more subdirectories at root level - search is complete
-				ws.ClearDiffSearch()
-				diffstatus.ClearMessage()
-				message.Info("Difference search complete - all differences found")
-				width, height := widget.Size()
-				g.Resize(0, 0, width, height)
-				return
-			}
-			// Continue search from where we left off at this level
-			continue
-		}
+	// Handle the result
+	switch step.Type {
+	case filer.StepFoundDiff:
+		// Found a difference - pause search and record result
+		// [IMPL:DIFF_SEARCH] Route status to dedicated diffstatus row, not ephemeral message
+		state.SetLastDiff(step.Name, step.Reason)
+		ws.SetCursorByNameAll(strings.TrimSuffix(step.Name, "/"))
+		diffstatus.SetMessage(fmt.Sprintf("Different: %s - %s", step.Name, step.Reason))
+	case filer.StepComplete:
+		// Search complete - all differences have been found
+		// [IMPL:DIFF_SEARCH] Use ephemeral message for completion since diffstatus row disappears
+		ws.ClearDiffSearch()
+		diffstatus.ClearMessage()
+		message.Info("Difference search complete - all differences found")
+		// Resize to reclaim space from diff status line
+		width, height := widget.Size()
+		g.Resize(0, 0, width, height)
 	}
 }
 

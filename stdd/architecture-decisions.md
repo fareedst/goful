@@ -818,9 +818,41 @@ func formatDirs(paths []string, quote bool) string {
 **Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
 - `DiffSearchState` (Module 1 in `filer/diffsearch.go`): Pure struct holding initial directories, active state, and status fields (LastDiffName, LastDiffReason, CurrentPath, FilesChecked, Searching). Methods for starting, checking active, clearing, and updating status.
 - `DiffSearchEngine` (Module 2 in `filer/diffsearch.go`): Pure functions for collecting file names, detecting differences, and finding the next different entry. No side effects, independently testable.
-- `DiffSearchNavigation` (Module 3 in `filer/workspace.go`): Workspace methods that move cursors to a named entry across all directories.
-- `DiffSearchCommands` (Module 4 in `app/goful.go`): Command wrappers that wire state, engine, and navigation together. Includes periodic UI refresh via goroutine/ticker.
-- `DiffStatusDisplay` (Module 5 in `diffstatus/diffstatus.go`): Dedicated status line display that persists while diff search is active. Shows current search progress or last found difference. Integrated into app draw cycle and resize handling.
+- `Navigator` (Module 3 in `filer/diffsearch.go`): Interface abstracting directory operations for tree traversal (`GetDirs`, `ChdirAll`, `ChdirParentAll`, `CurrentPath`, `RebuildComparisonIndex`). Allows TreeWalker to be tested with mock implementations.
+- `TreeWalker` (Module 4 in `filer/diffsearch.go`): Pure traversal algorithm that uses Navigator interface. `Run(progressFn)` method executes the traversal loop and returns a `Step` result (`StepFoundDiff` or `StepComplete`). Independently testable via MockNavigator.
+- `WorkspaceNavigator` (Module 5 in `filer/workspace.go`): Adapter implementing Navigator interface for Workspace. Bridges TreeWalker to real filesystem operations.
+- `DiffSearchNavigation` (Module 6 in `filer/workspace.go`): Workspace methods that move cursors to a named entry across all directories.
+- `DiffSearchCommands` (Module 7 in `app/goful.go`): Command wrappers that wire state, engine, and navigation together. Creates WorkspaceNavigator, TreeWalker, handles Step result, and manages TUI concerns (periodic UI refresh via goroutine/ticker, status messages, resize).
+- `DiffStatusDisplay` (Module 8 in `diffstatus/diffstatus.go`): Dedicated status line display that persists while diff search is active. Shows current search progress or last found difference. Integrated into app draw cycle and resize handling.
+
+**Navigator Interface Pattern:**
+The Navigator interface decouples the tree traversal algorithm from TUI concerns:
+```go
+type Navigator interface {
+    GetDirs() []*Directory           // Current directories being compared
+    ChdirAll(name string)            // Descend into subdirectory
+    ChdirParentAll()                 // Ascend to parent
+    CurrentPath() string             // Path of first directory
+    RebuildComparisonIndex()         // Refresh after directory changes
+}
+
+type StepType int
+const (
+    StepFoundDiff StepType = iota    // Difference found, search pauses
+    StepComplete                      // Search complete
+)
+
+type Step struct {
+    Type   StepType
+    Name   string   // Difference name (with "/" suffix for directories)
+    Reason string   // Why it's different
+    IsDir  bool     // Whether it's a directory
+}
+```
+This pattern enables:
+- Unit testing with MockNavigator (no real filesystem needed for algorithm tests)
+- Clear separation between traversal logic and TUI side effects
+- Easy addition of new Navigator implementations (e.g., for remote filesystems)
 
 **Algorithm Sketch:**
 ```text
