@@ -3,7 +3,7 @@
 **Cross-References**: [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]  
 **Status**: Active  
 **Created**: 2026-01-17  
-**Last Updated**: 2026-01-17
+**Last Updated**: 2026-01-18
 
 ---
 
@@ -69,24 +69,48 @@ func (g *Goful) handleDoubleClickDir(dir *filer.Directory) {
 
 ### Add `handleDoubleClickFile` for file opening
 
+When Linked mode is enabled, the handler collects all matching file paths from all windows and opens each one with a **separate command**. This ensures each file is opened independently, which provides better compatibility across different opener applications.
+
 ```go
 // handleDoubleClickFile opens a file, and opens same-named files in all windows when linked.
+// When linked mode is ON, opens same-named files from ALL windows where they exist.
 // [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
 func (g *Goful) handleDoubleClickFile(dir *filer.Directory) {
     filename := dir.File().Name()
-    
+
     if g.IsLinkedNav() {
-        // Move cursor to same-named file in all windows
+        // Collect all file paths from windows that have the same-named file
+        var filePaths []string
         for _, d := range g.Workspace().Dirs {
-            if d.FindFileByName(filename) != nil {
+            if found := d.FindFileByName(filename); found != nil {
                 d.SetCursorByName(filename)
+                filePaths = append(filePaths, found.Path())
             }
         }
+
+        // Open each matching file with a separate command
+        opener := "xdg-open"  // Linux
+        switch runtime.GOOS {
+        case "windows":
+            opener = "explorer"
+        case "darwin":
+            opener = "open"
+        }
+        for _, path := range filePaths {
+            g.Spawn(opener + " " + util.Quote(path) + " %&")
+        }
+        return
     }
-    // Trigger open action (uses extmap)
+
+    // Non-linked mode: only open the focused file
     g.Input("C-m")
 }
 ```
+
+**Key design choice**: Using separate commands for each file (one `open` invocation per file) rather than a single command with multiple file arguments. This approach:
+- Ensures consistent behavior across different opener applications
+- Allows each file to be opened by its associated application independently
+- Uses `util.Quote()` for proper shell escaping of paths with special characters
 
 ### Modify `handleLeftClick` to detect double-click
 
@@ -118,6 +142,7 @@ Tests that must reference `[REQ:MOUSE_DOUBLE_CLICK]`:
 |------|--------|-------------------|-------|
 | 2026-01-17 | — | ✅ Pass | 4 tests PASS |
 | 2026-01-17 | — | ✅ Pass | verified 1158 token references across 74 files |
+| 2026-01-18 | — | ✅ Pass | Bug fix: Linked mode file open now opens all matching files via single command |
 
 ## Related Decisions
 

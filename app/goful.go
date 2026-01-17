@@ -3,6 +3,7 @@ package app
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/anmitsu/goful/menu"
 	"github.com/anmitsu/goful/message"
 	"github.com/anmitsu/goful/progress"
+	"github.com/anmitsu/goful/util"
 	"github.com/anmitsu/goful/widget"
 	"github.com/gdamore/tcell/v2"
 )
@@ -316,20 +318,37 @@ func (g *Goful) handleDoubleClickDir(dir *filer.Directory) {
 }
 
 // handleDoubleClickFile opens a file, and opens same-named files in all windows when linked.
-// When linked mode is ON, moves cursor to same-named file in all windows before triggering open.
+// When linked mode is ON, opens same-named files from ALL windows where they exist.
 // [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
 func (g *Goful) handleDoubleClickFile(dir *filer.Directory) {
 	filename := dir.File().Name()
 
 	if g.IsLinkedNav() {
-		// Move cursor to same-named file in all windows
+		// Collect all file paths from windows that have the same-named file
+		var filePaths []string
 		for _, d := range g.Workspace().Dirs {
-			if d.FindFileByName(filename) != nil {
+			if found := d.FindFileByName(filename); found != nil {
 				d.SetCursorByName(filename)
+				filePaths = append(filePaths, found.Path())
 			}
 		}
+
+		// Open each matching file with a separate command
+		// [IMPL:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK] Open all matching files
+		opener := "xdg-open"
+		switch runtime.GOOS {
+		case "windows":
+			opener = "explorer"
+		case "darwin":
+			opener = "open"
+		}
+		for _, path := range filePaths {
+			g.Spawn(opener + " " + util.Quote(path) + " %&")
+		}
+		return
 	}
-	// Trigger open action (uses extmap via C-m or o key)
+
+	// Non-linked mode: only open the focused file
 	g.Input("C-m")
 }
 

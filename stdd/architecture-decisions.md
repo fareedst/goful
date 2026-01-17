@@ -1073,14 +1073,14 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
   - If Linked mode is ON: Call `ChdirAllToSubdirNoRebuild()` for other windows, then `EnterDir()` for the focused window, then `RebuildComparisonIndex()`.
   - If Linked mode is OFF: Call only `EnterDir()` for the clicked directory.
 - **File Double-Click Handler**: When double-clicking a file:
-  - If Linked mode is ON: For each window, find same-named file and trigger open action.
-  - If Linked mode is OFF: Trigger open action only for the clicked file.
+  - If Linked mode is ON: Collect all same-named file paths from all windows and open each with a **separate command** (one `open` invocation per file). This ensures consistent behavior across different opener applications.
+  - If Linked mode is OFF: Trigger open action only for the clicked file via the keymap.
 - **Integration with `handleLeftClick`**: After single-click selection, check `isDoubleClick()` and dispatch to appropriate handler.
 
 **Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
 - `DoubleClickDetector` (Module 1 in `app/goful.go`) – Pure timing/position logic, independently testable with mock time.
 - `DirectoryDoubleClickHandler` (Module 2 in `app/goful.go`) – Reuses linked navigation pattern, calls workspace and directory methods.
-- `FileDoubleClickHandler` (Module 3 in `app/goful.go`) – Iterates windows when Linked, triggers open action via `Input("C-m")` or equivalent.
+- `FileDoubleClickHandler` (Module 3 in `app/goful.go`) – Iterates windows when Linked, collects matching file paths, and opens each with a separate platform-appropriate command (xdg-open/open/explorer).
 
 **Alternatives Considered:**
 - **Separate double-click event**: tcell does not provide built-in double-click events, so manual detection is required.

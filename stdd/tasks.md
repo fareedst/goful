@@ -843,5 +843,6 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1158 token references across 74 files.`
 - Implementation in `app/goful.go`: `isDoubleClick()`, `handleDoubleClickDir()`, `handleDoubleClickFile()`
 - Unit tests in `app/mouse_test.go`: `TestIsDoubleClick_REQ_MOUSE_DOUBLE_CLICK`, `TestDoubleClickThreshold_REQ_MOUSE_DOUBLE_CLICK`, `TestIsDoubleClickUpdatesState_REQ_MOUSE_DOUBLE_CLICK`, `TestDoubleClickSequence_REQ_MOUSE_DOUBLE_CLICK`
+- Bug fix (2026-01-18): Linked mode file double-click now opens ALL matching files from all windows, executing the open command once for each same-named file. Root cause was that `g.Input("C-m")` only expanded `%f` macro to the focused file path.
 
 **Priority Rationale**: P1 because double-click completes the mouse navigation experience but keyboard navigation remains fully functional without it.
