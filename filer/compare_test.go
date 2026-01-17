@@ -591,3 +591,70 @@ func TestUpdateDigestStates_MixedSizesDifferentContent_REQ_FILE_COMPARISON_COLOR
 		t.Errorf("dir3 expected DigestNA, got %v", state3.DigestState)
 	}
 }
+
+// TestSharedFilenames_NilIndex_REQ_TOOLBAR_COMPARE_BUTTON tests SharedFilenames with nil index.
+// [REQ:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON]
+func TestSharedFilenames_NilIndex_REQ_TOOLBAR_COMPARE_BUTTON(t *testing.T) {
+	var idx *ComparisonIndex = nil
+	names := idx.SharedFilenames()
+	if names != nil {
+		t.Errorf("expected nil for nil index, got %v", names)
+	}
+}
+
+// TestSharedFilenames_EmptyIndex_REQ_TOOLBAR_COMPARE_BUTTON tests SharedFilenames with empty index.
+// [REQ:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON]
+func TestSharedFilenames_EmptyIndex_REQ_TOOLBAR_COMPARE_BUTTON(t *testing.T) {
+	idx := NewComparisonIndex()
+	names := idx.SharedFilenames()
+	if len(names) != 0 {
+		t.Errorf("expected empty slice for empty index, got %v", names)
+	}
+}
+
+// TestSharedFilenames_WithFiles_REQ_TOOLBAR_COMPARE_BUTTON tests SharedFilenames returns shared filenames.
+// [REQ:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON]
+func TestSharedFilenames_WithFiles_REQ_TOOLBAR_COMPARE_BUTTON(t *testing.T) {
+	now := time.Now()
+
+	// Create directories with shared and unique files
+	dir1 := mockDirectory(
+		mockFileStat("shared1.txt", 100, now),
+		mockFileStat("shared2.txt", 200, now),
+		mockFileStat("unique1.txt", 300, now),
+	)
+	dir2 := mockDirectory(
+		mockFileStat("shared1.txt", 100, now),
+		mockFileStat("shared2.txt", 200, now),
+		mockFileStat("unique2.txt", 400, now),
+	)
+
+	dirs := []*Directory{dir1, dir2}
+	idx := BuildComparisonIndex(dirs)
+
+	names := idx.SharedFilenames()
+
+	// Should have 2 shared filenames (shared1.txt and shared2.txt)
+	if len(names) != 2 {
+		t.Errorf("expected 2 shared filenames, got %d: %v", len(names), names)
+	}
+
+	// Check that both shared files are in the result
+	nameSet := make(map[string]bool)
+	for _, name := range names {
+		nameSet[name] = true
+	}
+
+	if !nameSet["shared1.txt"] {
+		t.Error("expected shared1.txt in shared filenames")
+	}
+	if !nameSet["shared2.txt"] {
+		t.Error("expected shared2.txt in shared filenames")
+	}
+	if nameSet["unique1.txt"] {
+		t.Error("unique1.txt should not be in shared filenames")
+	}
+	if nameSet["unique2.txt"] {
+		t.Error("unique2.txt should not be in shared filenames")
+	}
+}

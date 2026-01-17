@@ -235,6 +235,21 @@ func (idx *ComparisonIndex) Clear() {
 	idx.cache = make(map[string]map[int]*CompareState)
 }
 
+// SharedFilenames returns all filenames that appear in multiple directories.
+// [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON]
+func (idx *ComparisonIndex) SharedFilenames() []string {
+	if idx == nil {
+		return nil
+	}
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+	names := make([]string, 0, len(idx.cache))
+	for name := range idx.cache {
+		names = append(names, name)
+	}
+	return names
+}
+
 // CalculateFileDigest computes the xxHash64 digest of a file using streaming.
 // [IMPL:DIGEST_COMPARISON] [ARCH:FILE_COMPARISON_ENGINE] [REQ:FILE_COMPARISON_COLORS]
 func CalculateFileDigest(path string) (uint64, error) {

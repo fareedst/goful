@@ -1115,9 +1115,9 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 **Cross-References**: [REQ:MOUSE_CROSS_WINDOW_SYNC], [IMPL:MOUSE_CROSS_WINDOW_SYNC], [REQ:MOUSE_FILE_SELECT], [ARCH:MOUSE_EVENT_ROUTING]
 
-## 41. Toolbar Layout [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE]
+## 41. Toolbar Layout [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE] [REQ:TOOLBAR_COMPARE_BUTTON]
 
-### Decision: Integrate a clickable toolbar into the existing filer header row with parent navigation and linked mode toggle buttons.
+### Decision: Integrate a clickable toolbar into the existing filer header row with parent navigation, linked mode toggle, and compare digest buttons.
 **Rationale:**
 - Mouse-first users need accessible controls for common operations without relying on keyboard shortcuts.
 - The header row has available space at the left edge before the workspace tabs, minimizing UI disruption.
@@ -1129,12 +1129,14 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 - **Button Rendering** (`filer/filer.go`): Extend `drawHeader()` to render toolbar buttons at x=0 before the workspace tabs:
   - `[^]` - Parent navigation button (always reverse style)
   - `[L]` - Linked mode toggle (reverse style when ON, normal when OFF)
+  - `[=]` - Compare digest button (normal style, action button)
   Track each button's screen bounds (x1, y, x2) for hit-testing.
 - **Toolbar Hit-Testing** (`filer/filer.go`): `ToolbarButtonAt(x, y int) string` checks if coordinates fall within any toolbar button bounds. Returns the button identifier (e.g., `"parent"`, `"linked"`) or empty string.
 - **Button Invocation** (`filer/filer.go`): `InvokeToolbarButton(name string) bool` dispatches to the appropriate callback based on button identifier.
 - **Mouse Dispatch Extension** (`app/goful.go`): `handleLeftClick()` checks toolbar buttons before directory hit-testing.
 - **Parent Navigation Action**: Invokes `linkedParentNav` logic respecting Linked mode.
 - **Linked Toggle Action**: Invokes `ToggleLinkedNav()` and displays confirmation message.
+- **Compare Digest Action**: Iterates all shared filenames via `SharedFilenames()` and calls `CalculateDigestForFile()` for each, displaying a summary message.
 - **Indicator Replacement**: The conditional `[LINKED]` indicator is removed; the `[L]` button serves both display and toggle purposes.
 
 **Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
@@ -1149,11 +1151,12 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 - **Keep separate `[LINKED]` indicator**: Rejected; the toggle button provides same visibility with added interactivity.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
-- `filer/filer.go` includes `[IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT]` comments.
+- `filer/filer.go` includes `[IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_LINKED_TOGGLE] [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT]` comments.
+- `filer/compare.go` includes `[IMPL:TOOLBAR_COMPARE_BUTTON]` for `SharedFilenames()`.
 - `app/goful.go` includes same tokens for dispatch logic.
-- Tests reference `[REQ:TOOLBAR_PARENT_BUTTON]` and `[REQ:TOOLBAR_LINKED_TOGGLE]` in names/comments.
+- Tests reference `[REQ:TOOLBAR_PARENT_BUTTON]`, `[REQ:TOOLBAR_LINKED_TOGGLE]`, and `[REQ:TOOLBAR_COMPARE_BUTTON]` in names/comments.
 
-**Cross-References**: [REQ:TOOLBAR_PARENT_BUTTON], [IMPL:TOOLBAR_PARENT_BUTTON], [REQ:TOOLBAR_LINKED_TOGGLE], [IMPL:TOOLBAR_LINKED_TOGGLE], [REQ:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
+**Cross-References**: [REQ:TOOLBAR_PARENT_BUTTON], [IMPL:TOOLBAR_PARENT_BUTTON], [REQ:TOOLBAR_LINKED_TOGGLE], [IMPL:TOOLBAR_LINKED_TOGGLE], [REQ:TOOLBAR_COMPARE_BUTTON], [IMPL:TOOLBAR_COMPARE_BUTTON], [REQ:LINKED_NAVIGATION], [REQ:FILE_COMPARISON_COLORS], [REQ:MODULE_VALIDATION]
 
 ## 37. Sync Mode [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
 

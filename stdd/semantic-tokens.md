@@ -140,6 +140,7 @@ When referencing other tokens:
 - `[REQ:MOUSE_CROSS_WINDOW_SYNC]` - Cross-window cursor synchronization on mouse click
 - `[REQ:TOOLBAR_PARENT_BUTTON]` - Clickable parent navigation button in filer header toolbar
 - `[REQ:TOOLBAR_LINKED_TOGGLE]` - Clickable linked mode toggle button in filer header toolbar
+- `[REQ:TOOLBAR_COMPARE_BUTTON]` - Clickable comparison button in filer header toolbar for batch digest calculation
 - `[REQ:BATCH_DIFF_REPORT]` - Batch diff report CLI command for non-interactive directory comparison
 - Add your requirements tokens here
 
@@ -250,6 +251,7 @@ When referencing other tokens:
 - `[IMPL:EXTMAP_API_SAFETY]` - Nil-map safe AddExtmap for third-party integrations [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 - `[IMPL:TOOLBAR_PARENT_BUTTON]` - Toolbar parent button rendering, hit-testing, and dispatch [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
 - `[IMPL:TOOLBAR_LINKED_TOGGLE]` - Toolbar linked toggle button rendering and dispatch [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE]
+- `[IMPL:TOOLBAR_COMPARE_BUTTON]` - Toolbar compare button rendering, hit-testing, and dispatch [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON]
 - `[IMPL:BATCH_DIFF_REPORT]` - Batch diff report CLI implementation with headless navigator [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
 - Add your implementation tokens here
 

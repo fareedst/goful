@@ -1038,6 +1038,37 @@ Each requirement includes:
 - Conditional `[LINKED]` indicator removed from header; replaced by always-visible `[L]` toggle button.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1360 token references across 78 files.`
 
+### [REQ:TOOLBAR_COMPARE_BUTTON] Toolbar Compare Digest Button
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must provide a clickable `[=]` button in the filer header toolbar (next to the linked `[L]` button) that triggers digest comparison for all files appearing in multiple windows. Clicking the button calculates xxHash64 digests for every filename that exists in more than one directory pane, equivalent to pressing `=` on each shared file individually.
+- **Rationale**: Users comparing directories need a single-click way to calculate digests for all shared files without manually pressing `=` on each file. This improves workflow efficiency for backup verification and duplicate detection tasks where content verification is needed across many files.
+- **Satisfaction Criteria**:
+  - A clickable `[=]` button appears in the filer header immediately after the `[L]` linked toggle button.
+  - The button uses normal style (not reverse) since it triggers an action rather than displaying state.
+  - Left-clicking the button calculates digests for all files that appear in 2+ directory panes.
+  - A summary message is displayed after completion (e.g., "calculated digests for N files across M filenames").
+  - The button does not interfere with other header elements.
+- **Validation Criteria**:
+  - Unit tests cover the compare button bounds calculation and hit-testing.
+  - Unit tests verify compare button invocation triggers the callback.
+  - Unit tests verify SharedFilenames() method returns correct filenames.
+  - Manual verification confirms button click calculates digests and displays message.
+  - Token validation confirms `[REQ:TOOLBAR_COMPARE_BUTTON]`, `[ARCH:TOOLBAR_LAYOUT]`, and `[IMPL:TOOLBAR_COMPARE_BUTTON]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Toolbar Layout [ARCH:TOOLBAR_LAYOUT]
+- **Implementation**: See `implementation-decisions.md` § Toolbar Compare Button Implementation [IMPL:TOOLBAR_COMPARE_BUTTON]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- Unit tests in `filer/toolbar_test.go` (`TestToolbarCompareButtonHit_REQ_TOOLBAR_COMPARE_BUTTON`, `TestInvokeToolbarCompareButton_REQ_TOOLBAR_COMPARE_BUTTON`, `TestInvokeToolbarCompareButtonWithNilCallback_REQ_TOOLBAR_COMPARE_BUTTON`) covering hit-testing and callback invocation.
+- Unit tests in `filer/compare_test.go` (`TestSharedFilenames_NilIndex_REQ_TOOLBAR_COMPARE_BUTTON`, `TestSharedFilenames_EmptyIndex_REQ_TOOLBAR_COMPARE_BUTTON`, `TestSharedFilenames_WithFiles_REQ_TOOLBAR_COMPARE_BUTTON`) covering SharedFilenames() method.
+- Implementation in `filer/filer.go`: `drawHeader()` renders `[=]` button, stores bounds, `SetToolbarCompareDigestFn()` sets callback, `InvokeToolbarButton()` handles "compare" case.
+- Implementation in `filer/compare.go`: `SharedFilenames()` method returns all filenames in the comparison index.
+- Implementation in `main.go`: Callback wiring iterates shared files and calls `CalculateDigestForFile()` for each, displays summary message.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1468 token references across 78 files.`
+
 ### [REQ:IDENTIFIER] Requirement Name
 
 **Priority: P0 (Critical) | P1 (Important) | P2 (Nice-to-have) | P3 (Future)**

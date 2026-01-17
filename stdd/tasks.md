@@ -1113,3 +1113,39 @@ The following tasks were identified during an STDD documentation review to addre
 - CLI: `--diff-report` and `--quiet` flags, `runBatchDiffReport()` in `main.go`
 
 **Priority Rationale**: P1 because batch directory comparison enables automation and scripting workflows but does not block interactive usage.
+
+## P1: Toolbar Compare Digest Button [REQ:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON]
+
+**Status**: ✅ Complete
+
+**Description**: Add a clickable `[=]` button to the toolbar that triggers digest comparison for all files appearing in multiple windows, providing single-click batch digest calculation.
+
+**Dependencies**: [REQ:TOOLBAR_LINKED_TOGGLE] (complete), [REQ:FILE_COMPARISON_COLORS] (complete)
+
+**Subtasks**:
+- [x] Add requirement/architecture/implementation docs and register tokens
+- [x] Add SharedFilenames() method to ComparisonIndex
+- [x] Add toolbarCompareDigestFn callback and setter
+- [x] Extend InvokeToolbarButton() for "compare" case
+- [x] Render [=] button in drawHeader() after [L]
+- [x] Wire callback in main.go to iterate and calculate digests
+- [x] Add unit tests for hit-testing and invocation
+- [x] Token audit & validation [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] [=] button appears after [L] in header row
+- [x] Clicking button calculates digests for all shared files
+- [x] Summary message displays file count
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] [PROC:TOKEN_AUDIT] and [PROC:TOKEN_VALIDATION] outcomes logged
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./filer/... -run "REQ_TOOLBAR_COMPARE_BUTTON"` - 6 tests pass (darwin/arm64, Go 1.24.3)
+- `go test ./...` - all tests pass
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1468 token references across 78 files.`
+- Implementation: `SharedFilenames()` in `filer/compare.go`, `SetToolbarCompareDigestFn()` and `InvokeToolbarButton()` in `filer/filer.go`, callback wiring in `main.go`
+- Unit tests: `TestToolbarCompareButtonHit_REQ_TOOLBAR_COMPARE_BUTTON`, `TestInvokeToolbarCompareButton_REQ_TOOLBAR_COMPARE_BUTTON`, `TestSharedFilenames_*_REQ_TOOLBAR_COMPARE_BUTTON` in `filer/toolbar_test.go` and `filer/compare_test.go`
+
+**Priority Rationale**: P1 because batch digest comparison significantly improves file verification workflows but does not block core navigation.

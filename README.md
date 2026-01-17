@@ -96,7 +96,7 @@ key                  | function
 
 For more see [main.go](main.go)
 
-### Mouse Support `[REQ:MOUSE_FILE_SELECT]` `[REQ:TOOLBAR_PARENT_BUTTON]` `[REQ:TOOLBAR_LINKED_TOGGLE]`
+### Mouse Support `[REQ:MOUSE_FILE_SELECT]` `[REQ:TOOLBAR_PARENT_BUTTON]` `[REQ:TOOLBAR_LINKED_TOGGLE]` `[REQ:TOOLBAR_COMPARE_BUTTON]`
 
 Goful provides mouse support for common navigation and file operations, making it accessible to users who prefer graphical interaction alongside keyboard shortcuts.
 
@@ -108,6 +108,7 @@ The header row displays clickable toolbar buttons at the left edge:
 |--------|----------|----------|
 | `[^]` | Parent directory | Navigate to parent directory. Respects linked mode: when ON, all windows navigate to their respective parents; when OFF, only the focused window navigates. |
 | `[L]` | Linked mode toggle | Toggle linked navigation mode. The button style indicates current state: **highlighted** (reverse) when ON, normal when OFF. Click to toggle and see confirmation message. |
+| `[=]` | Compare all digests | Calculate xxHash64 digests for **all** files that appear in multiple panes. Equivalent to pressing `=` on every shared filename. Displays a summary message with the count of files processed. |
 
 **File Selection**
 

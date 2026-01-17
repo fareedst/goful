@@ -188,3 +188,79 @@ func TestInvokeToolbarLinkedButtonWithNilCallback_REQ_TOOLBAR_LINKED_TOGGLE(t *t
 		t.Errorf("InvokeToolbarButton(\"linked\") with nil callback = true, want false")
 	}
 }
+
+// TestToolbarCompareButtonHit_REQ_TOOLBAR_COMPARE_BUTTON tests hit-testing for the compare button.
+// [REQ:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON]
+func TestToolbarCompareButtonHit_REQ_TOOLBAR_COMPARE_BUTTON(t *testing.T) {
+	t.Cleanup(resetToolbarButtonsForTest)
+
+	// Setup: Register parent, linked, and compare buttons as they would appear in the header
+	// Layout: [^] [L] [=] ...
+	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 2}   // "[^]"
+	toolbarButtons["linked"] = toolbarBounds{x1: 4, y: 0, x2: 6}   // "[L]"
+	toolbarButtons["compare"] = toolbarBounds{x1: 8, y: 0, x2: 10} // "[=]"
+
+	tests := []struct {
+		name     string
+		x, y     int
+		expected string
+	}{
+		{"click on parent button", 1, 0, "parent"},
+		{"click on linked button", 5, 0, "linked"},
+		{"click on compare button left edge", 8, 0, "compare"},
+		{"click on compare button middle", 9, 0, "compare"},
+		{"click on compare button right edge", 10, 0, "compare"},
+		{"click between linked and compare", 7, 0, ""},
+		{"click after compare button", 11, 0, ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := ToolbarButtonAt(tc.x, tc.y)
+			if result != tc.expected {
+				t.Errorf("ToolbarButtonAt(%d, %d) = %q, want %q", tc.x, tc.y, result, tc.expected)
+			}
+		})
+	}
+}
+
+// TestInvokeToolbarCompareButton_REQ_TOOLBAR_COMPARE_BUTTON tests that compare button invocation triggers callback.
+// [REQ:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON]
+func TestInvokeToolbarCompareButton_REQ_TOOLBAR_COMPARE_BUTTON(t *testing.T) {
+	// Setup: Track callback invocation
+	callbackCalled := false
+	originalFn := toolbarCompareDigestFn
+	t.Cleanup(func() {
+		toolbarCompareDigestFn = originalFn
+	})
+
+	SetToolbarCompareDigestFn(func() {
+		callbackCalled = true
+	})
+
+	// Test invoking the compare button
+	handled := InvokeToolbarButton("compare")
+	if !handled {
+		t.Errorf("InvokeToolbarButton(\"compare\") = false, want true")
+	}
+	if !callbackCalled {
+		t.Errorf("Compare button callback was not invoked")
+	}
+}
+
+// TestInvokeToolbarCompareButtonWithNilCallback_REQ_TOOLBAR_COMPARE_BUTTON tests behavior when no callback is set.
+// [REQ:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON]
+func TestInvokeToolbarCompareButtonWithNilCallback_REQ_TOOLBAR_COMPARE_BUTTON(t *testing.T) {
+	// Setup: Clear the callback
+	originalFn := toolbarCompareDigestFn
+	t.Cleanup(func() {
+		toolbarCompareDigestFn = originalFn
+	})
+	toolbarCompareDigestFn = nil
+
+	// Should return false when no callback is set
+	handled := InvokeToolbarButton("compare")
+	if handled {
+		t.Errorf("InvokeToolbarButton(\"compare\") with nil callback = true, want false")
+	}
+}

@@ -74,6 +74,16 @@ func SetToolbarLinkedToggleFn(fn func()) {
 	toolbarLinkedToggleFn = fn
 }
 
+// toolbarCompareDigestFn is a callback invoked when the compare digest button is clicked.
+// [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON]
+var toolbarCompareDigestFn func()
+
+// SetToolbarCompareDigestFn sets the callback for the compare digest button.
+// [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON]
+func SetToolbarCompareDigestFn(fn func()) {
+	toolbarCompareDigestFn = fn
+}
+
 // ToolbarButtonAt returns the toolbar button identifier at coordinates (x, y).
 // Returns empty string if no button is at that position.
 // [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
@@ -88,7 +98,7 @@ func ToolbarButtonAt(x, y int) string {
 
 // InvokeToolbarButton invokes the action for the named toolbar button.
 // Returns true if the button was handled, false if unknown.
-// [IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE]
+// [IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_LINKED_TOGGLE] [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE] [REQ:TOOLBAR_COMPARE_BUTTON]
 func InvokeToolbarButton(name string) bool {
 	switch name {
 	case "parent":
@@ -100,6 +110,12 @@ func InvokeToolbarButton(name string) bool {
 		// [IMPL:TOOLBAR_LINKED_TOGGLE] Toggle linked navigation mode
 		if toolbarLinkedToggleFn != nil {
 			toolbarLinkedToggleFn()
+			return true
+		}
+	case "compare":
+		// [IMPL:TOOLBAR_COMPARE_BUTTON] Calculate digests for all shared files
+		if toolbarCompareDigestFn != nil {
+			toolbarCompareDigestFn()
 			return true
 		}
 	}
@@ -362,6 +378,15 @@ func (f *Filer) drawHeader() {
 	x = widget.SetCells(x, y, linkedBtn, linkedStyle)
 	linkedX2 := x - 1
 	toolbarButtons["linked"] = toolbarBounds{x1: linkedX1, y: y, x2: linkedX2}
+	x = widget.SetCells(x, y, " ", look.Default())
+
+	// [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON]
+	// Draw compare digest button - normal style (action button, not state toggle)
+	compareBtn := "[=]"
+	compareX1 := x
+	x = widget.SetCells(x, y, compareBtn, look.Default())
+	compareX2 := x - 1
+	toolbarButtons["compare"] = toolbarBounds{x1: compareX1, y: y, x2: compareX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
 	for i, ws := range f.Workspaces {

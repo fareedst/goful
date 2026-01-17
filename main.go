@@ -154,6 +154,27 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		message.Infof("[REQ:LINKED_NAVIGATION] linked navigation %s", state)
 	})
 
+	// [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON]
+	// Wire toolbar compare button to calculate digests for all shared files
+	filer.SetToolbarCompareDigestFn(func() {
+		idx := g.Workspace().ComparisonIndex()
+		if idx == nil {
+			message.Info("[REQ:FILE_COMPARISON_COLORS] no files to compare (single directory or comparison disabled)")
+			return
+		}
+		names := idx.SharedFilenames()
+		if len(names) == 0 {
+			message.Info("[REQ:FILE_COMPARISON_COLORS] no shared filenames across directories")
+			return
+		}
+		totalFiles := 0
+		for _, name := range names {
+			count := g.Workspace().CalculateDigestForFile(name)
+			totalFiles += count
+		}
+		message.Infof("[REQ:FILE_COMPARISON_COLORS] calculated digests for %d files across %d shared filenames", totalFiles, len(names))
+	})
+
 	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 	// Wire diff search status indicator to filer header
 	filer.SetDiffSearchStatusFn(g.DiffSearchStatus)
