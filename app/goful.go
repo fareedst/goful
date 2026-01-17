@@ -362,8 +362,9 @@ func (g *Goful) isDoubleClick(x, y int) bool {
 
 // handleLeftClick processes a left mouse click at (x, y).
 // Switches focus if clicking in an unfocused window and moves cursor to the clicked file.
+// Synchronizes cursor to same filename in all other windows.
 // Detects double-clicks and dispatches to appropriate handler.
-// [IMPL:MOUSE_FILE_SELECT] [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT] [REQ:MOUSE_DOUBLE_CLICK]
+// [IMPL:MOUSE_FILE_SELECT] [IMPL:MOUSE_DOUBLE_CLICK] [IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT] [REQ:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_CROSS_WINDOW_SYNC]
 func (g *Goful) handleLeftClick(x, y int) {
 	ws := g.Workspace()
 	dir, idx := ws.DirectoryAt(x, y)
@@ -380,6 +381,10 @@ func (g *Goful) handleLeftClick(x, y int) {
 	fileIdx := dir.FileIndexAtY(y)
 	if fileIdx >= 0 {
 		dir.SetCursor(fileIdx)
+		// [IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]
+		// Sync cursor to same filename in all other windows
+		filename := dir.File().Name()
+		ws.SetCursorByNameAll(filename)
 	}
 
 	// Check for double-click after selection

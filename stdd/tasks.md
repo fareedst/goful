@@ -993,3 +993,27 @@ The following tasks were identified during an STDD documentation review to addre
 - `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1287 token references across 77 files.`
 
 **Priority Rationale**: P1 because multi-target operations are high-risk and users expect confirmation for operations affecting multiple destinations.
+
+## P1: Mouse Cross-Window Cursor Sync [REQ:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [IMPL:MOUSE_CROSS_WINDOW_SYNC]
+
+**Status**: ✅ Complete
+
+**Description**: When clicking a file in the active window, synchronize cursor to the same filename in all other windows. Focus remains on the active window.
+
+**Dependencies**: [REQ:MOUSE_FILE_SELECT] (complete)
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] Code implements requirement with semantic token annotations
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./filer/... -run "REQ_MOUSE_CROSS_WINDOW_SYNC"` (darwin/arm64, Go 1.24.3) - 2 tests pass
+- `go test ./...` - all tests pass
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1298 token references across 77 files.`
+- Implementation: `handleLeftClick` in `app/goful.go` calls `ws.SetCursorByNameAll(filename)` after cursor selection
+- Unit tests: `TestSetCursorByNameAll_REQ_MOUSE_CROSS_WINDOW_SYNC`, `TestSetCursorByNameAllFocusUnchanged_REQ_MOUSE_CROSS_WINDOW_SYNC` in `filer/integration_test.go`
+
+**Priority Rationale**: P1 because this enhances file comparison workflows but does not block core navigation.

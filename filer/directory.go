@@ -553,7 +553,9 @@ func (d *Directory) drawFilesWithComparison(focus bool, dirIndex int, idx *Compa
 		x += shift
 
 		fs := d.List()[i].(*FileStat)
-		isFocused := focus && i == d.Cursor()
+		// [IMPL:MOUSE_CROSS_WINDOW_SYNC] Highlight cursor position in ALL windows, not just focused
+		// This enables cross-window cursor synchronization to be visible
+		isFocused := i == d.Cursor()
 
 		// Get comparison state for this file
 		var cmp *CompareState

@@ -469,3 +469,105 @@ func TestAddExtmap_MultipleEntries_REQ_DEBT_TRIAGE(t *testing.T) {
 		t.Errorf("expected count=111, got %d", count)
 	}
 }
+
+// TestSetCursorByNameAll_REQ_MOUSE_CROSS_WINDOW_SYNC verifies cursor synchronization across all directories.
+// [IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]
+func TestSetCursorByNameAll_REQ_MOUSE_CROSS_WINDOW_SYNC(t *testing.T) {
+	tmp1 := t.TempDir()
+	tmp2 := t.TempDir()
+	tmp3 := t.TempDir()
+
+	// Create common files in all directories
+	commonFiles := []string{"alpha.txt", "bravo.txt", "charlie.txt"}
+	for _, name := range commonFiles {
+		for _, tmp := range []string{tmp1, tmp2, tmp3} {
+			if err := os.WriteFile(filepath.Join(tmp, name), []byte(name), 0o644); err != nil {
+				t.Fatalf("write file: %v", err)
+			}
+		}
+	}
+
+	// Create workspace with 3 directories
+	ws := NewWorkspace(0, 0, 80, 20, "test")
+	dir1 := newTestDirectory(t, tmp1)
+	dir2 := newTestDirectory(t, tmp2)
+	dir3 := newTestDirectory(t, tmp3)
+	ws.Dirs = []*Directory{dir1, dir2, dir3}
+	ws.SetFocus(0)
+
+	// All directories should start with cursor at position 0
+	if dir1.Cursor() != 0 || dir2.Cursor() != 0 || dir3.Cursor() != 0 {
+		t.Fatalf("initial cursors not at 0: (%d, %d, %d)", dir1.Cursor(), dir2.Cursor(), dir3.Cursor())
+	}
+
+	// Call SetCursorByNameAll with a common file
+	ws.SetCursorByNameAll("bravo.txt")
+
+	// All directories should have cursor on "bravo.txt"
+	if dir1.File().Name() != "bravo.txt" {
+		t.Errorf("dir1 cursor not on bravo.txt, got %s", dir1.File().Name())
+	}
+	if dir2.File().Name() != "bravo.txt" {
+		t.Errorf("dir2 cursor not on bravo.txt, got %s", dir2.File().Name())
+	}
+	if dir3.File().Name() != "bravo.txt" {
+		t.Errorf("dir3 cursor not on bravo.txt, got %s", dir3.File().Name())
+	}
+
+	// Move to another common file
+	ws.SetCursorByNameAll("charlie.txt")
+
+	// All directories should have cursor on "charlie.txt"
+	if dir1.File().Name() != "charlie.txt" {
+		t.Errorf("dir1 cursor not on charlie.txt, got %s", dir1.File().Name())
+	}
+	if dir2.File().Name() != "charlie.txt" {
+		t.Errorf("dir2 cursor not on charlie.txt, got %s", dir2.File().Name())
+	}
+	if dir3.File().Name() != "charlie.txt" {
+		t.Errorf("dir3 cursor not on charlie.txt, got %s", dir3.File().Name())
+	}
+}
+
+// TestSetCursorByNameAllFocusUnchanged_REQ_MOUSE_CROSS_WINDOW_SYNC verifies focus remains on active window.
+// [IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]
+func TestSetCursorByNameAllFocusUnchanged_REQ_MOUSE_CROSS_WINDOW_SYNC(t *testing.T) {
+	tmp1 := t.TempDir()
+	tmp2 := t.TempDir()
+
+	// Create a common file
+	commonFile := "test.txt"
+	for _, tmp := range []string{tmp1, tmp2} {
+		if err := os.WriteFile(filepath.Join(tmp, commonFile), []byte(commonFile), 0o644); err != nil {
+			t.Fatalf("write file: %v", err)
+		}
+	}
+
+	ws := NewWorkspace(0, 0, 80, 20, "test")
+	dir1 := newTestDirectory(t, tmp1)
+	dir2 := newTestDirectory(t, tmp2)
+	ws.Dirs = []*Directory{dir1, dir2}
+	ws.SetFocus(0)
+
+	// Verify initial focus
+	if ws.Focus != 0 {
+		t.Fatalf("initial focus not 0: %d", ws.Focus)
+	}
+
+	// Call SetCursorByNameAll
+	ws.SetCursorByNameAll(commonFile)
+
+	// Focus should remain on window 0
+	if ws.Focus != 0 {
+		t.Errorf("focus changed from 0 to %d after SetCursorByNameAll", ws.Focus)
+	}
+
+	// Change focus to window 1 and try again
+	ws.SetFocus(1)
+	ws.SetCursorByNameAll(commonFile)
+
+	// Focus should remain on window 1
+	if ws.Focus != 1 {
+		t.Errorf("focus changed from 1 to %d after SetCursorByNameAll", ws.Focus)
+	}
+}

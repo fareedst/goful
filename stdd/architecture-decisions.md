@@ -1093,6 +1093,28 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 **Cross-References**: [REQ:MOUSE_DOUBLE_CLICK], [IMPL:MOUSE_DOUBLE_CLICK], [ARCH:MOUSE_EVENT_ROUTING], [REQ:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
 
+## 40. Mouse Cross-Window Cursor Synchronization [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]
+
+### Decision: Synchronize cursor position across all windows when a file is selected via mouse click in the active window, with visual highlighting in all windows.
+**Rationale:**
+- Users comparing directories need to see the same filename highlighted across all windows.
+- Reuses existing `SetCursorByNameAll()` method which already handles cursor positioning across directories.
+- Minimal change to existing `handleLeftClick` flow - just add synchronization call after cursor movement.
+- Works independently of Linked Navigation mode (always syncs on click).
+- Visual highlighting must appear in ALL windows, not just the focused one.
+
+**Architecture Outline:**
+- **Cursor Sync Point** (`app/goful.go`): After `dir.SetCursor(fileIdx)` in `handleLeftClick`, retrieve the filename and call `ws.SetCursorByNameAll(filename)`.
+- **Existing Infrastructure**: `filer.Workspace.SetCursorByNameAll(name string)` already iterates all directories and calls `SetCursorByName`.
+- **Rendering Invariant** (`filer/directory.go`): The `drawFilesWithComparison` function must highlight the cursor position (`isFocused := i == d.Cursor()`) independently of window focus, ensuring cross-window cursor visibility.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `app/goful.go` includes `[IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]`.
+- `filer/directory.go` contains the rendering fix for cursor highlighting in unfocused windows.
+- Tests reference `[REQ:MOUSE_CROSS_WINDOW_SYNC]` in names/comments.
+
+**Cross-References**: [REQ:MOUSE_CROSS_WINDOW_SYNC], [IMPL:MOUSE_CROSS_WINDOW_SYNC], [REQ:MOUSE_FILE_SELECT], [ARCH:MOUSE_EVENT_ROUTING]
+
 ## 37. Sync Mode [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
 
 ### Decision: Implement a two-stage prefix mode for executing synchronized file operations across all workspace panes.

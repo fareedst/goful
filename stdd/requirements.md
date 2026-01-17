@@ -951,6 +951,31 @@ Each requirement includes:
 - File double-click respects `linkedNav` by moving cursor to same-named files in all windows.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1158 token references across 74 files.`
 
+### [REQ:MOUSE_CROSS_WINDOW_SYNC] Mouse Cross-Window Cursor Synchronization
+
+**Priority: P1 (Important)**
+
+- **Description**: When a user clicks on a file in the active (focused) window, the cursor in all other windows should move to the same filename if it exists. Focus remains on the active window. This provides visual feedback showing matching files across all workspace panes.
+- **Rationale**: Users comparing directories benefit from seeing the same file highlighted across all windows. This complements the comparison color feature and helps users quickly identify matching files without manually navigating each pane.
+- **Satisfaction Criteria**:
+  - Left-clicking a file in the active window moves cursors in all other windows to the same filename (if present).
+  - Focus remains on the clicked window; other windows do not gain focus.
+  - Windows where the filename does not exist leave their cursor unchanged.
+  - Works independently of Linked Navigation mode.
+- **Validation Criteria**:
+  - Unit tests verify `SetCursorByNameAll` is called after cursor selection.
+  - Manual verification confirms cross-window highlighting with 2+ panes.
+  - Token validation confirms `[REQ:MOUSE_CROSS_WINDOW_SYNC]` references exist.
+- **Architecture**: See `architecture-decisions.md` § Mouse Cross-Window Sync [ARCH:MOUSE_CROSS_WINDOW_SYNC]
+- **Implementation**: See `implementation-decisions.md` § Mouse Cross-Window Sync [IMPL:MOUSE_CROSS_WINDOW_SYNC]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- Unit tests in `filer/integration_test.go` (`TestSetCursorByNameAll_REQ_MOUSE_CROSS_WINDOW_SYNC`, `TestSetCursorByNameAllFocusUnchanged_REQ_MOUSE_CROSS_WINDOW_SYNC`) covering cursor sync and focus preservation.
+- Implementation in `app/goful.go`: `handleLeftClick` calls `SetCursorByNameAll` after cursor selection.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1298 token references across 77 files.`
+
 ### [REQ:IDENTIFIER] Requirement Name
 
 **Priority: P0 (Critical) | P1 (Important) | P2 (Nice-to-have) | P3 (Future)**
