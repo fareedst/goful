@@ -96,11 +96,35 @@ key                  | function
 
 For more see [main.go](main.go)
 
+### Mouse Support `[REQ:MOUSE_FILE_SELECT]` `[REQ:TOOLBAR_PARENT_BUTTON]` `[REQ:TOOLBAR_LINKED_TOGGLE]`
+
+Goful provides mouse support for common navigation and file operations, making it accessible to users who prefer graphical interaction alongside keyboard shortcuts.
+
+**Toolbar Buttons**
+
+The header row displays clickable toolbar buttons at the left edge:
+
+| Button | Function | Behavior |
+|--------|----------|----------|
+| `[^]` | Parent directory | Navigate to parent directory. Respects linked mode: when ON, all windows navigate to their respective parents; when OFF, only the focused window navigates. |
+| `[L]` | Linked mode toggle | Toggle linked navigation mode. The button style indicates current state: **highlighted** (reverse) when ON, normal when OFF. Click to toggle and see confirmation message. |
+
+**File Selection**
+
+- **Left-click on a file**: Selects the file and moves the cursor. If clicking in an unfocused pane, switches focus to that pane first.
+- **Cross-window sync**: When you click a file, all other panes automatically move their cursors to any file with the same name (if it exists).
+- **Double-click on a directory**: Navigates into the directory. When linked mode is ON, all panes that contain a matching subdirectory navigate into it.
+- **Double-click on a file**: Opens the file using the system default application. When linked mode is ON, opens the same-named file from all panes where it exists.
+
+**Scrolling**
+
+- **Mouse wheel up/down**: Scrolls the file list in the pane under the cursor (3 lines per scroll).
+
 ### Linked navigation mode `[REQ:LINKED_NAVIGATION]`
 
 Linked navigation synchronizes directory navigation across all open panes. When enabled, navigating into a subdirectory or pressing backspace (parent directory) in the focused window causes all other windows to attempt the same navigation.
 
-**Toggle**: Press `L` (uppercase L) or `M-l` (Alt+l) to enable or disable linked mode. The header displays `[LINKED]` when the mode is active.
+**Toggle**: Press `L` (uppercase L), `M-l` (Alt+l), or click the `[L]` toolbar button to enable or disable linked mode. The `[L]` button in the header is always visible: **highlighted** when linked mode is ON, normal when OFF.
 
 > **macOS note**: The Option key often produces special characters instead of acting as Meta/Alt, so use uppercase `L` (Shift+l) which works reliably across all platforms.
 
@@ -115,7 +139,7 @@ Linked navigation synchronizes directory navigation across all open panes. When 
 - Navigating release versions side-by-side (`v1.0/`, `v2.0/`)
 - Keeping workspace panes aligned when exploring mirrored folder hierarchies
 
-The mode is **on by default** and does not persist across restarts. Press `L` to toggle it off if you prefer independent navigation.
+The mode is **on by default** and does not persist across restarts. Press `L` or click the `[L]` toolbar button to toggle it off if you prefer independent navigation.
 
 ### Difference search `[REQ:DIFF_SEARCH]`
 
