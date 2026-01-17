@@ -9,6 +9,8 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/anmitsu/goful/app"
 	"github.com/anmitsu/goful/cmdline"
@@ -24,6 +26,7 @@ import (
 	"github.com/anmitsu/goful/terminalcmd"
 	"github.com/anmitsu/goful/widget"
 	"github.com/mattn/go-runewidth"
+	"gopkg.in/yaml.v3"
 )
 
 const debugWorkspaceEnv = "GOFUL_DEBUG_WORKSPACE"
@@ -55,10 +58,28 @@ var (
 		"",
 		"Override path to comparison colors config (default "+configpaths.DefaultCompareColorsPath+" or "+configpaths.EnvCompareColorsKey+")",
 	)
+	// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+	diffReportFlag = flag.Bool(
+		"diff-report",
+		false,
+		"Run batch diff report on provided directories and exit (outputs YAML to stdout)",
+	)
+	quietFlag = flag.Bool(
+		"quiet",
+		false,
+		"Suppress progress output to stderr (only with --diff-report)",
+	)
 )
 
 func main() {
 	flag.Parse()
+
+	// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+	// Handle batch diff report mode before any TUI initialization
+	if *diffReportFlag {
+		runBatchDiffReport()
+		return
+	}
 
 	pathsResolver := configpaths.Resolver{}
 	runtimePaths := pathsResolver.Resolve(*stateFlag, *historyFlag, *commandsFlag, *excludeNamesFlag, *compareColorsFlag)
@@ -837,4 +858,100 @@ func menuKeymap(w *menu.Menu) widget.Keymap {
 		"C-g":  func() { w.Exit() },
 		"C-[":  func() { w.Exit() },
 	}
+}
+
+// runBatchDiffReport runs the batch diff report mode and exits.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func runBatchDiffReport() {
+	dirs := flag.Args()
+	if len(dirs) < 2 {
+		fmt.Fprintln(os.Stderr, "Error: --diff-report requires at least 2 directories")
+		fmt.Fprintln(os.Stderr, "Usage: goful --diff-report dir1 dir2 [dir3 ...]")
+		os.Exit(1)
+	}
+
+	// Validate directories exist
+	for _, dir := range dirs {
+		info, err := os.Stat(dir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: cannot access directory %q: %v\n", dir, err)
+			os.Exit(1)
+		}
+		if !info.IsDir() {
+			fmt.Fprintf(os.Stderr, "Error: %q is not a directory\n", dir)
+			os.Exit(1)
+		}
+	}
+
+	// Set up progress reporting unless --quiet
+	var progressFn filer.ProgressCallback
+	var progressQuit chan struct{}
+	var progressWg sync.WaitGroup
+
+	if !*quietFlag {
+		progressQuit = make(chan struct{})
+		lastProgress := struct {
+			sync.Mutex
+			files, dirs, diffs int
+			path               string
+		}{}
+
+		progressFn = func(filesChecked, dirsTraversed, diffsFound int, currentPath string) {
+			lastProgress.Lock()
+			lastProgress.files = filesChecked
+			lastProgress.dirs = dirsTraversed
+			lastProgress.diffs = diffsFound
+			lastProgress.path = currentPath
+			lastProgress.Unlock()
+		}
+
+		// Periodic progress reporter goroutine
+		progressWg.Add(1)
+		go func() {
+			defer progressWg.Done()
+			ticker := time.NewTicker(2 * time.Second)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					lastProgress.Lock()
+					fmt.Fprintf(os.Stderr, "[progress] Scanning %s (%d files checked, %d differences found)\n",
+						lastProgress.path, lastProgress.files, lastProgress.diffs)
+					lastProgress.Unlock()
+				case <-progressQuit:
+					return
+				}
+			}
+		}()
+	}
+
+	// Run the batch diff search
+	report, err := filer.RunBatchDiffSearch(dirs, progressFn)
+
+	// Stop progress reporter
+	if progressQuit != nil {
+		close(progressQuit)
+		progressWg.Wait()
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Output YAML report to stdout
+	encoder := yaml.NewEncoder(os.Stdout)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(report); err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding YAML: %v\n", err)
+		os.Exit(1)
+	}
+	encoder.Close()
+
+	// Exit code: 0 = no differences, 2 = differences found
+	if len(report.Differences) > 0 {
+		os.Exit(2)
+	}
+	os.Exit(0)
 }

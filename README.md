@@ -172,6 +172,68 @@ Difference search finds files and directories that differ across your workspace 
 
 **Tip**: Combine with **linked navigation mode** (`L`) to keep panes synchronized as you explore differences.
 
+### Batch Diff Report (N-Way Comparison) `[REQ:BATCH_DIFF_REPORT]`
+
+Goful offers a **unique n-way directory comparison** capability that goes beyond traditional two-directory diff tools. While most comparison utilities are limited to pairwise comparisons, goful can simultaneously compare 2, 3, 4, or more directory trees in a single operation—revealing differences that would require multiple manual comparisons with conventional tools.
+
+**Use cases for n-way comparison**:
+- **Multi-environment validation**: Compare staging, production, and development deployments simultaneously
+- **Parallel backup verification**: Validate that local, remote, and archive copies are identical
+- **Multi-version analysis**: Track changes across several release versions at once
+- **Distributed system checks**: Verify configuration consistency across multiple servers
+
+**CLI command**: Run a non-interactive batch comparison with YAML output:
+
+```bash
+# Compare two directories
+goful --diff-report dir1 dir2
+
+# Compare three or more directories (n-way)
+goful --diff-report prod/ staging/ dev/
+
+# Suppress progress output for scripting
+goful --diff-report --quiet backup1/ backup2/ backup3/
+```
+
+**Output format**: The command produces a structured YAML report to stdout:
+
+```yaml
+directories:
+  - /path/to/prod
+  - /path/to/staging
+  - /path/to/dev
+totalFilesChecked: 1542
+totalDirectoriesTraversed: 87
+durationSeconds: 2.34
+differences:
+  - name: config.json
+    path: app/config.json
+    reason: "size mismatch: 1024 vs 1048 vs 1024"
+    isDir: false
+  - name: cache/
+    path: cache/
+    reason: "missing in window 2"
+    isDir: true
+```
+
+**Exit codes** for scripting:
+| Code | Meaning |
+|------|---------|
+| 0 | No differences found |
+| 1 | Error (invalid arguments, directory not found) |
+| 2 | Differences found |
+
+**Progress reporting**: By default, progress updates are printed to stderr every 2 seconds. Use `--quiet` to suppress these for cleaner pipeline integration.
+
+**Example pipeline**:
+```bash
+# Check backups and alert on differences
+if ! goful --diff-report --quiet /backup/daily /backup/weekly /live; then
+    goful --diff-report /backup/daily /backup/weekly /live > /var/log/diff-report.yaml
+    mail -s "Backup mismatch detected" admin@example.com < /var/log/diff-report.yaml
+fi
+```
+
 ### Filename exclude list `[REQ:FILER_EXCLUDE_NAMES]`
 
 - Create a newline-delimited file containing the basenames you want to hide (for example `.DS_Store`, `Thumbs.db`). Blank lines and lines starting with `#` are ignored.

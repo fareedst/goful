@@ -1224,3 +1224,45 @@ func executeSync(ws *Workspace, filename string, newName string, op Operation, i
 - Tests reference `[REQ:SYNC_COMMANDS]` in names/comments.
 
 **Cross-References**: [REQ:SYNC_COMMANDS], [IMPL:SYNC_EXECUTE], [REQ:MODULE_VALIDATION]
+
+## 42. Batch Diff Report Architecture [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+
+### Decision: Provide a CLI-only batch mode that reuses the existing TreeWalker traversal algorithm with a headless Navigator implementation, collecting all differences into a YAML report without TUI initialization.
+
+**Rationale:**
+- Users need programmatic access to directory comparison results for automation, CI pipelines, and scripting.
+- The interactive diff search already has a proven traversal algorithm (TreeWalker + Navigator interface) that handles the complex tree walking, subdirectory descent, and difference detection.
+- By implementing a headless `BatchNavigator` that loads directories without screen attachment, we can reuse all existing comparison logic.
+- YAML output format provides human-readability while remaining machine-parseable, consistent with the existing external command config format.
+- Progress reporting to stderr keeps stdout clean for the structured report while giving users feedback during long comparisons.
+
+**Architecture Outline:**
+- **CLI Entry Point**: `--diff-report` flag in `main.go` triggers batch mode before any TUI initialization.
+- **Directory Validation**: Validate 2+ directories exist and are readable before starting comparison.
+- **BatchNavigator**: Headless implementation of the `filer.Navigator` interface that:
+  - Loads directories using `filer.NewDirectory()` without screen attachment
+  - Implements `GetDirs()`, `ChdirAll()`, `ChdirParentAll()`, `CurrentPath()`, `RebuildComparisonIndex()`
+  - Stores directory state in memory without widget dependencies
+- **Report Collection**: Modified traversal loop that collects all `StepFoundDiff` results instead of pausing at each one.
+- **Progress Reporter**: Goroutine with ticker writing to stderr, suppressible via `--quiet` flag.
+- **YAML Output**: Single YAML document with metadata and differences array written to stdout on completion.
+- **Exit Codes**: 0 = success (no differences), 1 = error, 2 = success (differences found).
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `DiffReport` (struct in `filer/diffsearch.go`): YAML-serializable report structure with directories, stats, and differences.
+- `DiffEntry` (struct in `filer/diffsearch.go`): Individual difference entry with name, path, reason, isDir.
+- `BatchNavigator` (struct in `filer/diffsearch.go`): Headless Navigator implementation.
+- `RunBatchDiffSearch()` (function in `filer/diffsearch.go`): Main entry point that creates navigator, runs TreeWalker in collection mode, returns DiffReport.
+- CLI wiring (in `main.go`): Flag parsing, validation, progress goroutine, YAML output, exit code.
+
+**Alternatives Considered:**
+- **Separate binary**: Rejected; reusing goful's existing logic is more maintainable.
+- **JSON output**: User requested YAML for consistency with other goful configs.
+- **Interactive mode with --batch**: Rejected; cleaner to have dedicated `--diff-report` flag.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/diffsearch.go` includes `[IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]` comments.
+- `main.go` includes same tokens for CLI wiring.
+- Tests reference `[REQ:BATCH_DIFF_REPORT]` in names/comments.
+
+**Cross-References**: [REQ:BATCH_DIFF_REPORT], [IMPL:BATCH_DIFF_REPORT], [REQ:MODULE_VALIDATION], [ARCH:DIFF_SEARCH], [IMPL:DIFF_SEARCH]

@@ -801,3 +801,292 @@ func TestTreeWalkerResumeFromSubdir_REQ_DIFF_SEARCH(t *testing.T) {
 		t.Errorf("Expected next diff after aaa to be 'bbb/', got '%s'", step.Name)
 	}
 }
+
+// =============================================================================
+// Batch Diff Report Tests
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+// =============================================================================
+
+// TestNewBatchNavigator_REQ_BATCH_DIFF_REPORT tests batch navigator creation.
+func TestNewBatchNavigator_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	// Create temp directories
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1, 0755)
+	os.MkdirAll(dir2, 0755)
+
+	// Test valid creation
+	nav, err := NewBatchNavigator([]string{dir1, dir2})
+	if err != nil {
+		t.Fatalf("NewBatchNavigator failed: %v", err)
+	}
+	if nav == nil {
+		t.Fatal("NewBatchNavigator returned nil")
+	}
+
+	// Verify initial dirs
+	initialDirs := nav.InitialDirs()
+	if len(initialDirs) != 2 {
+		t.Errorf("Expected 2 initial dirs, got %d", len(initialDirs))
+	}
+	if initialDirs[0] != dir1 {
+		t.Errorf("Expected first dir %s, got %s", dir1, initialDirs[0])
+	}
+}
+
+// TestNewBatchNavigator_TooFewDirs_REQ_BATCH_DIFF_REPORT tests error on insufficient directories.
+func TestNewBatchNavigator_TooFewDirs_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	os.MkdirAll(dir1, 0755)
+
+	// Test with only one directory
+	_, err := NewBatchNavigator([]string{dir1})
+	if err == nil {
+		t.Error("Expected error for fewer than 2 directories")
+	}
+}
+
+// TestNewBatchNavigator_NonexistentDir_REQ_BATCH_DIFF_REPORT tests error on missing directory.
+func TestNewBatchNavigator_NonexistentDir_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "nonexistent")
+	os.MkdirAll(dir1, 0755)
+
+	// Test with nonexistent directory
+	_, err := NewBatchNavigator([]string{dir1, dir2})
+	if err == nil {
+		t.Error("Expected error for nonexistent directory")
+	}
+}
+
+// TestBatchNavigator_ChdirAll_REQ_BATCH_DIFF_REPORT tests directory navigation.
+func TestBatchNavigator_ChdirAll_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	subdir1 := filepath.Join(dir1, "sub")
+	subdir2 := filepath.Join(dir2, "sub")
+	os.MkdirAll(subdir1, 0755)
+	os.MkdirAll(subdir2, 0755)
+
+	nav, err := NewBatchNavigator([]string{dir1, dir2})
+	if err != nil {
+		t.Fatalf("NewBatchNavigator failed: %v", err)
+	}
+
+	// Navigate into subdirectory
+	nav.ChdirAll("sub")
+
+	dirs := nav.GetDirs()
+	if dirs[0].Path != subdir1 {
+		t.Errorf("Expected dir1 path %s, got %s", subdir1, dirs[0].Path)
+	}
+	if dirs[1].Path != subdir2 {
+		t.Errorf("Expected dir2 path %s, got %s", subdir2, dirs[1].Path)
+	}
+
+	// Check relative path tracking
+	if nav.CurrentRelativePath() != "sub" {
+		t.Errorf("Expected relative path 'sub', got '%s'", nav.CurrentRelativePath())
+	}
+}
+
+// TestBatchNavigator_ChdirParentAll_REQ_BATCH_DIFF_REPORT tests parent navigation.
+func TestBatchNavigator_ChdirParentAll_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	subdir1 := filepath.Join(dir1, "sub")
+	subdir2 := filepath.Join(dir2, "sub")
+	os.MkdirAll(subdir1, 0755)
+	os.MkdirAll(subdir2, 0755)
+
+	nav, err := NewBatchNavigator([]string{dir1, dir2})
+	if err != nil {
+		t.Fatalf("NewBatchNavigator failed: %v", err)
+	}
+
+	// Navigate down then up
+	nav.ChdirAll("sub")
+	nav.ChdirParentAll()
+
+	dirs := nav.GetDirs()
+	if dirs[0].Path != dir1 {
+		t.Errorf("Expected dir1 path %s, got %s", dir1, dirs[0].Path)
+	}
+
+	// Check relative path is back to root
+	if nav.CurrentRelativePath() != "" {
+		t.Errorf("Expected empty relative path, got '%s'", nav.CurrentRelativePath())
+	}
+}
+
+// TestRunBatchDiffSearch_NoDifferences_REQ_BATCH_DIFF_REPORT tests identical directories.
+func TestRunBatchDiffSearch_NoDifferences_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1, 0755)
+	os.MkdirAll(dir2, 0755)
+
+	// Create identical files
+	os.WriteFile(filepath.Join(dir1, "file.txt"), []byte("same content"), 0644)
+	os.WriteFile(filepath.Join(dir2, "file.txt"), []byte("same content"), 0644)
+
+	report, err := RunBatchDiffSearch([]string{dir1, dir2}, nil)
+	if err != nil {
+		t.Fatalf("RunBatchDiffSearch failed: %v", err)
+	}
+
+	if len(report.Differences) != 0 {
+		t.Errorf("Expected no differences, got %d", len(report.Differences))
+	}
+}
+
+// TestRunBatchDiffSearch_SizeMismatch_REQ_BATCH_DIFF_REPORT tests size difference detection.
+func TestRunBatchDiffSearch_SizeMismatch_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1, 0755)
+	os.MkdirAll(dir2, 0755)
+
+	// Create files with different sizes
+	os.WriteFile(filepath.Join(dir1, "file.txt"), []byte("short"), 0644)
+	os.WriteFile(filepath.Join(dir2, "file.txt"), []byte("much longer content"), 0644)
+
+	report, err := RunBatchDiffSearch([]string{dir1, dir2}, nil)
+	if err != nil {
+		t.Fatalf("RunBatchDiffSearch failed: %v", err)
+	}
+
+	if len(report.Differences) != 1 {
+		t.Fatalf("Expected 1 difference, got %d", len(report.Differences))
+	}
+
+	diff := report.Differences[0]
+	if diff.Name != "file.txt" {
+		t.Errorf("Expected difference name 'file.txt', got '%s'", diff.Name)
+	}
+	if diff.Reason != "size mismatch" {
+		t.Errorf("Expected reason 'size mismatch', got '%s'", diff.Reason)
+	}
+}
+
+// TestRunBatchDiffSearch_MissingFile_REQ_BATCH_DIFF_REPORT tests missing file detection.
+func TestRunBatchDiffSearch_MissingFile_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1, 0755)
+	os.MkdirAll(dir2, 0755)
+
+	// Create file only in dir1
+	os.WriteFile(filepath.Join(dir1, "only_in_1.txt"), []byte("content"), 0644)
+
+	report, err := RunBatchDiffSearch([]string{dir1, dir2}, nil)
+	if err != nil {
+		t.Fatalf("RunBatchDiffSearch failed: %v", err)
+	}
+
+	if len(report.Differences) != 1 {
+		t.Fatalf("Expected 1 difference, got %d", len(report.Differences))
+	}
+
+	diff := report.Differences[0]
+	if diff.Name != "only_in_1.txt" {
+		t.Errorf("Expected difference name 'only_in_1.txt', got '%s'", diff.Name)
+	}
+	if diff.Reason != "missing in window 2" {
+		t.Errorf("Expected reason 'missing in window 2', got '%s'", diff.Reason)
+	}
+}
+
+// TestRunBatchDiffSearch_SubdirectoryDifference_REQ_BATCH_DIFF_REPORT tests subdirectory traversal.
+func TestRunBatchDiffSearch_SubdirectoryDifference_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	sub1 := filepath.Join(dir1, "sub")
+	sub2 := filepath.Join(dir2, "sub")
+	os.MkdirAll(sub1, 0755)
+	os.MkdirAll(sub2, 0755)
+
+	// Create different files in subdirectory
+	os.WriteFile(filepath.Join(sub1, "nested.txt"), []byte("a"), 0644)
+	os.WriteFile(filepath.Join(sub2, "nested.txt"), []byte("bb"), 0644)
+
+	report, err := RunBatchDiffSearch([]string{dir1, dir2}, nil)
+	if err != nil {
+		t.Fatalf("RunBatchDiffSearch failed: %v", err)
+	}
+
+	if len(report.Differences) != 1 {
+		t.Fatalf("Expected 1 difference, got %d", len(report.Differences))
+	}
+
+	diff := report.Differences[0]
+	if diff.Path != "sub/nested.txt" {
+		t.Errorf("Expected path 'sub/nested.txt', got '%s'", diff.Path)
+	}
+}
+
+// TestRunBatchDiffSearch_ThreeDirectories_REQ_BATCH_DIFF_REPORT tests comparison across 3 directories.
+func TestRunBatchDiffSearch_ThreeDirectories_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	dir3 := filepath.Join(tmpDir, "dir3")
+	os.MkdirAll(dir1, 0755)
+	os.MkdirAll(dir2, 0755)
+	os.MkdirAll(dir3, 0755)
+
+	// Create file in dir1 and dir2 only
+	os.WriteFile(filepath.Join(dir1, "shared.txt"), []byte("content"), 0644)
+	os.WriteFile(filepath.Join(dir2, "shared.txt"), []byte("content"), 0644)
+
+	report, err := RunBatchDiffSearch([]string{dir1, dir2, dir3}, nil)
+	if err != nil {
+		t.Fatalf("RunBatchDiffSearch failed: %v", err)
+	}
+
+	if len(report.Differences) != 1 {
+		t.Fatalf("Expected 1 difference, got %d", len(report.Differences))
+	}
+
+	diff := report.Differences[0]
+	if diff.Reason != "missing in window 3" {
+		t.Errorf("Expected reason 'missing in window 3', got '%s'", diff.Reason)
+	}
+}
+
+// TestDiffReport_Structure_REQ_BATCH_DIFF_REPORT tests report structure.
+func TestDiffReport_Structure_REQ_BATCH_DIFF_REPORT(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir1 := filepath.Join(tmpDir, "dir1")
+	dir2 := filepath.Join(tmpDir, "dir2")
+	os.MkdirAll(dir1, 0755)
+	os.MkdirAll(dir2, 0755)
+
+	report, err := RunBatchDiffSearch([]string{dir1, dir2}, nil)
+	if err != nil {
+		t.Fatalf("RunBatchDiffSearch failed: %v", err)
+	}
+
+	// Verify report structure
+	if len(report.Directories) != 2 {
+		t.Errorf("Expected 2 directories, got %d", len(report.Directories))
+	}
+	if report.TotalFilesChecked < 0 {
+		t.Error("TotalFilesChecked should be non-negative")
+	}
+	if report.TotalDirectoriesTraversed < 1 {
+		t.Error("TotalDirectoriesTraversed should be at least 1")
+	}
+	if report.DurationSeconds < 0 {
+		t.Error("DurationSeconds should be non-negative")
+	}
+}

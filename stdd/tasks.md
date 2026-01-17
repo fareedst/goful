@@ -1081,3 +1081,35 @@ The following tasks were identified during an STDD documentation review to addre
 - [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
 
 **Priority Rationale**: P1 because it completes the toolbar UI pattern and provides mouse-first access to linked mode toggle, improving discoverability and accessibility.
+
+## P1: Batch Diff Report CLI [REQ:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [IMPL:BATCH_DIFF_REPORT]
+
+**Status**: ✅ Complete (2026-01-17)
+
+**Description**: Add a `--diff-report` CLI flag that performs a complete non-interactive directory tree comparison across 2+ directories, outputs a structured YAML report to stdout with periodic progress to stderr, then exits without launching the interactive TUI.
+
+**Dependencies**: [REQ:DIFF_SEARCH] (complete), [REQ:MODULE_VALIDATION]
+
+**Module Boundaries**:
+- `DiffReport` (struct in `filer/diffsearch.go`): YAML-serializable report structure with directories, stats, and differences.
+- `DiffEntry` (struct in `filer/diffsearch.go`): Individual difference entry with name, path, reason, isDir.
+- `BatchNavigator` (struct in `filer/diffsearch.go`): Headless Navigator implementation without TUI dependencies.
+- `RunBatchDiffSearch()` (function in `filer/diffsearch.go`): Main entry point that creates navigator, runs TreeWalker in collection mode, returns DiffReport.
+- CLI wiring (in `main.go`): Flag parsing, validation, progress goroutine, YAML output, exit code.
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] `goful --diff-report dir1 dir2` produces valid YAML output
+- [x] Progress reporting to stderr works (and `--quiet` suppresses it)
+- [x] Exit codes: 0 (no differences), 1 (error), 2 (differences found)
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./filer/... -run "BATCH_DIFF_REPORT"` - 11 tests pass (darwin/arm64, Go 1.24.3)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1429 token references across 78 files.`
+- Implementation: `DiffReport`, `DiffEntry`, `BatchNavigator`, `RunBatchDiffSearch` in `filer/diffsearch.go`
+- CLI: `--diff-report` and `--quiet` flags, `runBatchDiffReport()` in `main.go`
+
+**Priority Rationale**: P1 because batch directory comparison enables automation and scripting workflows but does not block interactive usage.

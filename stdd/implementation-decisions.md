@@ -96,6 +96,7 @@ Example: `[IMPL:CONFIG_STRUCT]` → `implementation-decisions/IMPL-CONFIG_STRUCT
 | `[IMPL:MOUSE_CROSS_WINDOW_SYNC]` | Mouse Cross-Window Cursor Sync | Active | [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC] | [Detail](implementation-decisions/IMPL-MOUSE_CROSS_WINDOW_SYNC.md) |
 | `[IMPL:TOOLBAR_PARENT_BUTTON]` | Toolbar Parent Button | Active | [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] | [Detail](implementation-decisions/IMPL-TOOLBAR_PARENT_BUTTON.md) |
 | `[IMPL:TOOLBAR_LINKED_TOGGLE]` | Toolbar Linked Toggle Button | Active | [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE] | [Detail](implementation-decisions/IMPL-TOOLBAR_LINKED_TOGGLE.md) |
+|| `[IMPL:BATCH_DIFF_REPORT]` | Batch Diff Report CLI | Active | [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT] | [Detail](implementation-decisions/IMPL-BATCH_DIFF_REPORT.md) |
 
 ### Status Values
 

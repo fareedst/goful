@@ -1,10 +1,18 @@
 // Package filer difference search for cross-directory comparison.
 // [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
 package filer
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/anmitsu/goful/widget"
 )
 
 // DiffSearchState holds the state for a difference search session.
@@ -641,6 +649,377 @@ func (w *TreeWalker) Run(progressFn func()) Step {
 			}
 			// Continue search from where we left off at this level
 			continue
+		}
+	}
+}
+
+// =============================================================================
+// Batch Diff Report Types and Functions
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+// =============================================================================
+
+// DiffEntry represents a single difference found during batch comparison.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+type DiffEntry struct {
+	Name   string `yaml:"name"`   // Filename or dirname (with "/" suffix for dirs)
+	Path   string `yaml:"path"`   // Relative path from comparison root
+	Reason string `yaml:"reason"` // Why it differs (e.g., "size mismatch", "missing in window 2")
+	IsDir  bool   `yaml:"isDir"`  // Whether entry is a directory
+}
+
+// DiffReport is the YAML-serializable output of a batch diff search.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+type DiffReport struct {
+	Directories               []string    `yaml:"directories"`
+	TotalFilesChecked         int         `yaml:"totalFilesChecked"`
+	TotalDirectoriesTraversed int         `yaml:"totalDirectoriesTraversed"`
+	DurationSeconds           float64     `yaml:"durationSeconds"`
+	Differences               []DiffEntry `yaml:"differences"`
+}
+
+// BatchNavigator implements Navigator for headless batch comparison.
+// It loads directories without TUI dependencies and manages directory state in memory.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+type BatchNavigator struct {
+	dirs           []*Directory
+	initialDirs    []string
+	currentRelPath string // Relative path from initial directories
+	mu             sync.RWMutex
+}
+
+// NewBatchNavigator creates a navigator from directory paths.
+// Returns an error if any directory cannot be read.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func NewBatchNavigator(paths []string) (*BatchNavigator, error) {
+	if len(paths) < 2 {
+		return nil, fmt.Errorf("batch diff requires at least 2 directories, got %d", len(paths))
+	}
+
+	dirs := make([]*Directory, len(paths))
+	initialDirs := make([]string, len(paths))
+
+	for i, path := range paths {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return nil, fmt.Errorf("invalid path %q: %w", path, err)
+		}
+		initialDirs[i] = absPath
+
+		// Create a headless directory using batch-safe loading
+		dir, err := newBatchDirectory(absPath)
+		if err != nil {
+			return nil, fmt.Errorf("cannot access directory %q: %w", path, err)
+		}
+
+		dirs[i] = dir
+	}
+
+	return &BatchNavigator{
+		dirs:           dirs,
+		initialDirs:    initialDirs,
+		currentRelPath: "",
+	}, nil
+}
+
+// newBatchDirectory creates a Directory for batch mode without TUI dependencies.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func newBatchDirectory(path string) (*Directory, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify path is accessible
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("not a directory")
+	}
+
+	// Create directory struct manually without TUI
+	dir := &Directory{
+		ListBox: nil, // No ListBox needed for batch mode
+		reader:  defaultReader(absPath),
+		history: map[string]string{},
+		Path:    absPath,
+		Sort:    SortName,
+	}
+
+	// Read directory contents
+	if err := dir.batchRead(); err != nil {
+		return nil, err
+	}
+
+	return dir, nil
+}
+
+// batchRead reads directory contents for batch mode without TUI dependencies.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (d *Directory) batchRead() error {
+	entries, err := os.ReadDir(d.Path)
+	if err != nil {
+		return err
+	}
+
+	// Build file list - collect names first for filtering and sorting
+	type fileEntry struct {
+		name  string
+		isDir bool
+	}
+	var fileEntries []fileEntry
+
+	for _, entry := range entries {
+		name := entry.Name()
+		// Apply hidden file filter
+		if !showHiddens && strings.HasPrefix(name, ".") {
+			continue
+		}
+		// Apply exclude filter
+		if shouldExcludeName(name) {
+			continue
+		}
+		fileEntries = append(fileEntries, fileEntry{name: name, isDir: entry.IsDir()})
+	}
+
+	// Sort entries - directories first if priorityDir is set, then by name
+	sort.Slice(fileEntries, func(i, j int) bool {
+		if priorityDir {
+			if fileEntries[i].isDir && !fileEntries[j].isDir {
+				return true
+			}
+			if !fileEntries[i].isDir && fileEntries[j].isDir {
+				return false
+			}
+		}
+		return fileEntries[i].name < fileEntries[j].name
+	})
+
+	// Create FileStat entries (add ".." at the beginning)
+	list := make([]widget.Drawer, 0, len(fileEntries)+1)
+
+	// Add parent directory entry ".."
+	parentStat := NewFileStat(d.Path, "..")
+	if parentStat != nil {
+		list = append(list, parentStat)
+	}
+
+	// Add regular entries
+	for _, entry := range fileEntries {
+		fs := NewFileStat(d.Path, entry.name)
+		if fs != nil {
+			list = append(list, fs)
+		}
+	}
+
+	// Create minimal ListBox and set list
+	if d.ListBox == nil {
+		d.ListBox = widget.NewListBox(0, 0, 0, 0, d.Path)
+	}
+	d.SetList(list)
+
+	return nil
+}
+
+// GetDirs returns the current directories being compared.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (n *BatchNavigator) GetDirs() []*Directory {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return n.dirs
+}
+
+// ChdirAll changes to the named subdirectory in all directories.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (n *BatchNavigator) ChdirAll(name string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	for _, d := range n.dirs {
+		d.batchChdir(name)
+	}
+	if n.currentRelPath == "" {
+		n.currentRelPath = name
+	} else {
+		n.currentRelPath = filepath.Join(n.currentRelPath, name)
+	}
+}
+
+// ChdirParentAll navigates to parent directory in all directories.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (n *BatchNavigator) ChdirParentAll() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	for _, d := range n.dirs {
+		d.batchChdir("..")
+	}
+	n.currentRelPath = filepath.Dir(n.currentRelPath)
+	if n.currentRelPath == "." {
+		n.currentRelPath = ""
+	}
+}
+
+// batchChdir changes directory for batch mode without TUI dependencies.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (d *Directory) batchChdir(path string) error {
+	// Compute absolute path
+	var absPath string
+	if filepath.IsAbs(path) {
+		absPath = filepath.Clean(path)
+	} else {
+		absPath = filepath.Clean(filepath.Join(d.Path, path))
+	}
+
+	// Verify path is accessible
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("not a directory: %s", absPath)
+	}
+
+	// Update directory
+	d.Path = absPath
+	d.reader = defaultReader(absPath)
+	return d.batchRead()
+}
+
+// CurrentPath returns the path of the first directory.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (n *BatchNavigator) CurrentPath() string {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	if len(n.dirs) > 0 {
+		return n.dirs[0].Path
+	}
+	return ""
+}
+
+// CurrentRelativePath returns the current relative path from the initial directories.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (n *BatchNavigator) CurrentRelativePath() string {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return n.currentRelPath
+}
+
+// RebuildComparisonIndex is a no-op for batch mode (no coloring needed).
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (n *BatchNavigator) RebuildComparisonIndex() {
+	// No-op: batch mode doesn't need comparison coloring
+}
+
+// InitialDirs returns the initial directory paths.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func (n *BatchNavigator) InitialDirs() []string {
+	return n.initialDirs
+}
+
+// BatchSearchStats holds progress statistics for batch diff search.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+type BatchSearchStats struct {
+	mu               sync.RWMutex
+	FilesChecked     int
+	DirsTraversed    int
+	DifferencesFound int
+	CurrentPath      string
+}
+
+// Update safely updates the stats.
+func (s *BatchSearchStats) Update(filesChecked, dirsTraversed, diffsFound int, path string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.FilesChecked = filesChecked
+	s.DirsTraversed = dirsTraversed
+	s.DifferencesFound = diffsFound
+	s.CurrentPath = path
+}
+
+// Snapshot returns a copy of current stats.
+func (s *BatchSearchStats) Snapshot() (filesChecked, dirsTraversed, diffsFound int, path string) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.FilesChecked, s.DirsTraversed, s.DifferencesFound, s.CurrentPath
+}
+
+// ProgressCallback is called periodically during batch diff search.
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+type ProgressCallback func(filesChecked, dirsTraversed, diffsFound int, currentPath string)
+
+// RunBatchDiffSearch performs a complete directory comparison and returns a report.
+// The progressFn is called periodically with current statistics (can be nil).
+// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+func RunBatchDiffSearch(paths []string, progressFn ProgressCallback) (*DiffReport, error) {
+	startTime := time.Now()
+
+	nav, err := NewBatchNavigator(paths)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create state for tree walker
+	state := &DiffSearchState{
+		InitialDirs: nav.InitialDirs(),
+		Active:      true,
+	}
+
+	// Stats for progress reporting
+	stats := &BatchSearchStats{}
+	var differences []DiffEntry
+	dirsTraversed := 0
+
+	// Collection loop - keeps running until all differences are found
+	startAfter := ""
+	for {
+		// Update stats
+		dirsTraversed++
+		stats.Update(state.FilesChecked, dirsTraversed, len(differences), nav.CurrentPath())
+
+		// Call progress callback if provided
+		if progressFn != nil {
+			progressFn(state.FilesChecked, dirsTraversed, len(differences), nav.CurrentPath())
+		}
+
+		// Create walker for current position
+		walker := NewTreeWalker(nav, state, startAfter)
+		step := walker.Run(func() {
+			state.IncrementFilesChecked()
+			state.SetCurrentPath(nav.CurrentPath())
+		})
+
+		switch step.Type {
+		case StepFoundDiff:
+			// Collect the difference
+			relPath := nav.CurrentRelativePath()
+			entryPath := step.Name
+			if relPath != "" {
+				entryPath = filepath.Join(relPath, step.Name)
+			}
+
+			differences = append(differences, DiffEntry{
+				Name:   step.Name,
+				Path:   entryPath,
+				Reason: step.Reason,
+				IsDir:  step.IsDir,
+			})
+
+			// Continue searching from after this difference
+			startAfter = step.Name
+			if step.IsDir {
+				startAfter = filepath.Base(startAfter) // Remove trailing "/"
+			}
+
+		case StepComplete:
+			// Search complete - build final report
+			duration := time.Since(startTime)
+			return &DiffReport{
+				Directories:               nav.InitialDirs(),
+				TotalFilesChecked:         state.FilesChecked,
+				TotalDirectoriesTraversed: dirsTraversed,
+				DurationSeconds:           duration.Seconds(),
+				Differences:               differences,
+			}, nil
 		}
 	}
 }

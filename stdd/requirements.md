@@ -67,6 +67,7 @@ Each requirement includes:
 
 | Token | Requirement | Priority | Status | Architecture | Implementation |
 |-------|------------|----------|--------|--------------|----------------|
+| [REQ:BATCH_DIFF_REPORT] | Batch diff report CLI command | P1 | ✅ Implemented | [ARCH:BATCH_DIFF_REPORT] | [IMPL:BATCH_DIFF_REPORT] |
 
 ---
 
@@ -1109,6 +1110,38 @@ The following features are documented but marked as future enhancements:
   - Validation method 2
 
 **Status**: ⏳ Planned
+
+### [REQ:BATCH_DIFF_REPORT] Batch Diff Report CLI Command
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must provide a `--diff-report` CLI flag that performs a complete non-interactive directory tree comparison across 2 or more directories, outputs a structured YAML report to stdout, and exits without launching the interactive TUI. Progress updates are written to stderr periodically (suppressible with `--quiet`). This feature enables scripted/automated directory comparison workflows using the same traversal algorithm as the interactive `[` and `]` diff search commands.
+- **Rationale**: Users need programmatic access to directory comparison results for automation, CI pipelines, backup verification scripts, and other batch processing scenarios. The interactive diff search is powerful but requires manual interaction. A CLI command that produces machine-readable output enables integration with other tools while reusing the proven comparison algorithm.
+- **Satisfaction Criteria**:
+  - `goful --diff-report dir1 dir2 [dir3 ...]` compares directories and outputs YAML to stdout.
+  - Requires at least 2 directories; exits with error if fewer provided.
+  - `--quiet` flag suppresses progress output to stderr.
+  - Output YAML includes: `directories` list, `totalFilesChecked`, `totalDirectoriesTraversed`, `durationSeconds`, and `differences` array.
+  - Each difference entry includes: `name`, `path`, `reason`, and `isDir` fields.
+  - Progress updates to stderr every 2 seconds (configurable) showing current path and stats.
+  - Exit code 0 on success, 1 on error, 2 if differences found (for scripting).
+  - No TUI initialization when `--diff-report` is set.
+- **Validation Criteria**:
+  - Unit tests cover `BatchNavigator` directory loading and traversal without TUI dependencies.
+  - Unit tests cover `RunBatchDiffSearch` collecting all differences into the report structure.
+  - Integration tests verify YAML output format and exit codes.
+  - Manual verification confirms progress output to stderr and quiet mode suppression.
+  - Token validation confirms `[REQ:BATCH_DIFF_REPORT]`, `[ARCH:BATCH_DIFF_REPORT]`, and `[IMPL:BATCH_DIFF_REPORT]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Batch Diff Report Architecture [ARCH:BATCH_DIFF_REPORT]
+- **Implementation**: See `implementation-decisions.md` § Batch Diff Report Implementation [IMPL:BATCH_DIFF_REPORT]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- 11 unit tests in `filer/diffsearch_test.go` covering BatchNavigator, RunBatchDiffSearch, and report structure
+- CLI flags `--diff-report` and `--quiet` implemented in `main.go`
+- Exit codes: 0 (no differences), 1 (error), 2 (differences found)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1429 token references across 78 files.`
 
 ## Non-Functional Requirements
 
