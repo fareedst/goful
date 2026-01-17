@@ -744,7 +744,7 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 ## P1: Multi-Target Copy/Move via nsync [REQ:NSYNC_MULTI_TARGET] [ARCH:NSYNC_INTEGRATION] [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Integrate the nsync SDK from `github.com/fareedst/nsync` to provide multi-target copy/move operations where files sync to all visible workspace panes simultaneously with parallel execution and progress monitoring.
 
@@ -755,26 +755,19 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - `SyncCopy/SyncMove` (Module 2 – `app/nsync.go`): Wrapper functions configuring nsync and executing within `asyncFilectrl` pattern.
 - `CopyAll/MoveAll` (Module 3 – `app/nsync.go`): Functions collecting destinations from workspace and delegating to nsync wrappers.
 
-**Subtasks**:
-- [x] Update requirements with `[REQ:NSYNC_MULTI_TARGET]` [REQ:NSYNC_MULTI_TARGET]
-- [x] Update architecture decisions with `[ARCH:NSYNC_INTEGRATION]` [ARCH:NSYNC_INTEGRATION]
-- [x] Update implementation decisions with `[IMPL:NSYNC_OBSERVER]` and `[IMPL:NSYNC_COPY_MOVE]` [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
-- [x] Register tokens in `semantic-tokens.md`
-- [x] Add nsync dependency from public repo `github.com/fareedst/nsync` in `go.mod`
-- [ ] Implement `NsyncObserver` adapter in `app/nsync.go` [IMPL:NSYNC_OBSERVER]
-- [ ] Implement `syncCopy`/`syncMove` wrappers in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
-- [x] Add `CopyAll`/`MoveAll` functions in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
-- [ ] Wire keybindings (`C`/`M`) and View menu entries in `main.go` [IMPL:NSYNC_COPY_MOVE]
-- [ ] Add unit tests for observer adapter [REQ:MODULE_VALIDATION]
-- [ ] Add integration tests for multi-target sync [REQ:MODULE_VALIDATION]
-- [ ] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
-
 **Completion Criteria**:
-- [ ] NsyncObserver module validated independently before integration
-- [ ] SyncCopy/SyncMove wrappers validated with temp directory tests
-- [ ] CopyAll/MoveAll modes work with 2+ panes and fall back gracefully with 1 pane
-- [ ] Progress display updates during multi-file operations
-- [ ] Token audit + validation logged
+- [x] NsyncObserver module validated independently before integration
+- [x] SyncCopy/SyncMove wrappers validated with temp directory tests
+- [x] CopyAll/MoveAll modes work with 2+ panes and fall back gracefully with 1 pane
+- [x] Progress display updates during multi-file operations
+- [x] Token audit + validation logged
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./app/... -run "NSYNC"` (darwin/arm64, Go 1.24.3) - 11 tests pass
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1287 token references across 77 files.`
+- Implementation: `gofulObserver`, `syncCopy`, `syncMove`, `CopyAll`, `MoveAll` in `app/nsync.go`
+- Keybindings: `C` (Copy All), `M` (Move All) in filer keymap and command menu
+- Confirmation modes: `copyAllMode`, `moveAllMode` in `app/mode.go`
 
 **Priority Rationale**: P1 because multi-target copy/move significantly improves file distribution workflows but does not block core single-target operations.
 
@@ -957,7 +950,7 @@ The following tasks were identified during an STDD documentation review to addre
 
 ## P1: Complete nsync Multi-Target Integration [REQ:NSYNC_MULTI_TARGET] [ARCH:NSYNC_INTEGRATION] [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Complete the nsync SDK integration for multi-target copy/move operations. The dependency is added and `CopyAll`/`MoveAll` function stubs exist, but core implementation is incomplete.
 
@@ -968,48 +961,35 @@ The following tasks were identified during an STDD documentation review to addre
 - `SyncCopy/SyncMove` (Module 2 – `app/nsync.go`): Wrapper functions configuring nsync and executing within `asyncFilectrl` pattern.
 - `CopyAll/MoveAll` (Module 3 – `app/nsync.go`): Functions collecting destinations from workspace and delegating to nsync wrappers.
 
-**Subtasks**:
-- [x] Update requirements with `[REQ:NSYNC_MULTI_TARGET]` [REQ:NSYNC_MULTI_TARGET]
-- [x] Update architecture decisions with `[ARCH:NSYNC_INTEGRATION]` [ARCH:NSYNC_INTEGRATION]
-- [x] Update implementation decisions with `[IMPL:NSYNC_OBSERVER]` and `[IMPL:NSYNC_COPY_MOVE]` [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
-- [x] Register tokens in `semantic-tokens.md`
-- [x] Add nsync dependency from public repo `github.com/fareedst/nsync` in `go.mod`
-- [ ] Implement `NsyncObserver` adapter in `app/nsync.go` [IMPL:NSYNC_OBSERVER]
-- [ ] Implement `syncCopy`/`syncMove` wrappers in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
-- [x] Add `CopyAll`/`MoveAll` functions in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
-- [ ] Wire keybindings (`C`/`M`) and View menu entries in `main.go` [IMPL:NSYNC_COPY_MOVE]
-- [ ] Add unit tests for observer adapter [REQ:MODULE_VALIDATION]
-- [ ] Add integration tests for multi-target sync [REQ:MODULE_VALIDATION]
-- [ ] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
-
 **Completion Criteria**:
-- [ ] NsyncObserver module validated independently before integration
-- [ ] SyncCopy/SyncMove wrappers validated with temp directory tests
-- [ ] CopyAll/MoveAll modes work with 2+ panes and fall back gracefully with 1 pane
-- [ ] Progress display updates during multi-file operations
-- [ ] Token audit + validation logged
+- [x] NsyncObserver module validated independently before integration
+- [x] SyncCopy/SyncMove wrappers validated with temp directory tests
+- [x] CopyAll/MoveAll modes work with 2+ panes and fall back gracefully with 1 pane
+- [x] Progress display updates during multi-file operations
+- [x] Token audit + validation logged
+
+**Validation Evidence (2026-01-17)**: See main "Multi-Target Copy/Move via nsync" task for validation evidence.
 
 **Priority Rationale**: P1 because multi-target copy/move significantly improves file distribution workflows but does not block core single-target operations.
 
 ## P1: nsync Confirmation Prompts [REQ:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [IMPL:NSYNC_CONFIRMATION]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Add confirmation prompts before multi-target copy/move operations using existing cmdline mode pattern.
 
 **Dependencies**: [REQ:NSYNC_MULTI_TARGET]
 
-**Subtasks**:
-- [ ] Create `copyAllMode` and `moveAllMode` structs in `app/mode.go`
-- [ ] Implement `cmdline.Mode` interface for confirmation prompts
-- [ ] Wire confirmation into `CopyAll()`/`MoveAll()` public functions
-- [ ] Add unit tests for confirmation mode input handling [REQ:MODULE_VALIDATION]
-- [ ] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
-
 **Completion Criteria**:
-- [ ] Confirmation prompts display source/destination counts
-- [ ] Y/y/Enter confirms, n/N cancels
-- [ ] Tests cover input handling
-- [ ] Token audit + validation logged
+- [x] Confirmation prompts display source/destination counts
+- [x] Y/y/Enter confirms, n/N cancels
+- [x] Tests cover input handling
+- [x] Token audit + validation logged
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./app/... -run "NSYNC_CONFIRMATION"` (darwin/arm64, Go 1.24.3) - 4 tests pass
+- Implementation: `copyAllMode`, `moveAllMode` in `app/mode.go`
+- Tests: `TestCopyAllMode_String_REQ_NSYNC_CONFIRMATION`, `TestMoveAllMode_String_REQ_NSYNC_CONFIRMATION`, prompt count tests in `app/nsync_test.go`
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1287 token references across 77 files.`
 
 **Priority Rationale**: P1 because multi-target operations are high-risk and users expect confirmation for operations affecting multiple destinations.

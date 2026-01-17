@@ -196,3 +196,123 @@ func TestFakeFileInfo_REQ_NSYNC_MULTI_TARGET(t *testing.T) {
 		t.Errorf("Sys() = %v, want nil", fi.Sys())
 	}
 }
+
+// TestCopyAllMode_String_REQ_NSYNC_CONFIRMATION verifies copyAllMode interface.
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+func TestCopyAllMode_String_REQ_NSYNC_CONFIRMATION(t *testing.T) {
+	mode := &copyAllMode{
+		sources:      []string{"/src/a.txt", "/src/b.txt"},
+		destinations: []string{"/dst1", "/dst2", "/dst3"},
+	}
+
+	// Test mode name
+	if got := mode.String(); got != "copyall" {
+		t.Errorf("String() = %q, want %q", got, "copyall")
+	}
+
+	// Test prompt format
+	prompt := mode.Prompt()
+	want := "Copy 2 file(s) to 3 destinations? [Y/n] "
+	if prompt != want {
+		t.Errorf("Prompt() = %q, want %q", prompt, want)
+	}
+}
+
+// TestMoveAllMode_String_REQ_NSYNC_CONFIRMATION verifies moveAllMode interface.
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+func TestMoveAllMode_String_REQ_NSYNC_CONFIRMATION(t *testing.T) {
+	mode := &moveAllMode{
+		sources:      []string{"/src/a.txt"},
+		destinations: []string{"/dst1", "/dst2"},
+	}
+
+	// Test mode name
+	if got := mode.String(); got != "moveall" {
+		t.Errorf("String() = %q, want %q", got, "moveall")
+	}
+
+	// Test prompt format
+	prompt := mode.Prompt()
+	want := "Move 1 file(s) to 2 destinations? [Y/n] "
+	if prompt != want {
+		t.Errorf("Prompt() = %q, want %q", prompt, want)
+	}
+}
+
+// TestCopyAllMode_PromptCounts_REQ_NSYNC_CONFIRMATION tests various source/dest counts.
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+func TestCopyAllMode_PromptCounts_REQ_NSYNC_CONFIRMATION(t *testing.T) {
+	tests := []struct {
+		name         string
+		sources      []string
+		destinations []string
+		wantPrompt   string
+	}{
+		{
+			name:         "single file single dest",
+			sources:      []string{"/a.txt"},
+			destinations: []string{"/dst"},
+			wantPrompt:   "Copy 1 file(s) to 1 destinations? [Y/n] ",
+		},
+		{
+			name:         "multiple files multiple dests",
+			sources:      []string{"/a.txt", "/b.txt", "/c.txt"},
+			destinations: []string{"/d1", "/d2"},
+			wantPrompt:   "Copy 3 file(s) to 2 destinations? [Y/n] ",
+		},
+		{
+			name:         "ten files five dests",
+			sources:      []string{"/1", "/2", "/3", "/4", "/5", "/6", "/7", "/8", "/9", "/10"},
+			destinations: []string{"/a", "/b", "/c", "/d", "/e"},
+			wantPrompt:   "Copy 10 file(s) to 5 destinations? [Y/n] ",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mode := &copyAllMode{
+				sources:      tt.sources,
+				destinations: tt.destinations,
+			}
+			if got := mode.Prompt(); got != tt.wantPrompt {
+				t.Errorf("Prompt() = %q, want %q", got, tt.wantPrompt)
+			}
+		})
+	}
+}
+
+// TestMoveAllMode_PromptCounts_REQ_NSYNC_CONFIRMATION tests various source/dest counts.
+// [IMPL:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
+func TestMoveAllMode_PromptCounts_REQ_NSYNC_CONFIRMATION(t *testing.T) {
+	tests := []struct {
+		name         string
+		sources      []string
+		destinations []string
+		wantPrompt   string
+	}{
+		{
+			name:         "single file single dest",
+			sources:      []string{"/a.txt"},
+			destinations: []string{"/dst"},
+			wantPrompt:   "Move 1 file(s) to 1 destinations? [Y/n] ",
+		},
+		{
+			name:         "multiple files multiple dests",
+			sources:      []string{"/a.txt", "/b.txt"},
+			destinations: []string{"/d1", "/d2", "/d3", "/d4"},
+			wantPrompt:   "Move 2 file(s) to 4 destinations? [Y/n] ",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mode := &moveAllMode{
+				sources:      tt.sources,
+				destinations: tt.destinations,
+			}
+			if got := mode.Prompt(); got != tt.wantPrompt {
+				t.Errorf("Prompt() = %q, want %q", got, tt.wantPrompt)
+			}
+		})
+	}
+}

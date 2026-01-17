@@ -48,8 +48,8 @@ Each requirement includes:
 | [REQ:CONTRIBUTING_GUIDE] | Contributor standards | P1 | ✅ Implemented | [ARCH:CONTRIBUTION_PROCESS] | [IMPL:DOC_CONTRIBUTING] |
 | [REQ:BEHAVIOR_BASELINE] | Baseline behavior capture | P1 | ✅ Implemented | [ARCH:BASELINE_CAPTURE] | [IMPL:BASELINE_SNAPSHOTS] |
 | [REQ:EVENT_LOOP_SHUTDOWN] | Event poller shutdown control | P0 | ✅ Implemented | [ARCH:EVENT_LOOP_SHUTDOWN] | [IMPL:EVENT_LOOP_SHUTDOWN] |
-| [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ⏳ Planned | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
-| [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ⏳ Planned | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
+| [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ✅ Implemented | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
+| [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ✅ Implemented | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
 
 ### Non-Functional Requirements
 
@@ -769,7 +769,13 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § nsync Integration [ARCH:NSYNC_INTEGRATION]
 - **Implementation**: See `implementation-decisions.md` § nsync Observer [IMPL:NSYNC_OBSERVER], nsync Copy/Move [IMPL:NSYNC_COPY_MOVE]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./app/... -run "NSYNC"` (darwin/arm64, Go 1.24.3) - 11 tests pass
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1287 token references across 77 files.`
+- Implementation: `gofulObserver`, `syncCopy`, `syncMove`, `CopyAll`, `MoveAll` in `app/nsync.go`
+- Keybindings: `C` (Copy All), `M` (Move All) in filer keymap and command menu
 
 ### [REQ:NSYNC_CONFIRMATION] Multi-Target Copy/Move Confirmation
 
@@ -792,7 +798,12 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § nsync Confirmation [ARCH:NSYNC_CONFIRMATION]
 - **Implementation**: See `implementation-decisions.md` § nsync Confirmation Modes [IMPL:NSYNC_CONFIRMATION]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./app/... -run "NSYNC_CONFIRMATION"` (darwin/arm64, Go 1.24.3) - 4 tests pass
+- Implementation: `copyAllMode`, `moveAllMode` in `app/mode.go`
+- Tests: `TestCopyAllMode_String_REQ_NSYNC_CONFIRMATION`, `TestMoveAllMode_String_REQ_NSYNC_CONFIRMATION`, prompt count tests in `app/nsync_test.go`
 
 ### [REQ:EVENT_LOOP_SHUTDOWN] Event Poller Shutdown Control
 
