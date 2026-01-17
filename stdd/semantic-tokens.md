@@ -190,7 +190,7 @@ When referencing other tokens:
 
 ## Implementation Tokens Registry
 
-**📖 Full details**: See `implementation-decisions.md`
+**📖 Full details**: See `implementation-decisions.md` (index) and `implementation-decisions/` (detail files)
 
 - `[IMPL:CONFIG_STRUCT]` - Configuration structure implementation [ARCH:CONFIG_STRUCTURE] [REQ:CONFIGURATION]
 - `[IMPL:STDD_FILES]` - STDD file creation [ARCH:STDD_STRUCTURE] [REQ:STDD_SETUP]
