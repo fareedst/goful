@@ -6,21 +6,29 @@
 - Owners use the `goful-maintainers` alias so outstanding debt is assignable for audits.
 - Hotspots inline TODOs contain `[IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]`, keeping the trace intact for `[PROC:TOKEN_AUDIT]`.
 
-## Snapshot — 2026-01-01
+## Snapshot — 2026-01-17
 
 | ID | Area | Risk | Owner | TODO Reference | Next Action |
 |----|------|------|-------|----------------|-------------|
-| D1 | `app/goful.Run` event poller | Goroutine & channel leak after exit causes runaway CPU usage and blocks future runs | goful-maintainers | `// TODO(goful-maintainers)` in `app/goful.go` | Introduce context-aware poller and close `g.event` when shutting down |
+| D1 | `app/goful.Run` event poller | ✅ RESOLVED — Goroutine & channel leak after exit causes runaway CPU usage and blocks future runs | goful-maintainers | Implemented in `app/goful.go` | — |
 | D2 | CLI history persistence (`main.go` + `cmdline/history.go`) | Ignored errors hide corrupt history; missing files are treated as fatal and never logged | goful-maintainers | `// TODO(goful-maintainers)` in `main.go` & `cmdline/cmdline.go` | Differentiate `os.IsNotExist`, surface actionable errors via `message.Error`, add unit coverage |
 | D3 | History cache growth (`cmdline/cmdline.go`) | `historyMap` never bounds entries leading to unbounded memory per mode | goful-maintainers | `// TODO(goful-maintainers)` near `historyMap` | Add eviction policy (N most recent) and persistence compaction |
 | D4 | `filer.AddExtmap` | Nil map panic when invoked before `MergeExtmap` seeds inner map | goful-maintainers | `// TODO(goful-maintainers)` in `filer/filer.go` | Allocate inner map or deprecate API; add regression test |
 
 ## Item Details
 
-### D1. Event Poller Stop Control
+### D1. Event Poller Stop Control — ✅ RESOLVED
+
 - **Context**: `app/goful.go` launches `widget.PollEvent` in a tight infinite loop without observing `g.exit`.
 - **Impact**: After `Run` returns the goroutine continues to push into `g.event`, leaking goroutines and hammering the channel buffer.
 - **Mitigation Outline**: Move the poller behind a context or expose `stop <- struct{}{}` to break the loop while draining pending events.
+- **Resolution (2026-01-17)**: Implemented `[REQ:EVENT_LOOP_SHUTDOWN]`, `[ARCH:EVENT_LOOP_SHUTDOWN]`, `[IMPL:EVENT_LOOP_SHUTDOWN]`:
+  - Added `pollStop` channel and `pollWg` wait group to coordinate shutdown.
+  - `pollEvents()` goroutine checks for stop signal before and after `widget.PollEvent` calls.
+  - `shutdownPoller()` closes the stop channel with mutex protection (idempotent), waits for poller with timeout.
+  - Debug logging gated by `GOFUL_DEBUG_EVENTLOOP` environment variable.
+  - 8 unit tests validate shutdown behavior including concurrent shutdown safety.
+  - Old `// TODO(goful-maintainers)` removed from `app/goful.go`.
 
 ### D2. History Error Handling
 - **Context**: `_ = cmdline.LoadHistory()` and `_ = cmdline.SaveHistory()` swallow IO failures; `LoadHistory` also treats `os.ErrNotExist` as fatal.

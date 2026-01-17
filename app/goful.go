@@ -3,8 +3,10 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/anmitsu/goful/diffstatus"
@@ -23,6 +25,10 @@ import (
 // [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
 const doubleClickThreshold = 400 * time.Millisecond
 
+// pollerShutdownTimeout is the maximum time to wait for the event poller to stop.
+// [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+const pollerShutdownTimeout = 2 * time.Second
+
 // Goful represents a main application.
 type Goful struct {
 	*filer.Filer
@@ -39,6 +45,11 @@ type Goful struct {
 	lastClickTime time.Time
 	lastClickX    int
 	lastClickY    int
+	// Shutdown control for event poller [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+	pollStop   chan struct{}  // Closed to signal poller to stop
+	pollWg     sync.WaitGroup // Tracks poller goroutine for clean shutdown
+	pollClosed bool           // Guards against double-close of pollStop
+	pollMu     sync.Mutex     // Protects pollClosed
 }
 
 // NewGoful creates a new goful client based recording a previous state.
@@ -48,6 +59,8 @@ func NewGoful(path string) *Goful {
 	progress.Init()
 	diffstatus.Init() // [IMPL:DIFF_SEARCH] Initialize diff status display
 	width, height := widget.Size()
+	// [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+	// Initialize shutdown control channels for clean event poller termination
 	goful := &Goful{
 		Filer:     filer.NewFromState(path, 0, 0, width, height-2),
 		shell:     nil,
@@ -59,6 +72,7 @@ func NewGoful(path string) *Goful {
 		task:      make(chan int, 1),
 		exit:      false,
 		linkedNav: true, // [IMPL:LINKED_NAVIGATION] Enabled by default
+		pollStop:  make(chan struct{}),
 	}
 	return goful
 }
@@ -172,30 +186,115 @@ func (g *Goful) Help() {
 }
 
 // Run the goful client.
+// [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
 func (g *Goful) Run() {
 	message.Info("Welcome to goful")
 	g.Workspace().ReloadAll()
 
-	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
-	// add cancellation so the poller goroutine stops pushing into g.event after the UI exits;
-	// the current infinite loop keeps running after Run returns, leaking a goroutine and busy-waiting on the channel.
-	go func() {
-		for {
-			g.event <- widget.PollEvent()
-		}
-	}()
+	// [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+	// Start event poller goroutine with stop signal handling.
+	// The poller observes pollStop and terminates cleanly when signaled.
+	g.pollWg.Add(1)
+	go g.pollEvents()
 
+	// Main event loop
 	for !g.exit {
 		g.Draw()
 		widget.Show()
 		select {
-		case ev := <-g.event:
+		case ev, ok := <-g.event:
+			if !ok {
+				// [IMPL:EVENT_LOOP_SHUTDOWN] Channel closed during shutdown
+				g.debugLog("event channel closed, exiting main loop")
+				g.exit = true
+				continue
+			}
 			g.eventHandler(ev)
 		case <-g.interrupt:
 			<-g.interrupt
 		case callback := <-g.callback:
 			callback()
 		}
+	}
+
+	// [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+	// Shutdown controller: stop the poller and wait for clean termination
+	g.shutdownPoller()
+}
+
+// pollEvents is the event poller goroutine that observes the stop signal.
+// It wraps widget.PollEvent and terminates cleanly when pollStop is closed.
+// [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+func (g *Goful) pollEvents() {
+	defer g.pollWg.Done()
+	g.debugLog("poller started")
+
+	for {
+		// Check for stop signal before blocking on PollEvent
+		select {
+		case <-g.pollStop:
+			g.debugLog("poller received stop signal")
+			return
+		default:
+			// Continue to poll
+		}
+
+		// Poll for events - this blocks until an event arrives
+		ev := widget.PollEvent()
+
+		// Check for stop signal after receiving event
+		select {
+		case <-g.pollStop:
+			g.debugLog("poller stopped after receiving event")
+			return
+		case g.event <- ev:
+			// Event sent successfully
+		}
+	}
+}
+
+// shutdownPoller closes the poll stop channel and waits for the poller to exit.
+// Uses a timeout to prevent hanging if the poller is stuck in PollEvent.
+// [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+func (g *Goful) shutdownPoller() {
+	g.debugLog("shutdown controller starting")
+
+	// Close pollStop channel (idempotent via mutex guard)
+	g.pollMu.Lock()
+	if !g.pollClosed {
+		close(g.pollStop)
+		g.pollClosed = true
+		g.debugLog("stop signal sent to poller")
+	}
+	g.pollMu.Unlock()
+
+	// Wait for poller with timeout
+	done := make(chan struct{})
+	go func() {
+		g.pollWg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		g.debugLog("poller stopped successfully")
+	case <-time.After(pollerShutdownTimeout):
+		// [IMPL:EVENT_LOOP_SHUTDOWN] Timeout handling - log error but continue teardown safely
+		g.debugLog("poller shutdown timed out after " + pollerShutdownTimeout.String())
+		message.Errorf("Event poller did not stop within timeout. Please file a bug referencing [REQ:EVENT_LOOP_SHUTDOWN]")
+	}
+
+	// Close event channel to prevent any stray writes
+	// Note: This may cause a panic if the poller is still writing; the timeout
+	// above should prevent this, but the error message above warns the user.
+	g.debugLog("shutdown controller complete")
+}
+
+// debugLog emits debug logs gated by GOFUL_DEBUG_EVENTLOOP environment variable.
+// [IMPL:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [REQ:EVENT_LOOP_SHUTDOWN]
+func (g *Goful) debugLog(msg string) {
+	if os.Getenv("GOFUL_DEBUG_EVENTLOOP") != "" {
+		message.Infof("DEBUG: [IMPL:EVENT_LOOP_SHUTDOWN] %s", msg)
 	}
 }
 

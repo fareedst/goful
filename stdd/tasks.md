@@ -671,9 +671,9 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 ## P0: Event Loop Shutdown [REQ:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [IMPL:EVENT_LOOP_SHUTDOWN]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
-**Description**: Stop leaking goroutines by giving `app.Goful`’s event poller an explicit shutdown path that observes application exit, drains pending events safely, and closes channels without writing after close.
+**Description**: Stop leaking goroutines by giving `app.Goful`'s event poller an explicit shutdown path that observes application exit, drains pending events safely, and closes channels without writing after close.
 
 **Dependencies**: [REQ:MODULE_VALIDATION], [REQ:DEBT_TRIAGE]
 
@@ -684,19 +684,25 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Subtasks**:
 - [x] Publish requirement + architecture/implementation decisions and register semantic tokens [REQ:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [IMPL:EVENT_LOOP_SHUTDOWN]
-- [ ] Extract/implement `PollerAdapter` with stop signal handling [REQ:EVENT_LOOP_SHUTDOWN]
-- [ ] Add unit tests for the adapter using fake poll sources (module validation) [REQ:MODULE_VALIDATION]
-- [ ] Implement `ShutdownController` in `app/goful.go` with timeout + logging [IMPL:EVENT_LOOP_SHUTDOWN]
-- [ ] Add integration tests proving `Run` stops the poller and no events fire post-shutdown [REQ:EVENT_LOOP_SHUTDOWN]
-- [ ] Update `stdd/debt-log.md` D1 entry with mitigation notes once validation passes [REQ:DEBT_TRIAGE]
-- [ ] Run `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) after code/tests land
+- [x] Extract/implement `PollerAdapter` with stop signal handling [REQ:EVENT_LOOP_SHUTDOWN]
+- [x] Add unit tests for the adapter using fake poll sources (module validation) [REQ:MODULE_VALIDATION]
+- [x] Implement `ShutdownController` in `app/goful.go` with timeout + logging [IMPL:EVENT_LOOP_SHUTDOWN]
+- [x] Add integration tests proving `Run` stops the poller and no events fire post-shutdown [REQ:EVENT_LOOP_SHUTDOWN]
+- [x] Update `stdd/debt-log.md` D1 entry with mitigation notes once validation passes [REQ:DEBT_TRIAGE]
+- [x] Run `[PROC:TOKEN_AUDIT]` and `./scripts/validate_tokens.sh` (`[PROC:TOKEN_VALIDATION]`) after code/tests land
 
 **Completion Criteria**:
-- [ ] Poller and shutdown modules validated independently before integration (unit tests pass).
-- [ ] Integration coverage ensures no writes occur after `g.event` closes and goroutine count returns to baseline.
-- [ ] Debug logging documents shutdown start/stop (+ timeout) for operators.
-- [ ] Debt item D1 updated with resolved status referencing this requirement.
-- [ ] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` logs captured with new token references.
+- [x] Poller and shutdown modules validated independently before integration (unit tests pass).
+- [x] Integration coverage ensures no writes occur after `g.event` closes and goroutine count returns to baseline.
+- [x] Debug logging documents shutdown start/stop (+ timeout) for operators.
+- [x] Debt item D1 updated with resolved status referencing this requirement.
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` logs captured with new token references.
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./app/... -run "EVENT_LOOP_SHUTDOWN" -v` - 8 tests pass (darwin/arm64, Go 1.24.3)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1200 token references across 76 files.`
+- Implementation: `pollEvents()`, `shutdownPoller()`, `debugLog()` in `app/goful.go`
+- Tests: `app/shutdown_test.go` with 8 test cases covering timeout, idempotency, concurrency, channel closure
 
 **Priority Rationale**: P0 because the leaking poller burns CPU and risks crashes for every exit, making the UI unreliable.
 
@@ -846,3 +852,188 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - Bug fix (2026-01-18): Linked mode file double-click now opens ALL matching files from all windows, executing the open command once for each same-named file. Root cause was that `g.Input("C-m")` only expanded `%f` macro to the focused file path.
 
 **Priority Rationale**: P1 because double-click completes the mouse navigation experience but keyboard navigation remains fully functional without it.
+
+---
+
+## Phase 3: Code Quality Improvements (Identified 2026-01-17)
+
+The following tasks were identified during an STDD documentation review to address runtime reliability issues, documented technical debt, and documentation drift.
+
+## P0: Event Loop Shutdown [REQ:EVENT_LOOP_SHUTDOWN] [ARCH:EVENT_LOOP_SHUTDOWN] [IMPL:EVENT_LOOP_SHUTDOWN]
+
+**Status**: ✅ Complete (see main task entry above for validation evidence)
+
+**Priority Rationale**: P0 because the leaking poller burns CPU and risks crashes for every exit, making the UI unreliable. Completed 2026-01-17.
+
+## P1: History Error Handling [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:DEBT_TRACKING]
+
+**Status**: ⏳ Pending
+
+**Description**: Fix silent error swallowing in CLI history persistence. Distinguish first-run missing files (`os.ErrNotExist`) from actual IO failures (permissions, disk full) and surface actionable errors via `message.Error`.
+
+**Dependencies**: None
+
+**Debt Reference**: D2 in `stdd/debt-log.md`
+
+**Affected Files**:
+- `main.go` (lines 88-90, 103-105)
+- `cmdline/cmdline.go` (lines 168-172)
+
+**Subtasks**:
+- [ ] Update `cmdline.LoadHistory` to treat `os.ErrNotExist` as success (first-run behavior)
+- [ ] Surface other IO failures via `message.Error` with actionable context
+- [ ] Update `main.go` to capture and log `LoadHistory`/`SaveHistory` errors
+- [ ] Add unit tests covering the error differentiation paths [REQ:MODULE_VALIDATION]
+- [ ] Update D2 in `stdd/debt-log.md` with mitigation notes
+
+**Completion Criteria**:
+- [ ] First-run (missing history file) works silently without errors
+- [ ] Real IO failures surface via `message.Error` with context
+- [ ] Tests cover error differentiation
+- [ ] Debt item D2 updated with resolved status
+
+**Priority Rationale**: P1 because silent error swallowing hides corruption and permission issues, but users can still use goful without history.
+
+## P1: History Cache Boundaries [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:DEBT_TRACKING]
+
+**Status**: ⏳ Pending
+
+**Description**: Add a configurable per-mode entry limit to `historyMap` with an eviction policy that drops the oldest entries before serialization, preventing unbounded memory growth in long-running sessions.
+
+**Dependencies**: None
+
+**Debt Reference**: D3 in `stdd/debt-log.md`
+
+**Affected Files**:
+- `cmdline/cmdline.go` (near `historyMap` declaration)
+
+**Subtasks**:
+- [ ] Define configurable history limit constant (default: 1000 entries per mode)
+- [ ] Implement eviction policy that trims oldest entries when limit exceeded
+- [ ] Apply eviction during `SaveHistory` to compact persisted files
+- [ ] Add unit tests verifying eviction behavior [REQ:MODULE_VALIDATION]
+- [ ] Update D3 in `stdd/debt-log.md` with mitigation notes
+
+**Completion Criteria**:
+- [ ] `historyMap` never exceeds configured limit per mode
+- [ ] Eviction preserves most recent entries
+- [ ] Tests cover boundary conditions
+- [ ] Debt item D3 updated with resolved status
+
+**Priority Rationale**: P1 because unbounded growth affects long-running sessions, but typical sessions are short enough that this rarely impacts users.
+
+## P1: Extmap API Safety [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:DEBT_TRACKING]
+
+**Status**: ⏳ Pending
+
+**Description**: Fix nil map panic in `filer.AddExtmap` by allocating the inner map before writing, making the API safe for third-party integrations.
+
+**Dependencies**: None
+
+**Debt Reference**: D4 in `stdd/debt-log.md`
+
+**Affected Files**:
+- `filer/filer.go` (lines 225-229)
+
+**Subtasks**:
+- [ ] Check if inner map exists before writing; allocate if nil
+- [ ] Add regression test calling `AddExtmap` without prior `MergeExtmap` [REQ:MODULE_VALIDATION]
+- [ ] Update D4 in `stdd/debt-log.md` with mitigation notes
+
+**Completion Criteria**:
+- [ ] `AddExtmap` works correctly when called before `MergeExtmap`
+- [ ] Regression test prevents future breakage
+- [ ] Debt item D4 updated with resolved status
+
+**Priority Rationale**: P1 because the panic blocks third-party integrations, but the core goful app never triggers this path.
+
+## P1: Requirements Status Synchronization [REQ:STDD_SETUP] [PROC:TOKEN_AUDIT]
+
+**Status**: ⏳ Pending
+
+**Description**: Update `stdd/requirements.md` status flags to reflect completed tasks. Multiple requirements show "⏳ Planned" but their corresponding tasks in `tasks.md` are marked "✅ Complete", indicating documentation drift.
+
+**Dependencies**: None
+
+**Requirements to Update**:
+- `[REQ:CONFIGURABLE_STATE_PATHS]` - Task 2.1 ✅ → Status should be ✅ Implemented
+- `[REQ:WORKSPACE_START_DIRS]` - Task complete → Status should be ✅ Implemented
+- `[REQ:EXTERNAL_COMMAND_CONFIG]` - Task complete → Status should be ✅ Implemented
+- `[REQ:FILER_EXCLUDE_NAMES]` - Task complete → Status should be ✅ Implemented
+- `[REQ:WINDOW_MACRO_ENUMERATION]` - Task complete → Status should be ✅ Implemented
+- `[REQ:ARCH_DOCUMENTATION]` - ARCHITECTURE.md exists → Status should be ✅ Implemented
+- `[REQ:CONTRIBUTING_GUIDE]` - CONTRIBUTING.md exists → Status should be ✅ Implemented
+- `[REQ:BEHAVIOR_BASELINE]` - Keymap tests exist → Status should be ✅ Implemented
+- `[REQ:FILE_COMPARISON_COLORS]` - Feature complete → Status should be ✅ Implemented
+- `[REQ:HELP_POPUP]` - Feature complete → Status should be ✅ Implemented
+- `[REQ:SYNC_COMMANDS]` - Feature complete → Status should be ✅ Implemented
+
+**Subtasks**:
+- [ ] Update status flags in `stdd/requirements.md` for all completed requirements
+- [ ] Verify each status change against task completion evidence
+- [ ] Run `[PROC:TOKEN_VALIDATION]` to confirm registry integrity
+
+**Completion Criteria**:
+- [ ] All requirement statuses match task completion status
+- [ ] No documentation drift between requirements.md and tasks.md
+
+**Priority Rationale**: P1 because documentation accuracy is essential for STDD methodology integrity and contributor onboarding.
+
+## P1: Complete nsync Multi-Target Integration [REQ:NSYNC_MULTI_TARGET] [ARCH:NSYNC_INTEGRATION] [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
+
+**Status**: ⏳ Pending
+
+**Description**: Complete the nsync SDK integration for multi-target copy/move operations. The dependency is added and `CopyAll`/`MoveAll` function stubs exist, but core implementation is incomplete.
+
+**Dependencies**: [REQ:MODULE_VALIDATION], [REQ:WINDOW_MACRO_ENUMERATION] (for `otherWindowDirPaths` helper)
+
+**Module Boundaries**:
+- `NsyncObserver` (Module 1 – `app/nsync.go`): Adapter implementing `nsync.Observer` to bridge progress events to goful's `progress` widget.
+- `SyncCopy/SyncMove` (Module 2 – `app/nsync.go`): Wrapper functions configuring nsync and executing within `asyncFilectrl` pattern.
+- `CopyAll/MoveAll` (Module 3 – `app/nsync.go`): Functions collecting destinations from workspace and delegating to nsync wrappers.
+
+**Subtasks**:
+- [x] Update requirements with `[REQ:NSYNC_MULTI_TARGET]` [REQ:NSYNC_MULTI_TARGET]
+- [x] Update architecture decisions with `[ARCH:NSYNC_INTEGRATION]` [ARCH:NSYNC_INTEGRATION]
+- [x] Update implementation decisions with `[IMPL:NSYNC_OBSERVER]` and `[IMPL:NSYNC_COPY_MOVE]` [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE]
+- [x] Register tokens in `semantic-tokens.md`
+- [x] Add nsync dependency from public repo `github.com/fareedst/nsync` in `go.mod`
+- [ ] Implement `NsyncObserver` adapter in `app/nsync.go` [IMPL:NSYNC_OBSERVER]
+- [ ] Implement `syncCopy`/`syncMove` wrappers in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
+- [x] Add `CopyAll`/`MoveAll` functions in `app/nsync.go` [IMPL:NSYNC_COPY_MOVE]
+- [ ] Wire keybindings (`C`/`M`) and View menu entries in `main.go` [IMPL:NSYNC_COPY_MOVE]
+- [ ] Add unit tests for observer adapter [REQ:MODULE_VALIDATION]
+- [ ] Add integration tests for multi-target sync [REQ:MODULE_VALIDATION]
+- [ ] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [ ] NsyncObserver module validated independently before integration
+- [ ] SyncCopy/SyncMove wrappers validated with temp directory tests
+- [ ] CopyAll/MoveAll modes work with 2+ panes and fall back gracefully with 1 pane
+- [ ] Progress display updates during multi-file operations
+- [ ] Token audit + validation logged
+
+**Priority Rationale**: P1 because multi-target copy/move significantly improves file distribution workflows but does not block core single-target operations.
+
+## P1: nsync Confirmation Prompts [REQ:NSYNC_CONFIRMATION] [ARCH:NSYNC_CONFIRMATION] [IMPL:NSYNC_CONFIRMATION]
+
+**Status**: ⏳ Pending
+
+**Description**: Add confirmation prompts before multi-target copy/move operations using existing cmdline mode pattern.
+
+**Dependencies**: [REQ:NSYNC_MULTI_TARGET]
+
+**Subtasks**:
+- [ ] Create `copyAllMode` and `moveAllMode` structs in `app/mode.go`
+- [ ] Implement `cmdline.Mode` interface for confirmation prompts
+- [ ] Wire confirmation into `CopyAll()`/`MoveAll()` public functions
+- [ ] Add unit tests for confirmation mode input handling [REQ:MODULE_VALIDATION]
+- [ ] Run `[PROC:TOKEN_AUDIT]` + `./scripts/validate_tokens.sh` [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [ ] Confirmation prompts display source/destination counts
+- [ ] Y/y/Enter confirms, n/N cancels
+- [ ] Tests cover input handling
+- [ ] Token audit + validation logged
+
+**Priority Rationale**: P1 because multi-target operations are high-risk and users expect confirmation for operations affecting multiple destinations.

@@ -300,7 +300,13 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § State Path Selection [ARCH:STATE_PATH_SELECTION]
 - **Implementation**: See `implementation-decisions.md` § State Path Resolver [IMPL:STATE_PATH_RESOLVER]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-07)**:
+- Task 2.1 complete with module validation evidence
+- Unit tests covering flag/env/default precedence
+- `./scripts/validate_tokens.sh` → verified token references
+
 ### [REQ:WORKSPACE_START_DIRS] Positional Startup Directories
 
 **Priority: P1 (Important)**
@@ -320,8 +326,14 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Workspace Bootstrap from Positional Directories [ARCH:WORKSPACE_BOOTSTRAP]
 - **Implementation**: See `implementation-decisions.md` § Startup Directory Parser & Seeder [IMPL:WORKSPACE_START_DIRS]
 
-**Status**: ⏳ Planned
-### [REQ:WORKSPACE_START_DIRS] Positional Startup Directories
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-07)**:
+- Parser + seeder modules validated independently
+- `go test ./...` (darwin/arm64, Go 1.24.3)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 288 token references across 58 files.`
+
+### [REQ:WORKSPACE_START_DIRS] Positional Startup Directories (Duplicate Entry)
 
 **Priority: P1 (Important)**
 
@@ -340,7 +352,8 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Workspace Bootstrap from Positional Directories [ARCH:WORKSPACE_BOOTSTRAP]
 - **Implementation**: See `implementation-decisions.md` § Startup Directory Parser & Seeder [IMPL:WORKSPACE_START_DIRS]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
 ### [REQ:WINDOW_MACRO_ENUMERATION] External Command Window Enumeration
 
 **Priority: P1 (Important)**
@@ -362,7 +375,12 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Window Macro Enumeration [ARCH:WINDOW_MACRO_ENUMERATION]
 - **Implementation**: See `implementation-decisions.md` § Window Macro Enumeration [IMPL:WINDOW_MACRO_ENUMERATION]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-05)**:
+- `%D@`, `%~D@`, `%d@`, `%~d@` macros implemented with deterministic ordering
+- Unit + integration tests document module validation evidence
+- `./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 260 token references across 55 files.`
 
 ### [REQ:EXTERNAL_COMMAND_CONFIG] Configurable External Commands
 
@@ -386,7 +404,12 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § External Command Registry [ARCH:EXTERNAL_COMMAND_REGISTRY]
 - **Implementation**: See `implementation-decisions.md` § External Command Loader/Binding [IMPL:EXTERNAL_COMMAND_LOADER], [IMPL:EXTERNAL_COMMAND_BINDER]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-02)**:
+- JSON/YAML loader with prepend-by-default semantics
+- Module validation for loader + binder
+- `./scripts/validate_tokens.sh` → verified token references
 
 ### [REQ:FILER_EXCLUDE_NAMES] Configurable Filename Exclusions
 
@@ -408,7 +431,11 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Filename Exclude Filter [ARCH:FILER_EXCLUDE_FILTER]
 - **Implementation**: See `implementation-decisions.md` § Filename Exclude Rules / Loader [IMPL:FILER_EXCLUDE_RULES], [IMPL:FILER_EXCLUDE_LOADER]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-07)**:
+- `go test ./...` (darwin/arm64, Go 1.24.3)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 302 token references across 58 files.`
 
 ### [REQ:TERMINAL_PORTABILITY] Cross-Platform Terminal Launcher
 
@@ -499,7 +526,11 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Docs Structure [ARCH:DOCS_STRUCTURE]
 - **Implementation**: See `implementation-decisions.md` § Architecture Guide [IMPL:DOC_ARCH_GUIDE]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-01)**:
+- `ARCHITECTURE.md` published and linked from README/CONTRIBUTING
+- Package/data flow documented with semantic token cross-references
 
 ### [REQ:CONTRIBUTING_GUIDE] Contributor Standards
 
@@ -517,7 +548,11 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Contribution Process [ARCH:CONTRIBUTION_PROCESS]
 - **Implementation**: See `implementation-decisions.md` § CONTRIBUTING Guide [IMPL:DOC_CONTRIBUTING]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-01)**:
+- `CONTRIBUTING.md` published with workflow checklist and debug/logging policy
+- Linked from README
 
 ### [REQ:RELEASE_BUILD_MATRIX] Reproducible Builds
 
@@ -558,7 +593,11 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Baseline Capture [ARCH:BASELINE_CAPTURE]
 - **Implementation**: See `implementation-decisions.md` § Baseline Snapshots [IMPL:BASELINE_SNAPSHOTS]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-01)**:
+- `main_keymap_test.go` (`KeymapBaselineSuite`) enumerates canonical filer/cmdline/finder/completion/menu chords
+- Tests include `[TEST:KEYMAP_BASELINE]` token references
 
 ### [REQ:DEBT_TRIAGE] Debt and Risk Tracking
 
@@ -575,7 +614,11 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Debt Management [ARCH:DEBT_MANAGEMENT]
 - **Implementation**: See `implementation-decisions.md` § Debt Tracking [IMPL:DEBT_TRACKING]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-01)**:
+- `stdd/debt-log.md` created with D1-D4 entries
+- TODO annotations added to hotspot files with `[IMPL:DEBT_TRACKING]` tokens
 
 ### [REQ:FILE_COMPARISON_COLORS] Multi-Directory File Comparison Coloring
 
@@ -603,7 +646,12 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § File Comparison Engine [ARCH:FILE_COMPARISON_ENGINE]
 - **Implementation**: See `implementation-decisions.md` § Comparison Color Config [IMPL:COMPARE_COLOR_CONFIG], File Comparison Index [IMPL:FILE_COMPARISON_INDEX], Comparison Draw [IMPL:COMPARISON_DRAW], Digest Comparison [IMPL:DIGEST_COMPARISON]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-09)**:
+- Comparison coloring enabled by default with YAML config
+- Digest calculation via `=` key with xxHash64
+- Unit + integration tests with token references
 
 ### [REQ:LINKED_NAVIGATION] Linked Navigation Mode
 
@@ -740,7 +788,12 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Event Loop Shutdown [ARCH:EVENT_LOOP_SHUTDOWN]
 - **Implementation**: See `implementation-decisions.md` § Event Loop Shutdown Controller [IMPL:EVENT_LOOP_SHUTDOWN]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-10)**:
+- Keybindings: `[` (start), `]` (continue)
+- Dedicated `diffstatus` package for persistent status line
+- 16 tests covering difference detection and traversal
 
 ### [REQ:HELP_POPUP] Help Popup Keystroke Catalog
 
@@ -763,7 +816,12 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Help Widget [ARCH:HELP_WIDGET]
 - **Implementation**: See `implementation-decisions.md` § Help Popup Implementation [IMPL:HELP_POPUP]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-15)**:
+- `?` key opens scrollable help popup
+- Standard exit keys work (`?`, `q`, `C-g`, `C-[`)
+- Navigation keys scroll through content
 
 ### [REQ:SYNC_COMMANDS] Sync Command Operations
 
