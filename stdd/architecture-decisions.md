@@ -1057,6 +1057,42 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 **Cross-References**: [REQ:MOUSE_FILE_SELECT], [IMPL:MOUSE_HIT_TEST], [IMPL:MOUSE_FILE_SELECT], [REQ:MODULE_VALIDATION]
 
+## 39. Mouse Double-Click Detection [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
+
+### Decision: Implement time-based double-click detection in the mouse handler with action dispatch for directories and files, respecting the Linked navigation mode.
+**Rationale:**
+- Double-click is the standard "open/enter" gesture in file managers and users expect this behavior.
+- Detection requires tracking the last click time and position to determine if two clicks occur within a threshold (400ms) at the same location.
+- For directories, double-click should reuse the existing `linkedEnterDir` pattern to respect Linked navigation mode.
+- For files, double-click should trigger the open action, and when Linked mode is enabled, should open same-named files in all windows.
+
+**Architecture Outline:**
+- **Click State Tracking** (`app/goful.go`): Add `lastClickTime time.Time`, `lastClickX int`, `lastClickY int` fields to `Goful` struct.
+- **Double-Click Detection** (`app/goful.go`): Add `isDoubleClick(x, y int) bool` helper that checks if the current click is within threshold of the last click at the same position, then updates the tracking state.
+- **Directory Double-Click Handler**: When double-clicking a directory:
+  - If Linked mode is ON: Call `ChdirAllToSubdirNoRebuild()` for other windows, then `EnterDir()` for the focused window, then `RebuildComparisonIndex()`.
+  - If Linked mode is OFF: Call only `EnterDir()` for the clicked directory.
+- **File Double-Click Handler**: When double-clicking a file:
+  - If Linked mode is ON: For each window, find same-named file and trigger open action.
+  - If Linked mode is OFF: Trigger open action only for the clicked file.
+- **Integration with `handleLeftClick`**: After single-click selection, check `isDoubleClick()` and dispatch to appropriate handler.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `DoubleClickDetector` (Module 1 in `app/goful.go`) – Pure timing/position logic, independently testable with mock time.
+- `DirectoryDoubleClickHandler` (Module 2 in `app/goful.go`) – Reuses linked navigation pattern, calls workspace and directory methods.
+- `FileDoubleClickHandler` (Module 3 in `app/goful.go`) – Iterates windows when Linked, triggers open action via `Input("C-m")` or equivalent.
+
+**Alternatives Considered:**
+- **Separate double-click event**: tcell does not provide built-in double-click events, so manual detection is required.
+- **Fixed threshold only**: Chose configurable threshold (default 400ms) for future flexibility.
+- **Separate "open all windows" option**: Rejected in favor of reusing the existing Linked navigation setting for consistency.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `app/goful.go` includes `[IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]`.
+- Tests reference `[REQ:MOUSE_DOUBLE_CLICK]` in names/comments.
+
+**Cross-References**: [REQ:MOUSE_DOUBLE_CLICK], [IMPL:MOUSE_DOUBLE_CLICK], [ARCH:MOUSE_EVENT_ROUTING], [REQ:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
+
 ## 37. Sync Mode [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
 
 ### Decision: Implement a two-stage prefix mode for executing synchronized file operations across all workspace panes.

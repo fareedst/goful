@@ -33,6 +33,7 @@ Each requirement includes:
 | [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ⏳ Planned | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
 | [REQ:HELP_POPUP] | Help popup displays keystroke catalog on ? key | P2 | ⏳ Planned | [ARCH:HELP_WIDGET] | [IMPL:HELP_POPUP] |
 | [REQ:MOUSE_FILE_SELECT] | Mouse input for file selection in directory windows | P1 | ✅ Implemented | [ARCH:MOUSE_EVENT_ROUTING] | [IMPL:MOUSE_HIT_TEST], [IMPL:MOUSE_FILE_SELECT] |
+| [REQ:MOUSE_DOUBLE_CLICK] | Double-click to open files and navigate directories | P1 | ✅ Implemented | [ARCH:MOUSE_DOUBLE_CLICK] | [IMPL:MOUSE_DOUBLE_CLICK] |
 
 ### Non-Functional Requirements
 
@@ -824,6 +825,38 @@ Each requirement includes:
 - Event loop extended with `*tcell.EventMouse` case in `app/goful.go`.
 - Left-click file selection, focus switching, and wheel scrolling operational.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1137 token references across 74 files.`
+
+### [REQ:MOUSE_DOUBLE_CLICK] Mouse Double-Click Behavior
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must support double-click behavior for mouse navigation. Double-clicking on a directory navigates into it (respecting the Linked navigation mode). Double-clicking on a file opens it, and when Linked mode is enabled, opens same-named files in all windows where they exist. The feature requires time-based double-click detection and integration with existing navigation and file-open mechanisms.
+- **Rationale**: Double-click is the standard mouse gesture for "open" or "enter" actions in file managers. Supporting double-click provides intuitive interaction for users accustomed to GUI file managers and completes the mouse navigation experience started with single-click selection.
+- **Satisfaction Criteria**:
+  - Double-click detection uses time-based threshold (300-500ms) and position matching.
+  - Double-click on a directory calls `EnterDir()` to navigate into it.
+  - When Linked mode is ON, double-clicking a directory triggers `ChdirAllToSubdir()` to propagate navigation to all windows.
+  - Double-click on a file triggers the open action (equivalent to pressing Enter).
+  - When Linked mode is ON, double-clicking a file opens same-named files in all windows where they exist.
+  - When Linked mode is OFF, only the clicked file/directory is affected.
+  - State tracking for last click time and position is maintained in `app.Goful`.
+- **Validation Criteria**:
+  - Unit tests cover double-click timing detection logic with various thresholds.
+  - Unit tests cover directory double-click with Linked mode ON and OFF.
+  - Unit tests cover file double-click with Linked mode ON and OFF.
+  - Manual verification confirms double-click opens directories and files correctly.
+  - Token validation confirms `[REQ:MOUSE_DOUBLE_CLICK]`, `[ARCH:MOUSE_DOUBLE_CLICK]`, and `[IMPL:MOUSE_DOUBLE_CLICK]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Mouse Double-Click Detection [ARCH:MOUSE_DOUBLE_CLICK]
+- **Implementation**: See `implementation-decisions.md` § Mouse Double-Click Detection [IMPL:MOUSE_DOUBLE_CLICK]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- Unit tests in `app/mouse_test.go` covering double-click detection timing and position logic.
+- Implementation in `app/goful.go`: `isDoubleClick()`, `handleDoubleClickDir()`, `handleDoubleClickFile()`.
+- Directory double-click respects `linkedNav` via `ChdirAllToSubdirNoRebuild()`.
+- File double-click respects `linkedNav` by moving cursor to same-named files in all windows.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1158 token references across 74 files.`
 
 ### [REQ:IDENTIFIER] Requirement Name
 

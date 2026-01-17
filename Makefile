@@ -1,4 +1,4 @@
-.PHONY: help build run install test fmt vet lint tidy clean clean-release release
+.PHONY: help build run install test fmt vet lint tidy clean clean-release release app clean-app
 
 GO        ?= go
 BIN_DIR   ?= bin
@@ -9,6 +9,12 @@ DIST_DIR  ?= dist
 RELEASE_PLATFORMS ?= linux/amd64 linux/arm64 darwin/arm64
 RELEASE_LDFLAGS   ?= -s -w
 SHASUM    ?= shasum -a 256
+
+# macOS .app bundle variables
+APP_NAME      ?= PanelDemo
+APP_ID        ?= com.goful.paneldemo
+APP_DIR       ?= $(DIST_DIR)/$(APP_NAME).app
+APP_CONTENTS  ?= $(APP_DIR)/Contents
 
 help:
 	@echo "Available targets:"
@@ -73,3 +79,44 @@ release:
 		echo "DIAGNOSTIC: [IMPL:MAKE_RELEASE_TARGETS] [ARCH:BUILD_MATRIX] [REQ:RELEASE_BUILD_MATRIX] sha256 $$(cat $$output.sha256)"; \
 	done
 
+app:
+	@echo "Building $(APP_NAME).app..."
+	@mkdir -p $(APP_CONTENTS)/MacOS
+	@printf '%s\n' '#!/bin/bash' \
+		'logger -t $(APP_NAME) "$$(date +'"'"'%Y-%m-%d %H:%M:%S'"'"') : $$*"' \
+		> $(APP_CONTENTS)/MacOS/$(APP_NAME)
+	@chmod +x $(APP_CONTENTS)/MacOS/$(APP_NAME)
+	@printf '%s\n' \
+		'<?xml version="1.0" encoding="UTF-8"?>' \
+		'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+		'<plist version="1.0">' \
+		'<dict>' \
+		'  <key>CFBundleExecutable</key>' \
+		'  <string>$(APP_NAME)</string>' \
+		'  <key>CFBundleIdentifier</key>' \
+		'  <string>$(APP_ID)</string>' \
+		'  <key>CFBundleName</key>' \
+		'  <string>$(APP_NAME)</string>' \
+		'  <key>CFBundlePackageType</key>' \
+		'  <string>APPL</string>' \
+		'  <key>CFBundleVersion</key>' \
+		'  <string>1.0</string>' \
+		'  <key>CFBundleDocumentTypes</key>' \
+		'  <array>' \
+		'    <dict>' \
+		'      <key>CFBundleTypeExtensions</key>' \
+		'      <array><string>logged</string></array>' \
+		'      <key>CFBundleTypeName</key>' \
+		'      <string>Logged File</string>' \
+		'      <key>CFBundleTypeRole</key>' \
+		'      <string>Viewer</string>' \
+		'    </dict>' \
+		'  </array>' \
+		'</dict>' \
+		'</plist>' \
+		> $(APP_CONTENTS)/Info.plist
+	@echo "Created: $(APP_DIR)"
+	@echo "Run 'open $(APP_DIR)' to register with Launch Services"
+
+clean-app:
+	rm -rf $(APP_DIR)

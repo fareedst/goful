@@ -1776,3 +1776,131 @@ This ensures the comparison index is built with the correct file lists from all 
 - Tests: Integration tests with names referencing `REQ_MOUSE_FILE_SELECT`
 
 **Cross-References**: [ARCH:MOUSE_EVENT_ROUTING], [REQ:MOUSE_FILE_SELECT], [IMPL:MOUSE_HIT_TEST], [REQ:MODULE_VALIDATION]
+
+## 41. Mouse Double-Click Detection [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
+
+### Decision: Implement time-based double-click detection and action handlers for files and directories
+**Rationale:**
+- Implements double-click behavior per [REQ:MOUSE_DOUBLE_CLICK].
+- Reuses the linked navigation pattern for directories per [REQ:LINKED_NAVIGATION].
+- Extends existing mouse handler infrastructure from [IMPL:MOUSE_FILE_SELECT].
+
+### Implementation Approach:
+
+- **Add click state fields to `Goful` struct in `app/goful.go`**:
+  ```go
+  lastClickTime time.Time  // [IMPL:MOUSE_DOUBLE_CLICK]
+  lastClickX    int        // [IMPL:MOUSE_DOUBLE_CLICK]
+  lastClickY    int        // [IMPL:MOUSE_DOUBLE_CLICK]
+  ```
+
+- **Add `isDoubleClick` helper**:
+  ```go
+  const doubleClickThreshold = 400 * time.Millisecond
+
+  // isDoubleClick checks if this click is a double-click based on timing and position.
+  // [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
+  func (g *Goful) isDoubleClick(x, y int) bool {
+      now := time.Now()
+      isDouble := now.Sub(g.lastClickTime) < doubleClickThreshold &&
+                  g.lastClickX == x && g.lastClickY == y
+      g.lastClickTime = now
+      g.lastClickX = x
+      g.lastClickY = y
+      return isDouble
+  }
+  ```
+
+- **Add `handleDoubleClickDir` for directory navigation**:
+  ```go
+  // handleDoubleClickDir navigates into a directory, respecting linked mode.
+  // [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
+  func (g *Goful) handleDoubleClickDir(dir *filer.Directory) {
+      if g.IsLinkedNav() {
+          name := dir.File().Name()
+          navigated, skipped := g.Workspace().ChdirAllToSubdirNoRebuild(name)
+          if skipped > 0 {
+              g.SetLinkedNav(false)
+              message.Infof("linked navigation disabled: %d window(s) missing '%s'", skipped, name)
+          }
+          _ = navigated
+      }
+      dir.EnterDir()
+      if g.IsLinkedNav() {
+          g.Workspace().RebuildComparisonIndex()
+      }
+  }
+  ```
+
+- **Add `handleDoubleClickFile` for file opening**:
+  ```go
+  // handleDoubleClickFile opens a file, and opens same-named files in all windows when linked.
+  // [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
+  func (g *Goful) handleDoubleClickFile(dir *filer.Directory) {
+      filename := dir.File().Name()
+      
+      if g.IsLinkedNav() {
+          // Move cursor to same-named file in all windows
+          for _, d := range g.Workspace().Dirs {
+              if d.FindFileByName(filename) != nil {
+                  d.SetCursorByName(filename)
+              }
+          }
+      }
+      // Trigger open action (uses extmap)
+      g.Input("C-m")
+  }
+  ```
+
+- **Modify `handleLeftClick` to detect double-click**:
+  ```go
+  // handleLeftClick processes a left mouse click at (x, y).
+  // Switches focus if clicking in an unfocused window and moves cursor to the clicked file.
+  // Detects double-clicks and dispatches to appropriate handler.
+  // [IMPL:MOUSE_FILE_SELECT] [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT] [REQ:MOUSE_DOUBLE_CLICK]
+  func (g *Goful) handleLeftClick(x, y int) {
+      ws := g.Workspace()
+      dir, idx := ws.DirectoryAt(x, y)
+      if dir == nil {
+          return
+      }
+
+      // Switch focus if clicking in unfocused window
+      if idx != ws.Focus {
+          ws.SetFocus(idx)
+      }
+
+      // Convert Y to file index and move cursor
+      fileIdx := dir.FileIndexAtY(y)
+      if fileIdx >= 0 {
+          dir.SetCursor(fileIdx)
+      }
+
+      // Check for double-click after selection
+      // [IMPL:MOUSE_DOUBLE_CLICK]
+      if g.isDoubleClick(x, y) && fileIdx >= 0 {
+          file := dir.File()
+          if file.IsDir() {
+              g.handleDoubleClickDir(dir)
+          } else {
+              g.handleDoubleClickFile(dir)
+          }
+      }
+  }
+  ```
+
+**Code Markers**:
+- `app/goful.go`: `doubleClickThreshold` constant, `lastClickTime`/`lastClickX`/`lastClickY` fields, `isDoubleClick`, `handleDoubleClickDir`, `handleDoubleClickFile` with `// [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]`
+
+**Test Coverage**:
+- `app/mouse_test.go`: `TestIsDoubleClick_REQ_MOUSE_DOUBLE_CLICK` (table-driven timing/position tests), `TestDoubleClickThreshold_REQ_MOUSE_DOUBLE_CLICK` (threshold sanity check), `TestIsDoubleClickUpdatesState_REQ_MOUSE_DOUBLE_CLICK` (state updates), `TestDoubleClickSequence_REQ_MOUSE_DOUBLE_CLICK` (realistic click sequences)
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `app/goful.go`
+- Tests: Unit tests with names referencing `REQ_MOUSE_DOUBLE_CLICK`
+
+**Cross-References**: [ARCH:MOUSE_DOUBLE_CLICK], [REQ:MOUSE_DOUBLE_CLICK], [IMPL:MOUSE_FILE_SELECT], [REQ:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./app/... -run MOUSE_DOUBLE_CLICK` → 4 tests PASS
+- `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1158 token references across 74 files.`

@@ -820,3 +820,28 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 - Manual verification: `=` key now calculates digests for all windows including the focused window
 
 **Priority Rationale**: P0 because the bug broke a core feature (file digest comparison) when using linked navigation, making the comparison results incomplete and misleading.
+
+## P1: Mouse Double-Click Behavior [REQ:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [IMPL:MOUSE_DOUBLE_CLICK]
+
+**Status**: ✅ Complete
+
+**Description**: Implement double-click detection and actions for mouse navigation. Double-clicking directories navigates into them (respecting Linked mode), double-clicking files opens them (and opens same-named files in all windows when Linked mode is enabled).
+
+**Dependencies**: [REQ:MOUSE_FILE_SELECT] (complete), [REQ:LINKED_NAVIGATION] (complete)
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] Double-click on directory enters it, with linked mode propagation
+- [x] Double-click on file opens it, with linked mode opening all same-named files
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Validation Evidence** (2026-01-17):
+- `go test ./app/... -run MOUSE_DOUBLE_CLICK` - 4 tests pass (darwin/arm64, Go 1.24.3)
+- `go test ./...` - all tests pass
+- `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1158 token references across 74 files.`
+- Implementation in `app/goful.go`: `isDoubleClick()`, `handleDoubleClickDir()`, `handleDoubleClickFile()`
+- Unit tests in `app/mouse_test.go`: `TestIsDoubleClick_REQ_MOUSE_DOUBLE_CLICK`, `TestDoubleClickThreshold_REQ_MOUSE_DOUBLE_CLICK`, `TestIsDoubleClickUpdatesState_REQ_MOUSE_DOUBLE_CLICK`, `TestDoubleClickSequence_REQ_MOUSE_DOUBLE_CLICK`
+
+**Priority Rationale**: P1 because double-click completes the mouse navigation experience but keyboard navigation remains fully functional without it.
