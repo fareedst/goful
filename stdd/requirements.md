@@ -32,6 +32,7 @@ Each requirement includes:
 | [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ⏳ Planned | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
 | [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ⏳ Planned | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
 | [REQ:HELP_POPUP] | Help popup displays keystroke catalog on ? key | P2 | ⏳ Planned | [ARCH:HELP_WIDGET] | [IMPL:HELP_POPUP] |
+| [REQ:MOUSE_FILE_SELECT] | Mouse input for file selection in directory windows | P1 | ✅ Implemented | [ARCH:MOUSE_EVENT_ROUTING] | [IMPL:MOUSE_HIT_TEST], [IMPL:MOUSE_FILE_SELECT] |
 
 ### Non-Functional Requirements
 
@@ -791,6 +792,38 @@ Each requirement includes:
 - **Implementation**: See `implementation-decisions.md` § Sync Execute [IMPL:SYNC_EXECUTE]
 
 **Status**: ✅ Implemented
+
+### [REQ:MOUSE_FILE_SELECT] Mouse File Selection
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must support mouse input for file selection. Left-clicking on a file in a directory window moves the cursor to that file. Clicking in an unfocused window switches focus to that window before selecting the file. Double-clicking on a file or directory enters/opens it. The feature requires enabling tcell mouse events and implementing hit-testing to convert screen coordinates to file list indices.
+- **Rationale**: Mouse input is a common expectation for graphical terminal applications. Supporting mouse selection reduces the learning curve for new users familiar with GUI file managers, provides an alternative navigation method for users who prefer the mouse, and improves accessibility for users who have difficulty with keyboard navigation.
+- **Satisfaction Criteria**:
+  - tcell mouse events are enabled via `screen.EnableMouse()` during initialization.
+  - Left-click on a file in any visible directory window moves the cursor to that file.
+  - Clicking in an unfocused directory window first switches focus to that window, then selects the file.
+  - Double-click on a file or directory opens/enters it (same as pressing Enter).
+  - Mouse wheel scrolls the file list in the directory under the cursor.
+  - Mouse events are handled in the main event loop alongside keyboard and resize events.
+  - The feature can be enabled/disabled via a configuration option or environment variable (future).
+- **Validation Criteria**:
+  - Unit tests cover hit-testing functions (`FileIndexAtY`, `DirectoryAt`, `Contains`) with various window configurations and scroll positions.
+  - Integration tests verify mouse event routing from the event loop to the appropriate widget.
+  - Manual verification confirms file selection, focus switching, double-click, and scrolling work correctly on macOS and Linux terminals.
+  - Token validation confirms `[REQ:MOUSE_FILE_SELECT]`, `[ARCH:MOUSE_EVENT_ROUTING]`, and `[IMPL:*]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Mouse Event Routing [ARCH:MOUSE_EVENT_ROUTING]
+- **Implementation**: See `implementation-decisions.md` § Mouse Hit Testing [IMPL:MOUSE_HIT_TEST], Mouse File Selection [IMPL:MOUSE_FILE_SELECT]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- Unit tests in `widget/widget_test.go` (`TestWindowContains_REQ_MOUSE_FILE_SELECT`) covering hit-testing.
+- Unit tests in `filer/integration_test.go` (`TestDirectoryAt_REQ_MOUSE_FILE_SELECT`, `TestFileIndexAtY_REQ_MOUSE_FILE_SELECT`, `TestDirectoryContains_REQ_MOUSE_FILE_SELECT`) covering directory hit-testing and file index conversion.
+- Mouse events enabled via `screen.EnableMouse()` in `widget.Init()`.
+- Event loop extended with `*tcell.EventMouse` case in `app/goful.go`.
+- Left-click file selection, focus switching, and wheel scrolling operational.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1137 token references across 74 files.`
 
 ### [REQ:IDENTIFIER] Requirement Name
 

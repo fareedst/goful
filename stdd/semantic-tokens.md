@@ -135,6 +135,7 @@ When referencing other tokens:
 - `[REQ:NSYNC_CONFIRMATION]` - Confirmation prompts before multi-target copy/move operations
 - `[REQ:HELP_POPUP]` - Help popup displays keystroke catalog on `?` key
 - `[REQ:SYNC_COMMANDS]` - Sync command operations for copy/delete/rename across all workspace panes
+- `[REQ:MOUSE_FILE_SELECT]` - Mouse input for file selection, focus switching, and scrolling
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -182,6 +183,7 @@ When referencing other tokens:
 - `[ARCH:NSYNC_CONFIRMATION]` - Confirmation prompts before multi-target operations [REQ:NSYNC_CONFIRMATION]
 - `[ARCH:HELP_WIDGET]` - Help widget architecture based on ListBox pattern [REQ:HELP_POPUP]
 - `[ARCH:SYNC_MODE]` - Sync mode prefix architecture for batch operations [REQ:SYNC_COMMANDS]
+- `[ARCH:MOUSE_EVENT_ROUTING]` - Mouse event dispatch and hit-testing architecture [REQ:MOUSE_FILE_SELECT]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -230,6 +232,8 @@ When referencing other tokens:
 - `[IMPL:NSYNC_CONFIRMATION]` - Confirmation prompts for multi-target copy/move operations [ARCH:NSYNC_CONFIRMATION] [REQ:NSYNC_CONFIRMATION]
 - `[IMPL:HELP_POPUP]` - Help popup implementation with keystroke catalog [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
 - `[IMPL:SYNC_EXECUTE]` - Sync execution engine for sequential operations [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
+- `[IMPL:MOUSE_HIT_TEST]` - Coordinate-based hit-testing for mouse events [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+- `[IMPL:MOUSE_FILE_SELECT]` - Mouse click to cursor movement wiring [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

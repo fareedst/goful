@@ -121,6 +121,13 @@ func (w *Window) ResizeRelative(x, y, width, height int) {
 	w.height += height
 }
 
+// Contains returns true if the coordinates (x, y) are within the window bounds.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func (w *Window) Contains(x, y int) bool {
+	rx, ry := w.RightBottom()
+	return x >= w.x && x <= rx && y >= w.y && y <= ry
+}
+
 // IsNil returns whether nil widget.
 func IsNil(w Widget) bool {
 	_, ok := w.(nilWidget)
@@ -264,7 +271,8 @@ func EventToString(ev *tcell.EventKey) string {
 
 var screen tcell.Screen
 
-// Init initializes the tcell screen.
+// Init initializes the tcell screen with mouse support enabled.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
 func Init() {
 	s, err := tcell.NewScreen()
 	if err != nil {
@@ -273,6 +281,24 @@ func Init() {
 		panic(err)
 	}
 	screen = s
+	// [IMPL:MOUSE_HIT_TEST] Enable mouse events for file selection and scrolling
+	screen.EnableMouse()
+}
+
+// EnableMouse enables mouse event handling.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func EnableMouse() {
+	if screen != nil {
+		screen.EnableMouse()
+	}
+}
+
+// DisableMouse disables mouse event handling.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func DisableMouse() {
+	if screen != nil {
+		screen.DisableMouse()
+	}
 }
 
 // Fini finishes the tcell screen.

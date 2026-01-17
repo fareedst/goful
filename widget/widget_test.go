@@ -110,3 +110,35 @@ func TestEventToStringBackspace_REQ_BACKSPACE_BEHAVIOR(t *testing.T) {
 		})
 	}
 }
+
+func TestWindowContains_REQ_MOUSE_FILE_SELECT(t *testing.T) {
+	// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+	// Test hit-testing for mouse coordinate detection
+	for _, tc := range []struct {
+		name     string
+		x, y     int
+		w, h     int
+		testX    int
+		testY    int
+		expected bool
+	}{
+		{name: "inside_center", x: 10, y: 5, w: 20, h: 10, testX: 15, testY: 8, expected: true},
+		{name: "top_left_corner", x: 10, y: 5, w: 20, h: 10, testX: 10, testY: 5, expected: true},
+		{name: "bottom_right_corner", x: 10, y: 5, w: 20, h: 10, testX: 29, testY: 14, expected: true},
+		{name: "left_of_window", x: 10, y: 5, w: 20, h: 10, testX: 9, testY: 8, expected: false},
+		{name: "right_of_window", x: 10, y: 5, w: 20, h: 10, testX: 30, testY: 8, expected: false},
+		{name: "above_window", x: 10, y: 5, w: 20, h: 10, testX: 15, testY: 4, expected: false},
+		{name: "below_window", x: 10, y: 5, w: 20, h: 10, testX: 15, testY: 15, expected: false},
+		{name: "origin_window", x: 0, y: 0, w: 80, h: 24, testX: 0, testY: 0, expected: true},
+		{name: "origin_outside", x: 0, y: 0, w: 80, h: 24, testX: 80, testY: 24, expected: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := NewWindow(tc.x, tc.y, tc.w, tc.h)
+			got := w.Contains(tc.testX, tc.testY)
+			if got != tc.expected {
+				t.Errorf("Window(%d,%d,%d,%d).Contains(%d,%d)=%v, want %v",
+					tc.x, tc.y, tc.w, tc.h, tc.testX, tc.testY, got, tc.expected)
+			}
+		})
+	}
+}

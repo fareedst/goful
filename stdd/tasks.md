@@ -772,6 +772,34 @@ This document tracks all tasks and subtasks for implementing this project. Tasks
 
 **Priority Rationale**: P1 because multi-target copy/move significantly improves file distribution workflows but does not block core single-target operations.
 
+## P1: Mouse Support for File Selection [REQ:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [IMPL:MOUSE_HIT_TEST] [IMPL:MOUSE_FILE_SELECT]
+
+**Status**: ✅ Complete
+
+**Description**: Enable mouse input for file selection in directory windows. Left-clicking on a file moves the cursor to that file, clicking in an unfocused window switches focus first, double-clicking enters directories, and mouse wheel scrolls the file list. This is a multi-stage effort starting with file selection and progressing through focus switching, scrolling, and eventually modal support.
+
+**Dependencies**: [REQ:MODULE_VALIDATION]
+
+**Module Boundaries**:
+- `MouseEventTranslator` (Module 1 – `widget/widget.go`): Enables mouse at init, exports `EnableMouse`/`DisableMouse` functions. [IMPL:MOUSE_HIT_TEST]
+- `HitTestFramework` (Module 2 – `widget/widget.go`, `filer/workspace.go`, `filer/directory.go`): Pure coordinate-to-widget mapping with `Contains`, `DirectoryAt`, `FileIndexAtY`. [IMPL:MOUSE_HIT_TEST]
+- `MouseDispatcher` (Module 3 – `app/goful.go`): Orchestrates hit-testing and widget method calls via `mouseHandler`. [IMPL:MOUSE_FILE_SELECT]
+
+**Completion Criteria**:
+- [x] Mouse events enabled in tcell
+- [x] Hit-testing modules validated independently before integration
+- [x] Left-click selects files in directory windows
+- [x] Clicking unfocused window switches focus
+- [x] Mouse wheel scrolls file list
+- [x] Token audit + validation logged
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./widget/... ./filer/... -run "MOUSE"` (darwin/arm64, Go 1.24.3) - all hit-testing tests pass
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1137 token references across 74 files.`
+- Implemented modules: `widget.Init()` enables mouse, `widget.Window.Contains()`, `filer.Workspace.DirectoryAt()`, `filer.Directory.FileIndexAtY()`, `app.Goful.mouseHandler()` with left-click and wheel support
+
+**Priority Rationale**: P1 because mouse support significantly improves accessibility and user experience for GUI-oriented users, but keyboard navigation remains fully functional without it.
+
 ## P0: Linked Navigation Comparison Index Timing Fix [REQ:LINKED_NAVIGATION] [REQ:FILE_COMPARISON_COLORS] [IMPL:LINKED_NAVIGATION]
 
 **Status**: ✅ Complete

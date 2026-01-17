@@ -1623,3 +1623,156 @@ This ensures the comparison index is built with the correct file lists from all 
 - Unit tests: `TestFindFileByName_REQ_SYNC_COMMANDS`, `TestSyncResult_REQ_SYNC_COMMANDS`, `TestCopyFileSimple_REQ_SYNC_COMMANDS`, `TestCopyDirRecursive_REQ_SYNC_COMMANDS`, `TestSyncMode_REQ_SYNC_COMMANDS`
 
 **Cross-References**: [ARCH:SYNC_MODE], [REQ:SYNC_COMMANDS], [REQ:MODULE_VALIDATION]
+
+## 39. Mouse Hit Testing [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+
+### Decision: Implement coordinate-based hit-testing for mouse event routing
+**Rationale:**
+- Implements the foundational layer for mouse support per [REQ:MOUSE_FILE_SELECT].
+- Separates coordinate math from event handling for independent validation per [REQ:MODULE_VALIDATION].
+- Extends existing `widget.Window` with a simple bounds-check method.
+
+### Implementation Approach:
+
+- **Enable Mouse in `widget/widget.go`**:
+  - Add `screen.EnableMouse()` call after `screen.Init()` in `Init()` function.
+  - Export `EnableMouse()` and `DisableMouse()` functions for runtime control.
+
+- **Add `Contains` to `widget.Window`**:
+  ```go
+  // Contains returns true if (x, y) is within the window bounds.
+  // [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+  func (w *Window) Contains(x, y int) bool {
+      rx, ry := w.RightBottom()
+      return x >= w.x && x <= rx && y >= w.y && y <= ry
+  }
+  ```
+
+- **Add `DirectoryAt` to `filer.Workspace`**:
+  ```go
+  // DirectoryAt returns the directory containing (x, y) and its index, or nil/-1.
+  // [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+  func (w *Workspace) DirectoryAt(x, y int) (*Directory, int) {
+      for i, dir := range w.Dirs {
+          if dir.Contains(x, y) {
+              return dir, i
+          }
+      }
+      return nil, -1
+  }
+  ```
+
+- **Add `FileIndexAtY` to `filer.Directory`**:
+  ```go
+  // FileIndexAtY converts a screen Y coordinate to a list index, or -1 if outside.
+  // [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+  func (d *Directory) FileIndexAtY(y int) int {
+      _, topY := d.LeftTop()
+      contentStart := topY + 1  // Account for header/border
+      row := y - contentStart
+      if row < 0 || row >= d.Height()-2 {
+          return -1
+      }
+      idx := d.Offset() + row
+      if idx >= d.Upper() {
+          return -1
+      }
+      return idx
+  }
+  ```
+
+**Code Markers**:
+- `widget/widget.go`: `EnableMouse`, `DisableMouse`, `Contains` with `// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]`
+- `filer/workspace.go`: `DirectoryAt` with same tokens.
+- `filer/directory.go`: `FileIndexAtY` with same tokens.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `widget/widget.go`, `filer/workspace.go`, `filer/directory.go`
+- Tests: Unit tests with names referencing `REQ_MOUSE_FILE_SELECT`
+
+**Cross-References**: [ARCH:MOUSE_EVENT_ROUTING], [REQ:MOUSE_FILE_SELECT], [REQ:MODULE_VALIDATION]
+
+## 40. Mouse File Selection [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+
+### Decision: Wire mouse click events to file cursor movement and directory focus switching
+**Rationale:**
+- Implements the core mouse selection feature per [REQ:MOUSE_FILE_SELECT].
+- Uses the hit-testing framework from [IMPL:MOUSE_HIT_TEST] to find the target directory and file.
+- Integrates with the existing event loop pattern in `app.Goful`.
+
+### Implementation Approach:
+
+- **Extend `eventHandler` in `app/goful.go`**:
+  ```go
+  func (g *Goful) eventHandler(ev tcell.Event) {
+      switch ev := ev.(type) {
+      case *tcell.EventKey:
+          // ... existing code ...
+      case *tcell.EventResize:
+          // ... existing code ...
+      case *tcell.EventMouse:
+          g.mouseHandler(ev)
+      }
+  }
+  ```
+
+- **Add `mouseHandler` in `app/goful.go`**:
+  ```go
+  // mouseHandler handles mouse events for file selection and scrolling.
+  // [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+  func (g *Goful) mouseHandler(ev *tcell.EventMouse) {
+      x, y := ev.Position()
+      buttons := ev.Buttons()
+      
+      // Handle modal widgets first
+      if !widget.IsNil(g.Next()) {
+          // TODO: Modal mouse handling (future stage)
+          return
+      }
+      
+      // Handle left click for file selection
+      if buttons&tcell.Button1 != 0 {
+          g.handleLeftClick(x, y)
+      }
+      
+      // Handle wheel for scrolling
+      if buttons&tcell.WheelUp != 0 {
+          g.handleWheelUp(x, y)
+      }
+      if buttons&tcell.WheelDown != 0 {
+          g.handleWheelDown(x, y)
+      }
+  }
+  
+  func (g *Goful) handleLeftClick(x, y int) {
+      ws := g.Workspace()
+      dir, idx := ws.DirectoryAt(x, y)
+      if dir == nil {
+          return
+      }
+      
+      // Switch focus if clicking in unfocused window
+      if idx != ws.Focus {
+          ws.SetFocus(idx)
+      }
+      
+      // Convert Y to file index and move cursor
+      fileIdx := dir.FileIndexAtY(y)
+      if fileIdx >= 0 {
+          dir.SetCursor(fileIdx)
+      }
+  }
+  ```
+
+- **Track double-click for enter** (optional enhancement):
+  - Add `lastClickTime time.Time` and `lastClickPos (int, int)` fields to `Goful`.
+  - If same position within 300ms, call `dir.EnterDir()` for directories.
+
+**Code Markers**:
+- `app/goful.go`: `mouseHandler`, `handleLeftClick`, `handleWheelUp`, `handleWheelDown` with `// [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]`
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- Source: `app/goful.go`
+- Tests: Integration tests with names referencing `REQ_MOUSE_FILE_SELECT`
+
+**Cross-References**: [ARCH:MOUSE_EVENT_ROUTING], [REQ:MOUSE_FILE_SELECT], [IMPL:MOUSE_HIT_TEST], [REQ:MODULE_VALIDATION]

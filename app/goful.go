@@ -201,7 +201,86 @@ func (g *Goful) eventHandler(ev tcell.Event) {
 	case *tcell.EventResize:
 		width, height := ev.Size()
 		g.Resize(0, 0, width, height)
+	case *tcell.EventMouse:
+		// [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+		g.mouseHandler(ev)
 	}
+}
+
+// mouseHandler handles mouse events for file selection, focus switching, and scrolling.
+// [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func (g *Goful) mouseHandler(ev *tcell.EventMouse) {
+	x, y := ev.Position()
+	buttons := ev.Buttons()
+
+	// Handle modal widgets first - ignore mouse in modals for now
+	if !widget.IsNil(g.Next()) {
+		return
+	}
+
+	// Handle left click for file selection
+	// [IMPL:MOUSE_FILE_SELECT] Left-click selects files and switches focus
+	if buttons&tcell.Button1 != 0 {
+		g.handleLeftClick(x, y)
+		return
+	}
+
+	// Handle mouse wheel for scrolling
+	// [IMPL:MOUSE_FILE_SELECT] Wheel scrolls the file list
+	if buttons&tcell.WheelUp != 0 {
+		g.handleWheelUp(x, y)
+		return
+	}
+	if buttons&tcell.WheelDown != 0 {
+		g.handleWheelDown(x, y)
+		return
+	}
+}
+
+// handleLeftClick processes a left mouse click at (x, y).
+// Switches focus if clicking in an unfocused window and moves cursor to the clicked file.
+// [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func (g *Goful) handleLeftClick(x, y int) {
+	ws := g.Workspace()
+	dir, idx := ws.DirectoryAt(x, y)
+	if dir == nil {
+		return
+	}
+
+	// Switch focus if clicking in unfocused window
+	if idx != ws.Focus {
+		ws.SetFocus(idx)
+	}
+
+	// Convert Y to file index and move cursor
+	fileIdx := dir.FileIndexAtY(y)
+	if fileIdx >= 0 {
+		dir.SetCursor(fileIdx)
+	}
+}
+
+// handleWheelUp scrolls the directory under the mouse cursor up.
+// [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func (g *Goful) handleWheelUp(x, y int) {
+	ws := g.Workspace()
+	dir, _ := ws.DirectoryAt(x, y)
+	if dir == nil {
+		// Default to focused directory if click outside any directory
+		dir = ws.Dir()
+	}
+	dir.MoveCursor(-3)
+}
+
+// handleWheelDown scrolls the directory under the mouse cursor down.
+// [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func (g *Goful) handleWheelDown(x, y int) {
+	ws := g.Workspace()
+	dir, _ := ws.DirectoryAt(x, y)
+	if dir == nil {
+		// Default to focused directory if click outside any directory
+		dir = ws.Dir()
+	}
+	dir.MoveCursor(3)
 }
 
 // ToggleLinkedNav toggles the linked navigation mode and returns the new state.

@@ -582,3 +582,22 @@ func (d *Directory) drawWithComparisonIndex(focus bool, dirIndex int, idx *Compa
 		d.finder.Draw(focus)
 	}
 }
+
+// FileIndexAtY converts a screen Y coordinate to a file list index.
+// Returns -1 if the coordinate is outside the file list area.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func (d *Directory) FileIndexAtY(y int) int {
+	_, topY := d.LeftTop()
+	// Content starts after the header/border (row 1)
+	contentStart := topY + 1
+	row := y - contentStart
+	// Height()-2 accounts for header and footer
+	if row < 0 || row >= d.Height()-2 {
+		return -1
+	}
+	idx := d.Offset() + row
+	if idx >= d.Upper() {
+		return -1
+	}
+	return idx
+}

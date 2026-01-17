@@ -1014,6 +1014,49 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 **Cross-References**: [REQ:HELP_POPUP], [IMPL:HELP_POPUP], [REQ:MODULE_VALIDATION]
 
+## 38. Mouse Event Routing [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+
+### Decision: Enable tcell mouse events and extend the main event loop to dispatch mouse events to the appropriate widget via hit-testing.
+**Rationale:**
+- Mouse input is expected in modern terminal applications and provides an alternative navigation method.
+- Centralizing mouse event handling in `app.Goful.eventHandler` maintains consistency with existing keyboard and resize event routing.
+- Hit-testing (determining which widget contains the click coordinates) enables clean separation between event detection and widget response.
+- The existing `widget.Widget` interface can be extended with coordinate-based methods without breaking backward compatibility.
+
+**Architecture Outline:**
+- **Mouse Initialization** (`widget/widget.go`): Call `screen.EnableMouse()` after `screen.Init()` in the `Init()` function. This enables all mouse events (clicks, drags, wheel) at the tcell level.
+- **Event Dispatch** (`app/goful.go`): Extend `eventHandler` to handle `*tcell.EventMouse` events. Extract position via `ev.Position()` and button via `ev.Buttons()`.
+- **Hit-Testing Framework** (`widget/widget.go`, `filer/workspace.go`):
+  - Add `Contains(x, y int) bool` method to `widget.Window` that returns true if coordinates are within the window bounds.
+  - Add `DirectoryAt(x, y int) (*Directory, int)` method to `filer.Workspace` that finds which directory window contains the coordinates.
+- **Mouse Handler** (`app/goful.go`): New `mouseHandler(ev *tcell.EventMouse)` method that:
+  1. Checks if a modal (`g.Next()`) is active and handles modal-specific mouse events.
+  2. Otherwise, delegates to filer-level mouse handling for directory selection.
+
+**Multi-Stage Implementation:**
+1. **Stage 1 - Infrastructure**: Enable mouse, add `EventMouse` case to handler, create hit-test framework.
+2. **Stage 2 - File Selection**: Implement `FileIndexAtY`, wire click to `SetCursor`.
+3. **Stage 3 - Window Focus**: Clicking unfocused window switches focus.
+4. **Stage 4 - Scrolling**: Mouse wheel support.
+5. **Stage 5 - Modals**: Menu and modal mouse support (future).
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `MouseEventTranslator` (Module 1 in `widget/widget.go`) – Enables mouse at init, provides helpers for button detection.
+- `HitTestFramework` (Module 2 in `widget/widget.go`, `filer/workspace.go`) – Pure coordinate-to-widget mapping, independently testable.
+- `MouseDispatcher` (Module 3 in `app/goful.go`) – Orchestrates hit-testing and widget method calls.
+
+**Alternatives Considered:**
+- **Per-widget mouse polling**: Rejected because centralized dispatch is simpler and matches existing keyboard handling.
+- **Full GUI-style event bubbling**: Rejected as over-engineered for a terminal file manager.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `widget/widget.go` includes `[IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]`.
+- `filer/workspace.go` and `filer/directory.go` include same tokens for hit-testing methods.
+- `app/goful.go` includes `[IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]`.
+- Tests reference `[REQ:MOUSE_FILE_SELECT]` in names/comments.
+
+**Cross-References**: [REQ:MOUSE_FILE_SELECT], [IMPL:MOUSE_HIT_TEST], [IMPL:MOUSE_FILE_SELECT], [REQ:MODULE_VALIDATION]
+
 ## 37. Sync Mode [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
 
 ### Decision: Implement a two-stage prefix mode for executing synchronized file operations across all workspace panes.

@@ -502,6 +502,18 @@ func (w *Workspace) draw() {
 	}
 }
 
+// DirectoryAt returns the directory containing the screen coordinates (x, y) and its index.
+// Returns (nil, -1) if no directory contains the coordinates.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func (w *Workspace) DirectoryAt(x, y int) (*Directory, int) {
+	for i, dir := range w.Dirs {
+		if dir.Contains(x, y) {
+			return dir, i
+		}
+	}
+	return nil, -1
+}
+
 // WorkspaceNavigator adapts Workspace to the Navigator interface.
 // This allows the TreeWalker to operate on a Workspace while keeping
 // the navigation logic decoupled from TUI concerns.

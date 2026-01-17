@@ -300,3 +300,106 @@ func TestExcludedNamesHideEntries_REQ_FILER_EXCLUDE_NAMES(t *testing.T) {
 		t.Fatalf("excluded file should reappear after toggling filter off, got %v", names)
 	}
 }
+
+// TestDirectoryAt_REQ_MOUSE_FILE_SELECT tests workspace hit-testing for mouse events.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func TestDirectoryAt_REQ_MOUSE_FILE_SELECT(t *testing.T) {
+	tmp := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmp, "test.txt"), []byte("data"), 0o644); err != nil {
+		t.Fatalf("write file: %v", err)
+	}
+
+	// Create workspace with two directories side by side
+	ws := NewWorkspace(0, 0, 80, 20, "test")
+	dir1 := NewDirectory(0, 0, 40, 20)
+	dir1.Chdir(tmp)
+	dir2 := NewDirectory(40, 0, 40, 20)
+	dir2.Chdir(tmp)
+	ws.Dirs = []*Directory{dir1, dir2}
+	ws.SetFocus(0)
+
+	// Test clicking in first directory
+	gotDir, gotIdx := ws.DirectoryAt(20, 10)
+	if gotDir != dir1 || gotIdx != 0 {
+		t.Errorf("DirectoryAt(20,10) = (%p, %d), want (%p, 0)", gotDir, gotIdx, dir1)
+	}
+
+	// Test clicking in second directory
+	gotDir, gotIdx = ws.DirectoryAt(60, 10)
+	if gotDir != dir2 || gotIdx != 1 {
+		t.Errorf("DirectoryAt(60,10) = (%p, %d), want (%p, 1)", gotDir, gotIdx, dir2)
+	}
+
+	// Test clicking outside all directories
+	gotDir, gotIdx = ws.DirectoryAt(100, 10)
+	if gotDir != nil || gotIdx != -1 {
+		t.Errorf("DirectoryAt(100,10) = (%p, %d), want (nil, -1)", gotDir, gotIdx)
+	}
+}
+
+// TestFileIndexAtY_REQ_MOUSE_FILE_SELECT tests file list hit-testing for mouse events.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func TestFileIndexAtY_REQ_MOUSE_FILE_SELECT(t *testing.T) {
+	tmp := t.TempDir()
+	// Create 5 files to have a scrollable list
+	for i := 0; i < 5; i++ {
+		name := filepath.Join(tmp, string(rune('a'+i))+".txt")
+		if err := os.WriteFile(name, []byte("data"), 0o644); err != nil {
+			t.Fatalf("write file: %v", err)
+		}
+	}
+
+	// Create directory at position (10, 5) with size 60x15
+	dir := NewDirectory(10, 5, 60, 15)
+	dir.Chdir(tmp)
+
+	// Directory content starts at y=6 (after header at y=5)
+	// File indices should map: y=6 -> 0, y=7 -> 1, etc.
+	for _, tc := range []struct {
+		name     string
+		y        int
+		expected int
+	}{
+		{name: "first_file", y: 6, expected: 0},
+		{name: "second_file", y: 7, expected: 1},
+		{name: "third_file", y: 8, expected: 2},
+		{name: "header_row", y: 5, expected: -1},     // Header row
+		{name: "above_window", y: 4, expected: -1},   // Above window
+		{name: "footer_row", y: 18, expected: -1},    // Footer row (y=5+15-2=18)
+		{name: "below_content", y: 19, expected: -1}, // Below window
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := dir.FileIndexAtY(tc.y)
+			if got != tc.expected {
+				t.Errorf("FileIndexAtY(%d) = %d, want %d", tc.y, got, tc.expected)
+			}
+		})
+	}
+}
+
+// TestDirectoryContains_REQ_MOUSE_FILE_SELECT tests directory boundary detection.
+// [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+func TestDirectoryContains_REQ_MOUSE_FILE_SELECT(t *testing.T) {
+	dir := NewDirectory(10, 5, 40, 15)
+
+	for _, tc := range []struct {
+		name     string
+		x, y     int
+		expected bool
+	}{
+		{name: "inside", x: 30, y: 10, expected: true},
+		{name: "top_left", x: 10, y: 5, expected: true},
+		{name: "bottom_right", x: 49, y: 19, expected: true},
+		{name: "left_edge_outside", x: 9, y: 10, expected: false},
+		{name: "right_edge_outside", x: 50, y: 10, expected: false},
+		{name: "above", x: 30, y: 4, expected: false},
+		{name: "below", x: 30, y: 20, expected: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := dir.Contains(tc.x, tc.y)
+			if got != tc.expected {
+				t.Errorf("Directory.Contains(%d,%d) = %v, want %v", tc.x, tc.y, got, tc.expected)
+			}
+		})
+	}
+}
