@@ -1115,6 +1115,46 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 **Cross-References**: [REQ:MOUSE_CROSS_WINDOW_SYNC], [IMPL:MOUSE_CROSS_WINDOW_SYNC], [REQ:MOUSE_FILE_SELECT], [ARCH:MOUSE_EVENT_ROUTING]
 
+## 41. Toolbar Layout [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE]
+
+### Decision: Integrate a clickable toolbar into the existing filer header row with parent navigation and linked mode toggle buttons.
+**Rationale:**
+- Mouse-first users need accessible controls for common operations without relying on keyboard shortcuts.
+- The header row has available space at the left edge before the workspace tabs, minimizing UI disruption.
+- Bracketed symbols (`[^]`, `[L]`) provide clear visual identification and clickable affordance.
+- Respecting Linked navigation mode maintains consistency with keyboard equivalents.
+- The linked toggle button replaces the conditional `[LINKED]` indicator with an always-visible, clickable control.
+
+**Architecture Outline:**
+- **Button Rendering** (`filer/filer.go`): Extend `drawHeader()` to render toolbar buttons at x=0 before the workspace tabs:
+  - `[^]` - Parent navigation button (always reverse style)
+  - `[L]` - Linked mode toggle (reverse style when ON, normal when OFF)
+  Track each button's screen bounds (x1, y, x2) for hit-testing.
+- **Toolbar Hit-Testing** (`filer/filer.go`): `ToolbarButtonAt(x, y int) string` checks if coordinates fall within any toolbar button bounds. Returns the button identifier (e.g., `"parent"`, `"linked"`) or empty string.
+- **Button Invocation** (`filer/filer.go`): `InvokeToolbarButton(name string) bool` dispatches to the appropriate callback based on button identifier.
+- **Mouse Dispatch Extension** (`app/goful.go`): `handleLeftClick()` checks toolbar buttons before directory hit-testing.
+- **Parent Navigation Action**: Invokes `linkedParentNav` logic respecting Linked mode.
+- **Linked Toggle Action**: Invokes `ToggleLinkedNav()` and displays confirmation message.
+- **Indicator Replacement**: The conditional `[LINKED]` indicator is removed; the `[L]` button serves both display and toggle purposes.
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `ToolbarRenderer` (Module 1 in `filer/filer.go`) – Pure rendering that draws buttons and tracks bounds. No side effects beyond screen output. Bounds are stored in a package-level map keyed by button identifier.
+- `ToolbarHitTest` (Module 2 in `filer/filer.go`) – Pure coordinate-to-button-name mapping. Queries bounds map, returns identifier or empty string. Independently testable.
+- `ToolbarDispatcher` (Module 3 in `app/goful.go`) – Orchestrates hit-testing and action invocation. Calls `filer.ToolbarButtonAt()`, maps result to action function.
+
+**Alternatives Considered:**
+- **Separate toolbar row**: Rejected to avoid consuming additional vertical space in terminal environments where lines are precious.
+- **Text-only button**: Rejected; bracketed symbol `[^]` provides clearer visual affordance than plain text.
+- **Always navigate all windows**: Rejected; respecting Linked mode maintains UI consistency and user expectations.
+- **Keep separate `[LINKED]` indicator**: Rejected; the toggle button provides same visibility with added interactivity.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/filer.go` includes `[IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT]` comments.
+- `app/goful.go` includes same tokens for dispatch logic.
+- Tests reference `[REQ:TOOLBAR_PARENT_BUTTON]` and `[REQ:TOOLBAR_LINKED_TOGGLE]` in names/comments.
+
+**Cross-References**: [REQ:TOOLBAR_PARENT_BUTTON], [IMPL:TOOLBAR_PARENT_BUTTON], [REQ:TOOLBAR_LINKED_TOGGLE], [IMPL:TOOLBAR_LINKED_TOGGLE], [REQ:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
+
 ## 37. Sync Mode [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
 
 ### Decision: Implement a two-stage prefix mode for executing synchronized file operations across all workspace panes.

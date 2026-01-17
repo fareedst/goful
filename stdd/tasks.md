@@ -1017,3 +1017,67 @@ The following tasks were identified during an STDD documentation review to addre
 - Unit tests: `TestSetCursorByNameAll_REQ_MOUSE_CROSS_WINDOW_SYNC`, `TestSetCursorByNameAllFocusUnchanged_REQ_MOUSE_CROSS_WINDOW_SYNC` in `filer/integration_test.go`
 
 **Priority Rationale**: P1 because this enhances file comparison workflows but does not block core navigation.
+
+## P1: Toolbar Parent Navigation Button [REQ:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_PARENT_BUTTON]
+
+**Status**: ✅ Complete (2026-01-18)
+
+**Description**: Add a clickable `[^]` parent navigation button to the filer header row. The button respects Linked navigation mode: when ON, all windows navigate to parent; when OFF, only the focused window navigates. This is the first element of a planned mouse-first toolbar.
+
+**Dependencies**: [REQ:LINKED_NAVIGATION] (complete), [REQ:MOUSE_FILE_SELECT] (complete)
+
+**Module Boundaries**:
+- `ToolbarRenderer` (Module 1 – `filer/filer.go`): Renders button and tracks screen bounds in package-level map.
+- `ToolbarHitTest` (Module 2 – `filer/filer.go`): Pure coordinate-to-button-name mapping.
+- `ToolbarDispatcher` (Module 3 – `app/goful.go`): Orchestrates hit-testing and action invocation.
+
+**Subtasks**:
+- [x] Add `[REQ:TOOLBAR_PARENT_BUTTON]` requirement to stdd/requirements.md [REQ:TOOLBAR_PARENT_BUTTON]
+- [x] Add `[ARCH:TOOLBAR_LAYOUT]` architecture decision to stdd/architecture-decisions.md [ARCH:TOOLBAR_LAYOUT]
+- [x] Add `[IMPL:TOOLBAR_PARENT_BUTTON]` to implementation-decisions.md [IMPL:TOOLBAR_PARENT_BUTTON]
+- [x] Register new tokens in stdd/semantic-tokens.md
+- [x] Modify `drawHeader()` in `filer/filer.go` to render `[^]` button with bounds tracking [IMPL:TOOLBAR_PARENT_BUTTON]
+- [x] Add `ToolbarButtonAt()` hit-testing method to `filer/filer.go` [IMPL:TOOLBAR_PARENT_BUTTON]
+- [x] Extend `handleLeftClick()` in `app/goful.go` to check toolbar hits [IMPL:TOOLBAR_PARENT_BUTTON]
+- [x] Wire button click to `linkedParentNav` logic respecting Linked mode [IMPL:TOOLBAR_PARENT_BUTTON]
+- [x] Add unit tests for toolbar hit-testing and navigation dispatch [REQ:TOOLBAR_PARENT_BUTTON]
+- [x] Token audit & validation [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] `[^]` button appears at left edge of header row
+- [x] Clicking button navigates parent (all windows when Linked, focused only when not)
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Priority Rationale**: P1 because mouse-first navigation significantly improves accessibility and user experience for GUI-oriented users, but keyboard navigation remains fully functional without it.
+
+## P1: Toolbar Linked Mode Toggle Button [REQ:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_LINKED_TOGGLE]
+
+**Status**: ✅ Complete (2026-01-18)
+
+**Description**: Add a clickable `[L]` button to the toolbar in the filer header row, immediately after the `[^]` parent button. The button displays the current linked navigation mode state (reverse style when ON, normal style when OFF) and toggles the mode when clicked. This button replaces the existing conditional `[LINKED]` indicator.
+
+**Dependencies**: [REQ:TOOLBAR_PARENT_BUTTON] (complete), [REQ:LINKED_NAVIGATION] (complete)
+
+**Subtasks**:
+- [x] Add `toolbarLinkedToggleFn` callback and setter in `filer/filer.go` [IMPL:TOOLBAR_LINKED_TOGGLE]
+- [x] Extend `InvokeToolbarButton()` to handle "linked" button [IMPL:TOOLBAR_LINKED_TOGGLE]
+- [x] Render `[L]` button in `drawHeader()` after `[^]` with state-based styling [IMPL:TOOLBAR_LINKED_TOGGLE]
+- [x] Remove conditional `[LINKED]` indicator from `drawHeader()` [IMPL:TOOLBAR_LINKED_TOGGLE]
+- [x] Wire `SetToolbarLinkedToggleFn` callback in `main.go` [IMPL:TOOLBAR_LINKED_TOGGLE]
+- [x] Add unit tests for linked button hit-testing and invocation [REQ:TOOLBAR_LINKED_TOGGLE]
+- [x] Token audit & validation [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] `[L]` button appears after `[^]` in header row
+- [x] Button style reflects linked mode state (reverse when ON, normal when OFF)
+- [x] Clicking button toggles linked mode and displays confirmation message
+- [x] Existing `[LINKED]` indicator removed
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Priority Rationale**: P1 because it completes the toolbar UI pattern and provides mouse-first access to linked mode toggle, improving discoverability and accessibility.

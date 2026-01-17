@@ -138,6 +138,8 @@ When referencing other tokens:
 - `[REQ:MOUSE_FILE_SELECT]` - Mouse input for file selection, focus switching, and scrolling
 - `[REQ:MOUSE_DOUBLE_CLICK]` - Double-click behavior for opening files and navigating directories
 - `[REQ:MOUSE_CROSS_WINDOW_SYNC]` - Cross-window cursor synchronization on mouse click
+- `[REQ:TOOLBAR_PARENT_BUTTON]` - Clickable parent navigation button in filer header toolbar
+- `[REQ:TOOLBAR_LINKED_TOGGLE]` - Clickable linked mode toggle button in filer header toolbar
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -188,6 +190,7 @@ When referencing other tokens:
 - `[ARCH:MOUSE_EVENT_ROUTING]` - Mouse event dispatch and hit-testing architecture [REQ:MOUSE_FILE_SELECT]
 - `[ARCH:MOUSE_DOUBLE_CLICK]` - Double-click detection and action dispatch architecture [REQ:MOUSE_DOUBLE_CLICK]
 - `[ARCH:MOUSE_CROSS_WINDOW_SYNC]` - Cross-window cursor sync architecture [REQ:MOUSE_CROSS_WINDOW_SYNC]
+- `[ARCH:TOOLBAR_LAYOUT]` - Toolbar layout and button rendering architecture [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -243,6 +246,8 @@ When referencing other tokens:
 - `[IMPL:HISTORY_ERROR_HANDLING]` - Structured history error handling with first-run detection [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 - `[IMPL:HISTORY_CACHE_LIMIT]` - Configurable history limit with eviction policy [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 - `[IMPL:EXTMAP_API_SAFETY]` - Nil-map safe AddExtmap for third-party integrations [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+- `[IMPL:TOOLBAR_PARENT_BUTTON]` - Toolbar parent button rendering, hit-testing, and dispatch [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+- `[IMPL:TOOLBAR_LINKED_TOGGLE]` - Toolbar linked toggle button rendering and dispatch [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

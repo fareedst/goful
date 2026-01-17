@@ -50,6 +50,8 @@ Each requirement includes:
 | [REQ:EVENT_LOOP_SHUTDOWN] | Event poller shutdown control | P0 | ✅ Implemented | [ARCH:EVENT_LOOP_SHUTDOWN] | [IMPL:EVENT_LOOP_SHUTDOWN] |
 | [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ✅ Implemented | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
 | [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ✅ Implemented | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
+| [REQ:TOOLBAR_PARENT_BUTTON] | Clickable parent navigation button in toolbar | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_PARENT_BUTTON] |
+| [REQ:TOOLBAR_LINKED_TOGGLE] | Clickable linked mode toggle button in toolbar | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_LINKED_TOGGLE] |
 
 ### Non-Functional Requirements
 
@@ -975,6 +977,65 @@ Each requirement includes:
 - Unit tests in `filer/integration_test.go` (`TestSetCursorByNameAll_REQ_MOUSE_CROSS_WINDOW_SYNC`, `TestSetCursorByNameAllFocusUnchanged_REQ_MOUSE_CROSS_WINDOW_SYNC`) covering cursor sync and focus preservation.
 - Implementation in `app/goful.go`: `handleLeftClick` calls `SetCursorByNameAll` after cursor selection.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1298 token references across 77 files.`
+
+### [REQ:TOOLBAR_PARENT_BUTTON] Toolbar Parent Navigation Button
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must provide a clickable button in the filer header row that navigates to the parent directory. When clicked, the button behaves identically to the keyboard `backspace`/`C-h`/`u` commands, respecting the current Linked navigation mode setting: if Linked mode is ON, all workspace windows navigate to their respective parent directories; if Linked mode is OFF, only the focused window navigates. This button is the first element of a planned mouse-first toolbar.
+- **Rationale**: Mouse-first users need accessible UI controls for common navigation operations without relying on keyboard shortcuts. The parent directory navigation is one of the most frequently used operations and provides a natural starting point for a toolbar. Positioning the button in the header row keeps it visible and accessible while minimizing UI real estate usage.
+- **Satisfaction Criteria**:
+  - A clickable `[^]` button appears at the left edge of the filer header row, before the workspace tabs.
+  - Left-clicking the button navigates to the parent directory following the current Linked mode setting.
+  - When Linked mode is ON, all workspace windows navigate to their respective parent directories.
+  - When Linked mode is OFF, only the focused window navigates to its parent directory.
+  - The comparison index is rebuilt after navigation (same as keyboard parent navigation).
+  - The button does not interfere with existing header elements (workspace tabs, LINKED indicator, directory tabs).
+- **Validation Criteria**:
+  - Unit tests cover the toolbar button bounds calculation and hit-testing.
+  - Unit tests verify Linked mode behavior dispatch (navigate all vs. navigate focused).
+  - Manual verification confirms button click triggers parent navigation on macOS and Linux terminals.
+  - Token validation confirms `[REQ:TOOLBAR_PARENT_BUTTON]`, `[ARCH:TOOLBAR_LAYOUT]`, and `[IMPL:TOOLBAR_PARENT_BUTTON]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Toolbar Layout [ARCH:TOOLBAR_LAYOUT]
+- **Implementation**: See `implementation-decisions.md` § Toolbar Parent Button Implementation [IMPL:TOOLBAR_PARENT_BUTTON]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-18)**:
+- Unit tests in `filer/toolbar_test.go` (`TestToolbarButtonAt_REQ_TOOLBAR_PARENT_BUTTON`, `TestToolbarButtonAtMultipleButtons_REQ_TOOLBAR_PARENT_BUTTON`, `TestInvokeToolbarButton_REQ_TOOLBAR_PARENT_BUTTON`, `TestInvokeToolbarButtonWithNilCallback_REQ_TOOLBAR_PARENT_BUTTON`) covering hit-testing and callback invocation.
+- Implementation in `filer/filer.go`: `drawHeader()` renders `[^]` button and stores bounds, `ToolbarButtonAt()` provides hit-testing, `InvokeToolbarButton()` dispatches actions.
+- Implementation in `app/goful.go`: `handleLeftClick()` checks toolbar before directory selection, `HandleParentButtonPress()` implements linked parent navigation.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1326 token references across 77 files.`
+
+### [REQ:TOOLBAR_LINKED_TOGGLE] Toolbar Linked Mode Toggle Button
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must provide a clickable `[L]` button in the filer header toolbar (next to the parent `[^]` button) that displays and toggles the linked navigation mode. The button is always visible, with its visual style reflecting the current state: reverse style when linked mode is ON, normal style when OFF. Clicking the button toggles the linked mode state and displays a confirmation message. This button replaces the existing conditional `[LINKED]` indicator that only appeared when the mode was enabled.
+- **Rationale**: The existing `[LINKED]` indicator only shows when linked mode is ON, making it unclear when the mode is OFF. A toggle button provides both state visibility and quick access to toggle the mode, improving discoverability and mouse-first user experience. Placing it in the toolbar next to the parent button creates a consistent toolbar UI.
+- **Satisfaction Criteria**:
+  - A clickable `[L]` button appears in the filer header immediately after the `[^]` parent button.
+  - The button uses reverse style when linked mode is ON, normal style when OFF.
+  - Left-clicking the button toggles the linked navigation mode.
+  - A confirmation message is displayed after toggle (e.g., "linked navigation enabled/disabled").
+  - The existing conditional `[LINKED]` indicator is removed.
+  - The button does not interfere with other header elements.
+- **Validation Criteria**:
+  - Unit tests cover the linked button bounds calculation and hit-testing.
+  - Unit tests verify linked button invocation triggers the toggle callback.
+  - Manual verification confirms button click toggles linked mode and displays message.
+  - Token validation confirms `[REQ:TOOLBAR_LINKED_TOGGLE]`, `[ARCH:TOOLBAR_LAYOUT]`, and `[IMPL:TOOLBAR_LINKED_TOGGLE]` references exist across docs, code, and tests.
+- **Architecture**: See `architecture-decisions.md` § Toolbar Layout [ARCH:TOOLBAR_LAYOUT]
+- **Implementation**: See `implementation-decisions.md` § Toolbar Linked Toggle Implementation [IMPL:TOOLBAR_LINKED_TOGGLE]
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-18)**:
+- Unit tests in `filer/toolbar_test.go` (`TestToolbarLinkedButtonHit_REQ_TOOLBAR_LINKED_TOGGLE`, `TestInvokeToolbarLinkedButton_REQ_TOOLBAR_LINKED_TOGGLE`, `TestInvokeToolbarLinkedButtonWithNilCallback_REQ_TOOLBAR_LINKED_TOGGLE`) covering hit-testing and callback invocation.
+- Implementation in `filer/filer.go`: `drawHeader()` renders `[L]` button with state-based styling, stores bounds, `SetToolbarLinkedToggleFn()` sets callback, `InvokeToolbarButton()` handles "linked" case.
+- Implementation in `main.go`: Callback wiring invokes `ToggleLinkedNav()` and displays confirmation message.
+- Conditional `[LINKED]` indicator removed from header; replaced by always-visible `[L]` toggle button.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1360 token references across 78 files.`
 
 ### [REQ:IDENTIFIER] Requirement Name
 

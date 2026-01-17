@@ -366,6 +366,13 @@ func (g *Goful) isDoubleClick(x, y int) bool {
 // Detects double-clicks and dispatches to appropriate handler.
 // [IMPL:MOUSE_FILE_SELECT] [IMPL:MOUSE_DOUBLE_CLICK] [IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT] [REQ:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_CROSS_WINDOW_SYNC]
 func (g *Goful) handleLeftClick(x, y int) {
+	// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+	// Check for toolbar button clicks first (in header row)
+	if btnName := filer.ToolbarButtonAt(x, y); btnName != "" {
+		filer.InvokeToolbarButton(btnName)
+		return
+	}
+
 	ws := g.Workspace()
 	dir, idx := ws.DirectoryAt(x, y)
 	if dir == nil {
@@ -635,4 +642,14 @@ func (g *Goful) SetBorderStyle(style widget.BorderStyle) {
 			d.SetBorderStyle(style)
 		}
 	}
+}
+
+// HandleParentButtonPress navigates to the parent directory, respecting Linked mode.
+// When Linked mode is ON, navigates all windows to their respective parent directories.
+// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+func (g *Goful) HandleParentButtonPress() {
+	if g.IsLinkedNav() {
+		g.Workspace().ChdirAllToParent()
+	}
+	g.Dir().Chdir("..")
 }

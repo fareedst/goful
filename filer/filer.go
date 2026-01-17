@@ -45,6 +45,67 @@ func SetDiffSearchStatusFn(fn func() string) {
 	diffSearchStatusFn = fn
 }
 
+// toolbarButtonBounds stores the screen bounds of toolbar buttons for hit-testing.
+// Key is the button identifier (e.g., "parent"), value is the bounds.
+// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+type toolbarBounds struct {
+	x1, y, x2 int
+}
+
+var toolbarButtons = make(map[string]toolbarBounds)
+
+// toolbarParentNavFn is a callback invoked when the parent toolbar button is clicked.
+// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+var toolbarParentNavFn func()
+
+// SetToolbarParentNavFn sets the callback for the parent toolbar button.
+// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+func SetToolbarParentNavFn(fn func()) {
+	toolbarParentNavFn = fn
+}
+
+// toolbarLinkedToggleFn is a callback invoked when the linked toggle button is clicked.
+// [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE]
+var toolbarLinkedToggleFn func()
+
+// SetToolbarLinkedToggleFn sets the callback for the linked toggle button.
+// [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE]
+func SetToolbarLinkedToggleFn(fn func()) {
+	toolbarLinkedToggleFn = fn
+}
+
+// ToolbarButtonAt returns the toolbar button identifier at coordinates (x, y).
+// Returns empty string if no button is at that position.
+// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+func ToolbarButtonAt(x, y int) string {
+	for name, bounds := range toolbarButtons {
+		if y == bounds.y && x >= bounds.x1 && x <= bounds.x2 {
+			return name
+		}
+	}
+	return ""
+}
+
+// InvokeToolbarButton invokes the action for the named toolbar button.
+// Returns true if the button was handled, false if unknown.
+// [IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE]
+func InvokeToolbarButton(name string) bool {
+	switch name {
+	case "parent":
+		if toolbarParentNavFn != nil {
+			toolbarParentNavFn()
+			return true
+		}
+	case "linked":
+		// [IMPL:TOOLBAR_LINKED_TOGGLE] Toggle linked navigation mode
+		if toolbarLinkedToggleFn != nil {
+			toolbarLinkedToggleFn()
+			return true
+		}
+	}
+	return false
+}
+
 // New creates a new filer based on specified size and coordinates.
 // Creates five workspaces and default path is home directory.
 func New(x, y, width, height int) *Filer {
@@ -280,6 +341,29 @@ func (f *Filer) Input(key string) {
 
 func (f *Filer) drawHeader() {
 	x, y := f.LeftTop()
+
+	// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+	// Draw parent directory button at the start of the header
+	parentBtn := "[^]"
+	parentX1 := x
+	x = widget.SetCells(x, y, parentBtn, look.Default().Reverse(true))
+	parentX2 := x - 1
+	toolbarButtons["parent"] = toolbarBounds{x1: parentX1, y: y, x2: parentX2}
+	x = widget.SetCells(x, y, " ", look.Default())
+
+	// [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE]
+	// Draw linked mode toggle button - reverse style when ON, normal when OFF
+	linkedBtn := "[L]"
+	linkedX1 := x
+	linkedStyle := look.Default()
+	if linkedNavIndicator != nil && linkedNavIndicator() {
+		linkedStyle = linkedStyle.Reverse(true)
+	}
+	x = widget.SetCells(x, y, linkedBtn, linkedStyle)
+	linkedX2 := x - 1
+	toolbarButtons["linked"] = toolbarBounds{x1: linkedX1, y: y, x2: linkedX2}
+	x = widget.SetCells(x, y, " ", look.Default())
+
 	for i, ws := range f.Workspaces {
 		s := fmt.Sprintf(" %s ", ws.Title)
 		if f.Current != i {
@@ -289,13 +373,6 @@ func (f *Filer) drawHeader() {
 		}
 	}
 	x = widget.SetCells(x, y, " | ", look.Default())
-
-	// [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
-	// Show linked navigation indicator when enabled
-	if linkedNavIndicator != nil && linkedNavIndicator() {
-		x = widget.SetCells(x, y, "[LINKED]", look.Default().Reverse(true))
-		x = widget.SetCells(x, y, " ", look.Default())
-	}
 
 	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 	// Show diff search status when active

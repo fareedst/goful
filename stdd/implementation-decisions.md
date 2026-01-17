@@ -93,6 +93,9 @@ Example: `[IMPL:CONFIG_STRUCT]` → `implementation-decisions/IMPL-CONFIG_STRUCT
 | `[IMPL:MOUSE_HIT_TEST]` | Mouse Hit Testing | Active | [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT] | [Detail](implementation-decisions/IMPL-MOUSE_HIT_TEST.md) |
 | `[IMPL:MOUSE_FILE_SELECT]` | Mouse File Selection | Active | [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT] | [Detail](implementation-decisions/IMPL-MOUSE_FILE_SELECT.md) |
 | `[IMPL:MOUSE_DOUBLE_CLICK]` | Mouse Double-Click Detection | Active | [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK] | [Detail](implementation-decisions/IMPL-MOUSE_DOUBLE_CLICK.md) |
+| `[IMPL:MOUSE_CROSS_WINDOW_SYNC]` | Mouse Cross-Window Cursor Sync | Active | [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC] | [Detail](implementation-decisions/IMPL-MOUSE_CROSS_WINDOW_SYNC.md) |
+| `[IMPL:TOOLBAR_PARENT_BUTTON]` | Toolbar Parent Button | Active | [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] | [Detail](implementation-decisions/IMPL-TOOLBAR_PARENT_BUTTON.md) |
+| `[IMPL:TOOLBAR_LINKED_TOGGLE]` | Toolbar Linked Toggle Button | Active | [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE] | [Detail](implementation-decisions/IMPL-TOOLBAR_LINKED_TOGGLE.md) |
 
 ### Status Values
 

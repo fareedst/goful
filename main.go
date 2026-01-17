@@ -118,6 +118,21 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 	// Wire linked navigation indicator to filer header
 	filer.SetLinkedNavIndicator(g.IsLinkedNav)
 
+	// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+	// Wire toolbar parent button action to navigate to parent directory
+	filer.SetToolbarParentNavFn(g.HandleParentButtonPress)
+
+	// [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE]
+	// Wire toolbar linked toggle button to toggle linked navigation mode
+	filer.SetToolbarLinkedToggleFn(func() {
+		enabled := g.ToggleLinkedNav()
+		state := "disabled"
+		if enabled {
+			state = "enabled"
+		}
+		message.Infof("[REQ:LINKED_NAVIGATION] linked navigation %s", state)
+	})
+
 	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 	// Wire diff search status indicator to filer header
 	filer.SetDiffSearchStatusFn(g.DiffSearchStatus)
