@@ -85,10 +85,12 @@ func main() {
 
 	goful := app.NewGoful(runtimePaths.State)
 	config(goful, is_tmux, runtimePaths)
-	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
-	// plumb LoadHistory errors (distinguish first-run missing files vs actual IO failures) so we can alert users instead of
-	// silently discarding history and ingest errors.
-	_ = cmdline.LoadHistory(runtimePaths.History)
+	// [IMPL:HISTORY_ERROR_HANDLING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+	// LoadHistory returns nil for first-run (missing file) but returns structured errors
+	// for actual IO failures that users need to know about.
+	if err := cmdline.LoadHistory(runtimePaths.History); err != nil {
+		message.Errorf("[REQ:DEBT_TRIAGE] %v", err)
+	}
 
 	startupDirs, startupWarnings := app.ParseStartupDirs(flag.Args())
 	for _, warn := range startupWarnings {
@@ -100,9 +102,13 @@ func main() {
 	goful.Run()
 
 	_ = goful.SaveState(runtimePaths.State)
-	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
-	// surface SaveHistory failures (permissions/full disk) via message logging instead of quietly ignoring write errors.
-	_ = cmdline.SaveHistory(runtimePaths.History)
+	// [IMPL:HISTORY_ERROR_HANDLING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+	// SaveHistory returns structured errors for IO failures (permissions/full disk) that
+	// users need to know about. Note: We can't use message.Errorf here since the TUI is
+	// already finalized — write to stderr for post-exit visibility.
+	if err := cmdline.SaveHistory(runtimePaths.History); err != nil {
+		fmt.Fprintf(os.Stderr, "WARN: [REQ:DEBT_TRIAGE] %v\n", err)
+	}
 }
 
 func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {

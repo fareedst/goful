@@ -219,17 +219,21 @@ func (f *Filer) MergeKeymap(m widget.Keymap) {
 }
 
 // AddExtmap adds to the filer extmap.
+// [IMPL:EXTMAP_API_SAFETY] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+// Safe for third-party integrations: allocates inner map if missing.
 func (f *Filer) AddExtmap(a ...interface{}) {
 	if len(a)%3 != 0 {
 		panic("items must be a multiple of 3")
 	}
 
-	// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
-	// allocate the inner map before writing to f.extmap[key][ext] to avoid panics when third-party integrations call AddExtmap directly.
 	for i := 0; i < len(a); i += 3 {
 		key := a[i].(string)
 		ext := a[i+1].(string)
 		callback := a[i+2].(func())
+		// [IMPL:EXTMAP_API_SAFETY] Allocate inner map if missing to prevent nil map panic.
+		if _, found := f.extmap[key]; !found {
+			f.extmap[key] = map[string]func(){}
+		}
 		f.extmap[key][ext] = callback
 	}
 }

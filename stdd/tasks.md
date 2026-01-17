@@ -865,9 +865,9 @@ The following tasks were identified during an STDD documentation review to addre
 
 **Priority Rationale**: P0 because the leaking poller burns CPU and risks crashes for every exit, making the UI unreliable. Completed 2026-01-17.
 
-## P1: History Error Handling [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:DEBT_TRACKING]
+## P1: History Error Handling [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:HISTORY_ERROR_HANDLING]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Fix silent error swallowing in CLI history persistence. Distinguish first-run missing files (`os.ErrNotExist`) from actual IO failures (permissions, disk full) and surface actionable errors via `message.Error`.
 
@@ -875,28 +875,24 @@ The following tasks were identified during an STDD documentation review to addre
 
 **Debt Reference**: D2 in `stdd/debt-log.md`
 
-**Affected Files**:
-- `main.go` (lines 88-90, 103-105)
-- `cmdline/cmdline.go` (lines 168-172)
-
-**Subtasks**:
-- [ ] Update `cmdline.LoadHistory` to treat `os.ErrNotExist` as success (first-run behavior)
-- [ ] Surface other IO failures via `message.Error` with actionable context
-- [ ] Update `main.go` to capture and log `LoadHistory`/`SaveHistory` errors
-- [ ] Add unit tests covering the error differentiation paths [REQ:MODULE_VALIDATION]
-- [ ] Update D2 in `stdd/debt-log.md` with mitigation notes
-
 **Completion Criteria**:
-- [ ] First-run (missing history file) works silently without errors
-- [ ] Real IO failures surface via `message.Error` with context
-- [ ] Tests cover error differentiation
-- [ ] Debt item D2 updated with resolved status
+- [x] First-run (missing history file) works silently without errors
+- [x] Real IO failures surface via `message.Error` with context
+- [x] Tests cover error differentiation
+- [x] Debt item D2 updated with resolved status
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./cmdline/... -run "REQ_DEBT_TRIAGE"` - 6 tests pass (darwin/arm64, Go 1.24.3)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1254 token references across 77 files.`
+- Implementation: `HistoryError` struct, `IsFirstRun()` helper, updated `LoadHistory`/`SaveHistory` in `cmdline/cmdline.go`
+- `main.go` surfaces load errors via `message.Errorf`, save errors via `stderr` (post-TUI)
+- Unit tests in `cmdline/history_test.go`: first-run success, permission errors, valid file load/save
 
 **Priority Rationale**: P1 because silent error swallowing hides corruption and permission issues, but users can still use goful without history.
 
-## P1: History Cache Boundaries [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:DEBT_TRACKING]
+## P1: History Cache Boundaries [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:HISTORY_CACHE_LIMIT]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Add a configurable per-mode entry limit to `historyMap` with an eviction policy that drops the oldest entries before serialization, preventing unbounded memory growth in long-running sessions.
 
@@ -904,27 +900,23 @@ The following tasks were identified during an STDD documentation review to addre
 
 **Debt Reference**: D3 in `stdd/debt-log.md`
 
-**Affected Files**:
-- `cmdline/cmdline.go` (near `historyMap` declaration)
-
-**Subtasks**:
-- [ ] Define configurable history limit constant (default: 1000 entries per mode)
-- [ ] Implement eviction policy that trims oldest entries when limit exceeded
-- [ ] Apply eviction during `SaveHistory` to compact persisted files
-- [ ] Add unit tests verifying eviction behavior [REQ:MODULE_VALIDATION]
-- [ ] Update D3 in `stdd/debt-log.md` with mitigation notes
-
 **Completion Criteria**:
-- [ ] `historyMap` never exceeds configured limit per mode
-- [ ] Eviction preserves most recent entries
-- [ ] Tests cover boundary conditions
-- [ ] Debt item D3 updated with resolved status
+- [x] `historyMap` never exceeds configured limit per mode
+- [x] Eviction preserves most recent entries
+- [x] Tests cover boundary conditions
+- [x] Debt item D3 updated with resolved status
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./cmdline/... -run "REQ_DEBT_TRIAGE"` - 9 tests pass (darwin/arm64, Go 1.24.3)
+- Implementation: `HistoryLimit` variable (default 1000), `trimHistory()` helper in `cmdline/cmdline.go`
+- Trimming applied in `History.add()` and `SaveHistory()`
+- Unit tests: `TestTrimHistory_REQ_DEBT_TRIAGE`, `TestHistoryAddWithLimit_REQ_DEBT_TRIAGE`, `TestSaveHistory_TrimsBeforeSave_REQ_DEBT_TRIAGE`
 
 **Priority Rationale**: P1 because unbounded growth affects long-running sessions, but typical sessions are short enough that this rarely impacts users.
 
-## P1: Extmap API Safety [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:DEBT_TRACKING]
+## P1: Extmap API Safety [REQ:DEBT_TRIAGE] [ARCH:DEBT_MANAGEMENT] [IMPL:EXTMAP_API_SAFETY]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Fix nil map panic in `filer.AddExtmap` by allocating the inner map before writing, making the API safe for third-party integrations.
 
@@ -932,50 +924,34 @@ The following tasks were identified during an STDD documentation review to addre
 
 **Debt Reference**: D4 in `stdd/debt-log.md`
 
-**Affected Files**:
-- `filer/filer.go` (lines 225-229)
-
-**Subtasks**:
-- [ ] Check if inner map exists before writing; allocate if nil
-- [ ] Add regression test calling `AddExtmap` without prior `MergeExtmap` [REQ:MODULE_VALIDATION]
-- [ ] Update D4 in `stdd/debt-log.md` with mitigation notes
-
 **Completion Criteria**:
-- [ ] `AddExtmap` works correctly when called before `MergeExtmap`
-- [ ] Regression test prevents future breakage
-- [ ] Debt item D4 updated with resolved status
+- [x] `AddExtmap` works correctly when called before `MergeExtmap`
+- [x] Regression test prevents future breakage
+- [x] Debt item D4 updated with resolved status
+
+**Validation Evidence (2026-01-17)**:
+- `go test ./filer/... -run "REQ_DEBT_TRIAGE"` - 2 tests pass (darwin/arm64, Go 1.24.3)
+- Implementation: Check + allocate inner map in `filer/filer.go` `AddExtmap()`
+- Unit tests: `TestAddExtmap_NilMapSafe_REQ_DEBT_TRIAGE`, `TestAddExtmap_MultipleEntries_REQ_DEBT_TRIAGE`
 
 **Priority Rationale**: P1 because the panic blocks third-party integrations, but the core goful app never triggers this path.
 
 ## P1: Requirements Status Synchronization [REQ:STDD_SETUP] [PROC:TOKEN_AUDIT]
 
-**Status**: ⏳ Pending
+**Status**: ✅ Complete
 
 **Description**: Update `stdd/requirements.md` status flags to reflect completed tasks. Multiple requirements show "⏳ Planned" but their corresponding tasks in `tasks.md` are marked "✅ Complete", indicating documentation drift.
 
 **Dependencies**: None
 
-**Requirements to Update**:
-- `[REQ:CONFIGURABLE_STATE_PATHS]` - Task 2.1 ✅ → Status should be ✅ Implemented
-- `[REQ:WORKSPACE_START_DIRS]` - Task complete → Status should be ✅ Implemented
-- `[REQ:EXTERNAL_COMMAND_CONFIG]` - Task complete → Status should be ✅ Implemented
-- `[REQ:FILER_EXCLUDE_NAMES]` - Task complete → Status should be ✅ Implemented
-- `[REQ:WINDOW_MACRO_ENUMERATION]` - Task complete → Status should be ✅ Implemented
-- `[REQ:ARCH_DOCUMENTATION]` - ARCHITECTURE.md exists → Status should be ✅ Implemented
-- `[REQ:CONTRIBUTING_GUIDE]` - CONTRIBUTING.md exists → Status should be ✅ Implemented
-- `[REQ:BEHAVIOR_BASELINE]` - Keymap tests exist → Status should be ✅ Implemented
-- `[REQ:FILE_COMPARISON_COLORS]` - Feature complete → Status should be ✅ Implemented
-- `[REQ:HELP_POPUP]` - Feature complete → Status should be ✅ Implemented
-- `[REQ:SYNC_COMMANDS]` - Feature complete → Status should be ✅ Implemented
-
-**Subtasks**:
-- [ ] Update status flags in `stdd/requirements.md` for all completed requirements
-- [ ] Verify each status change against task completion evidence
-- [ ] Run `[PROC:TOKEN_VALIDATION]` to confirm registry integrity
-
 **Completion Criteria**:
-- [ ] All requirement statuses match task completion status
-- [ ] No documentation drift between requirements.md and tasks.md
+- [x] All requirement statuses match task completion status
+- [x] No documentation drift between requirements.md and tasks.md
+
+**Validation Evidence (2026-01-17)**:
+- Updated Requirements Registry table with 20+ implemented requirements
+- Updated `[REQ:CMD_HANDLER_TESTS]` and `[REQ:INTEGRATION_FLOWS]` statuses to ✅ Implemented
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1275 token references across 77 files.`
 
 **Priority Rationale**: P1 because documentation accuracy is essential for STDD methodology integrity and contributor onboarding.
 

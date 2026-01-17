@@ -3,6 +3,7 @@ package cmdline
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -158,18 +159,48 @@ func (c *Cmdline) Run() {
 	c.mode.Run(c)
 }
 
-// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
-// bound historyMap by a configurable size per mode so long-running sessions do not retain unbounded command history in memory.
+// [IMPL:HISTORY_CACHE_LIMIT] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+// HistoryLimit controls maximum entries per mode to prevent unbounded memory growth.
+// Default 1000 entries per mode; set to 0 for unlimited (not recommended for long sessions).
+var HistoryLimit = 1000
+
 var historyMap = map[string][]string{}
 
+// HistoryError represents errors during history loading/saving operations.
+// [IMPL:HISTORY_ERROR_HANDLING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+type HistoryError struct {
+	Path string
+	Op   string // "load" or "save"
+	Err  error
+}
+
+func (e *HistoryError) Error() string {
+	return e.Op + " history " + e.Path + ": " + e.Err.Error()
+}
+
+func (e *HistoryError) Unwrap() error { return e.Err }
+
+// IsFirstRun returns true if the error indicates a missing history file (first run).
+// [IMPL:HISTORY_ERROR_HANDLING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+func (e *HistoryError) IsFirstRun() bool {
+	return errors.Is(e.Err, os.ErrNotExist)
+}
+
 // LoadHistory loads from a path and append to history maps of a key as the file name.
+// Returns nil on success or when the file does not exist (first-run behavior).
+// Returns a *HistoryError for actual IO failures (permissions, corrupt files, etc.)
+// that should be surfaced to the user.
+// [IMPL:HISTORY_ERROR_HANDLING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 func LoadHistory(path string) error {
 	path = util.ExpandPath(path)
 	file, err := os.Open(path)
 	if err != nil {
-		// TODO(goful-maintainers) [IMPL:DEBT_TRACKING] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]:
-		// treat os.ErrNotExist as success and surface other IO failures via message logging instead of returning opaque errors.
-		return err
+		// [IMPL:HISTORY_ERROR_HANDLING] First-run: missing file is not an error.
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		// Actual IO failure (permissions, etc.) — return structured error for caller to handle.
+		return &HistoryError{Path: path, Op: "load", Err: err}
 	}
 	defer file.Close()
 
@@ -181,7 +212,7 @@ func LoadHistory(path string) error {
 			break
 		}
 		if err != nil {
-			return err
+			return &HistoryError{Path: path, Op: "load", Err: err}
 		}
 		history = append(history, string(line))
 	}
@@ -191,28 +222,35 @@ func LoadHistory(path string) error {
 }
 
 // SaveHistory saves the history to a path.
+// Returns a *HistoryError for IO failures (permissions, disk full, etc.)
+// that should be surfaced to the user.
+// [IMPL:HISTORY_ERROR_HANDLING] [IMPL:HISTORY_CACHE_LIMIT] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 func SaveHistory(path string) error {
 	path = util.ExpandPath(path)
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
+		return &HistoryError{Path: path, Op: "save", Err: err}
 	}
 
 	file, err := os.Create(path)
 	if err != nil {
-		return err
+		return &HistoryError{Path: path, Op: "save", Err: err}
 	}
 	defer file.Close()
 
 	key := filepath.Base(path)
 	if history, ok := historyMap[key]; ok {
+		// [IMPL:HISTORY_CACHE_LIMIT] Trim before saving to compact persisted files
+		history = trimHistory(history)
+		historyMap[key] = history
+
 		writer := bufio.NewWriter(file)
 		for _, h := range history {
 			if _, err := writer.WriteString(h + "\n"); err != nil {
-				return err
+				return &HistoryError{Path: path, Op: "save", Err: err}
 			}
 		}
 		if err := writer.Flush(); err != nil {
-			return err
+			return &HistoryError{Path: path, Op: "save", Err: err}
 		}
 	}
 	return nil
@@ -265,11 +303,22 @@ func (h *History) add() {
 				break
 			}
 		}
-		historyMap[mode] = append(history, text)
+		historyMap[mode] = trimHistory(append(history, text))
 	} else {
 		history := []string{}
-		historyMap[mode] = append(history, text)
+		historyMap[mode] = trimHistory(append(history, text))
 	}
+}
+
+// trimHistory enforces HistoryLimit by dropping oldest entries.
+// [IMPL:HISTORY_CACHE_LIMIT] [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+func trimHistory(history []string) []string {
+	if HistoryLimit <= 0 || len(history) <= HistoryLimit {
+		return history
+	}
+	// Keep the most recent entries (tail of the slice)
+	excess := len(history) - HistoryLimit
+	return history[excess:]
 }
 
 // Delete a history content on the cursor.

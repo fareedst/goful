@@ -29,11 +29,27 @@ Each requirement includes:
 
 | Token | Requirement | Priority | Status | Architecture | Implementation |
 |-------|------------|----------|--------|--------------|----------------|
-| [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ⏳ Planned | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
-| [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ⏳ Planned | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
-| [REQ:HELP_POPUP] | Help popup displays keystroke catalog on ? key | P2 | ⏳ Planned | [ARCH:HELP_WIDGET] | [IMPL:HELP_POPUP] |
+| [REQ:STDD_SETUP] | STDD methodology setup | P0 | ✅ Implemented | [ARCH:STDD_STRUCTURE] | [IMPL:STDD_FILES] |
+| [REQ:MODULE_VALIDATION] | Independent module validation before integration | P0 | ✅ Implemented | [ARCH:MODULE_VALIDATION] | [IMPL:MODULE_VALIDATION] |
+| [REQ:CONFIGURABLE_STATE_PATHS] | Configurable state/history persistence paths | P0 | ✅ Implemented | [ARCH:STATE_PATH_SELECTION] | [IMPL:STATE_PATH_RESOLVER] |
+| [REQ:WORKSPACE_START_DIRS] | Positional CLI directories seed workspace windows | P1 | ✅ Implemented | [ARCH:WORKSPACE_BOOTSTRAP] | [IMPL:WORKSPACE_START_DIRS] |
+| [REQ:EXTERNAL_COMMAND_CONFIG] | External command menu from config files | P1 | ✅ Implemented | [ARCH:EXTERNAL_COMMAND_REGISTRY] | [IMPL:EXTERNAL_COMMAND_LOADER], [IMPL:EXTERNAL_COMMAND_BINDER] |
+| [REQ:FILER_EXCLUDE_NAMES] | Configurable filename exclusions | P1 | ✅ Implemented | [ARCH:FILER_EXCLUDE_FILTER] | [IMPL:FILER_EXCLUDE_RULES], [IMPL:FILER_EXCLUDE_LOADER] |
+| [REQ:WINDOW_MACRO_ENUMERATION] | %D@/%d@ enumerate workspace directories | P1 | ✅ Implemented | [ARCH:WINDOW_MACRO_ENUMERATION] | [IMPL:WINDOW_MACRO_ENUMERATION] |
+| [REQ:FILE_COMPARISON_COLORS] | Multi-directory file comparison coloring | P1 | ✅ Implemented | [ARCH:FILE_COMPARISON_ENGINE] | [IMPL:COMPARE_COLOR_CONFIG], [IMPL:FILE_COMPARISON_INDEX] |
+| [REQ:LINKED_NAVIGATION] | Linked navigation across workspace windows | P1 | ✅ Implemented | [ARCH:LINKED_NAVIGATION] | [IMPL:LINKED_NAVIGATION] |
+| [REQ:DIFF_SEARCH] | Cross-window difference search | P1 | ✅ Implemented | [ARCH:DIFF_SEARCH] | [IMPL:DIFF_SEARCH] |
+| [REQ:HELP_POPUP] | Help popup displays keystroke catalog on ? key | P2 | ✅ Implemented | [ARCH:HELP_WIDGET] | [IMPL:HELP_POPUP] |
+| [REQ:SYNC_COMMANDS] | Sync command operations across panes | P1 | ✅ Implemented | [ARCH:SYNC_MODE] | [IMPL:SYNC_EXECUTE] |
 | [REQ:MOUSE_FILE_SELECT] | Mouse input for file selection in directory windows | P1 | ✅ Implemented | [ARCH:MOUSE_EVENT_ROUTING] | [IMPL:MOUSE_HIT_TEST], [IMPL:MOUSE_FILE_SELECT] |
 | [REQ:MOUSE_DOUBLE_CLICK] | Double-click to open files and navigate directories | P1 | ✅ Implemented | [ARCH:MOUSE_DOUBLE_CLICK] | [IMPL:MOUSE_DOUBLE_CLICK] |
+| [REQ:DEBT_TRIAGE] | Technical debt and risk tracking | P1 | ✅ Implemented | [ARCH:DEBT_MANAGEMENT] | [IMPL:DEBT_TRACKING] |
+| [REQ:ARCH_DOCUMENTATION] | Architecture documentation | P1 | ✅ Implemented | [ARCH:DOCS_STRUCTURE] | [IMPL:DOC_ARCH_GUIDE] |
+| [REQ:CONTRIBUTING_GUIDE] | Contributor standards | P1 | ✅ Implemented | [ARCH:CONTRIBUTION_PROCESS] | [IMPL:DOC_CONTRIBUTING] |
+| [REQ:BEHAVIOR_BASELINE] | Baseline behavior capture | P1 | ✅ Implemented | [ARCH:BASELINE_CAPTURE] | [IMPL:BASELINE_SNAPSHOTS] |
+| [REQ:EVENT_LOOP_SHUTDOWN] | Event poller shutdown control | P0 | ✅ Implemented | [ARCH:EVENT_LOOP_SHUTDOWN] | [IMPL:EVENT_LOOP_SHUTDOWN] |
+| [REQ:NSYNC_MULTI_TARGET] | Multi-target copy/move via nsync SDK | P1 | ⏳ Planned | [ARCH:NSYNC_INTEGRATION] | [IMPL:NSYNC_OBSERVER], [IMPL:NSYNC_COPY_MOVE] |
+| [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ⏳ Planned | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
 
 ### Non-Functional Requirements
 
@@ -263,7 +279,11 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Command Test Strategy [ARCH:TEST_STRATEGY_CMD]
 - **Implementation**: See `implementation-decisions.md` § Command Tests [IMPL:TEST_CMDLINE]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- `cmdline/history_test.go` tests cover history dedup, cursor movement, and error handling
+- Tests include `[REQ:CMD_HANDLER_TESTS]` token references
 
 ### [REQ:INTEGRATION_FLOWS] Integration Flows for File Ops
 
@@ -280,7 +300,11 @@ Each requirement includes:
 - **Architecture**: See `architecture-decisions.md` § Integration Test Strategy [ARCH:TEST_STRATEGY_INTEGRATION]
 - **Implementation**: See `implementation-decisions.md` § Integration Flow Tests [IMPL:TEST_INTEGRATION_FLOWS]
 
-**Status**: ⏳ Planned
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-17)**:
+- `filer/integration_test.go` tests cover open directory, navigate, rename, delete flows
+- Tests include `[REQ:INTEGRATION_FLOWS]` token references
 
 ### [REQ:CONFIGURABLE_STATE_PATHS] Configurable State & History Persistence
 

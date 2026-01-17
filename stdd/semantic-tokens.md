@@ -237,6 +237,9 @@ When referencing other tokens:
 - `[IMPL:MOUSE_HIT_TEST]` - Coordinate-based hit-testing for mouse events [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
 - `[IMPL:MOUSE_FILE_SELECT]` - Mouse click to cursor movement wiring [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
 - `[IMPL:MOUSE_DOUBLE_CLICK]` - Double-click detection and handlers for files/directories [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
+- `[IMPL:HISTORY_ERROR_HANDLING]` - Structured history error handling with first-run detection [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+- `[IMPL:HISTORY_CACHE_LIMIT]` - Configurable history limit with eviction policy [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
+- `[IMPL:EXTMAP_API_SAFETY]` - Nil-map safe AddExtmap for third-party integrations [ARCH:DEBT_MANAGEMENT] [REQ:DEBT_TRIAGE]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

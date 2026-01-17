@@ -403,3 +403,69 @@ func TestDirectoryContains_REQ_MOUSE_FILE_SELECT(t *testing.T) {
 		})
 	}
 }
+
+// [REQ:DEBT_TRIAGE] [IMPL:EXTMAP_API_SAFETY] [ARCH:DEBT_MANAGEMENT]
+// Test that AddExtmap works without prior MergeExtmap call (regression test for nil map panic).
+func TestAddExtmap_NilMapSafe_REQ_DEBT_TRIAGE(t *testing.T) {
+	// Create a filer with empty extmap (no MergeExtmap called)
+	f := &Filer{
+		extmap: make(map[string]map[string]func()),
+	}
+
+	called := false
+	callback := func() { called = true }
+
+	// This should not panic even though f.extmap["testkey"] is nil
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("AddExtmap panicked: %v", r)
+		}
+	}()
+
+	f.AddExtmap("testkey", ".txt", callback)
+
+	// Verify the callback was added correctly
+	if f.extmap["testkey"] == nil {
+		t.Fatal("AddExtmap should have created inner map")
+	}
+	if f.extmap["testkey"][".txt"] == nil {
+		t.Fatal("AddExtmap should have stored callback")
+	}
+
+	// Call the callback to verify it's the right one
+	f.extmap["testkey"][".txt"]()
+	if !called {
+		t.Fatal("stored callback should be callable")
+	}
+}
+
+// [REQ:DEBT_TRIAGE] [IMPL:EXTMAP_API_SAFETY] [ARCH:DEBT_MANAGEMENT]
+// Test AddExtmap with multiple entries and pre-existing keys.
+func TestAddExtmap_MultipleEntries_REQ_DEBT_TRIAGE(t *testing.T) {
+	f := &Filer{
+		extmap: make(map[string]map[string]func()),
+	}
+
+	count := 0
+	f.AddExtmap(
+		"key1", ".go", func() { count += 1 },
+		"key1", ".py", func() { count += 10 },
+		"key2", ".rs", func() { count += 100 },
+	)
+
+	// Verify all entries were added
+	if len(f.extmap["key1"]) != 2 {
+		t.Errorf("expected 2 entries for key1, got %d", len(f.extmap["key1"]))
+	}
+	if len(f.extmap["key2"]) != 1 {
+		t.Errorf("expected 1 entry for key2, got %d", len(f.extmap["key2"]))
+	}
+
+	// Call all callbacks
+	f.extmap["key1"][".go"]()
+	f.extmap["key1"][".py"]()
+	f.extmap["key2"][".rs"]()
+	if count != 111 {
+		t.Errorf("expected count=111, got %d", count)
+	}
+}
