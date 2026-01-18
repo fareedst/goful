@@ -1175,3 +1175,41 @@ The following tasks were identified during an STDD documentation review to addre
 - Unit tests: `TestMoveCursorLinked_REQ_LINKED_NAVIGATION`, `TestMoveCursorLinkedOff_REQ_LINKED_NAVIGATION`, `TestMoveTopLinked_REQ_LINKED_NAVIGATION`, `TestMoveBottomLinked_REQ_LINKED_NAVIGATION`, `TestLinkedCursorSyncMissingFile_REQ_LINKED_NAVIGATION` in `app/linked_cursor_test.go`
 
 **Priority Rationale**: P1 because this unifies existing behavior and improves consistency between mouse and keyboard workflows.
+
+## P1: Toolbar Sync Operation Buttons [REQ:TOOLBAR_SYNC_BUTTONS] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES]
+
+**Status**: ✅ Complete
+
+**Description**: Add four clickable toolbar buttons `[C]`, `[D]`, `[R]`, `[!]` after the `[=]` compare button. These buttons obey Linked navigation mode: when Linked is ON, they trigger Sync operations across all windows; when OFF, they trigger single-window operations. The `[!]` button toggles a persistent ignore-failures mode.
+
+**Dependencies**: [REQ:TOOLBAR_COMPARE_BUTTON] (complete), [REQ:SYNC_COMMANDS] (complete), [REQ:LINKED_NAVIGATION] (complete)
+
+**Subtasks**:
+- [x] Register STDD tokens in semantic-tokens.md, requirements.md, architecture-decisions.md [REQ:TOOLBAR_SYNC_BUTTONS]
+- [x] Create implementation decision detail files for each button [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES]
+- [x] Add `syncIgnoreFailures` state and accessors to `app/goful.go` [IMPL:TOOLBAR_IGNORE_FAILURES]
+- [x] Add toolbar button callbacks and setters in `filer/filer.go` [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES]
+- [x] Extend `drawHeader()` to render `[C]`, `[D]`, `[R]`, `[!]` buttons [ARCH:TOOLBAR_LAYOUT]
+- [x] Extend `InvokeToolbarButton()` with new button cases [ARCH:TOOLBAR_LAYOUT]
+- [x] Wire callbacks in `main.go` with Linked mode logic [REQ:TOOLBAR_SYNC_BUTTONS]
+- [x] Add unit tests for new buttons in `filer/toolbar_test.go` [REQ:TOOLBAR_SYNC_BUTTONS]
+- [x] Token audit & validation [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] Four buttons appear after `[=]` in header row
+- [x] Buttons trigger correct operations based on Linked mode
+- [x] `[!]` button styling reflects ignore-failures state
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Validation Evidence (2026-01-18)**:
+- `go test ./...` - all tests pass
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1621 token references across 79 files.`
+- Implementation: `syncIgnoreFailures`, `IsSyncIgnoreFailures()`, `ToggleSyncIgnoreFailures()` in `app/goful.go`
+- Toolbar rendering and callbacks in `filer/filer.go`: `SetToolbarSyncCopyFn()`, `SetToolbarSyncDeleteFn()`, `SetToolbarSyncRenameFn()`, `SetToolbarIgnoreFailuresFn()`, `SetSyncIgnoreFailuresIndicator()`
+- Exported sync methods: `StartSyncCopy()`, `StartSyncDelete()`, `StartSyncRename()` in `app/window_wide.go`
+- Unit tests: `TestToolbarSyncButtonsHit_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncCopyButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncDeleteButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncRenameButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarIgnoreFailuresButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncButtonsWithNilCallback_REQ_TOOLBAR_SYNC_BUTTONS`, `TestIgnoreFailuresIndicator_REQ_TOOLBAR_SYNC_BUTTONS` in `filer/toolbar_test.go`
+
+**Priority Rationale**: P1 because mouse-first sync operations significantly improve accessibility and workflow efficiency, but keyboard shortcuts remain fully functional without them.

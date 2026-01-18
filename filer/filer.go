@@ -84,6 +84,56 @@ func SetToolbarCompareDigestFn(fn func()) {
 	toolbarCompareDigestFn = fn
 }
 
+// toolbarSyncCopyFn is a callback invoked when the sync copy button is clicked.
+// [IMPL:TOOLBAR_SYNC_COPY] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+var toolbarSyncCopyFn func()
+
+// SetToolbarSyncCopyFn sets the callback for the sync copy button.
+// [IMPL:TOOLBAR_SYNC_COPY] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+func SetToolbarSyncCopyFn(fn func()) {
+	toolbarSyncCopyFn = fn
+}
+
+// toolbarSyncDeleteFn is a callback invoked when the sync delete button is clicked.
+// [IMPL:TOOLBAR_SYNC_DELETE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+var toolbarSyncDeleteFn func()
+
+// SetToolbarSyncDeleteFn sets the callback for the sync delete button.
+// [IMPL:TOOLBAR_SYNC_DELETE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+func SetToolbarSyncDeleteFn(fn func()) {
+	toolbarSyncDeleteFn = fn
+}
+
+// toolbarSyncRenameFn is a callback invoked when the sync rename button is clicked.
+// [IMPL:TOOLBAR_SYNC_RENAME] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+var toolbarSyncRenameFn func()
+
+// SetToolbarSyncRenameFn sets the callback for the sync rename button.
+// [IMPL:TOOLBAR_SYNC_RENAME] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+func SetToolbarSyncRenameFn(fn func()) {
+	toolbarSyncRenameFn = fn
+}
+
+// toolbarIgnoreFailuresFn is a callback invoked when the ignore-failures toggle button is clicked.
+// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+var toolbarIgnoreFailuresFn func()
+
+// SetToolbarIgnoreFailuresFn sets the callback for the ignore-failures toggle button.
+// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+func SetToolbarIgnoreFailuresFn(fn func()) {
+	toolbarIgnoreFailuresFn = fn
+}
+
+// syncIgnoreFailuresIndicator returns whether ignore-failures mode is enabled (for button styling).
+// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+var syncIgnoreFailuresIndicator func() bool
+
+// SetSyncIgnoreFailuresIndicator sets the callback used to check if ignore-failures mode is enabled.
+// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+func SetSyncIgnoreFailuresIndicator(fn func() bool) {
+	syncIgnoreFailuresIndicator = fn
+}
+
 // ToolbarButtonAt returns the toolbar button identifier at coordinates (x, y).
 // Returns empty string if no button is at that position.
 // [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
@@ -98,7 +148,7 @@ func ToolbarButtonAt(x, y int) string {
 
 // InvokeToolbarButton invokes the action for the named toolbar button.
 // Returns true if the button was handled, false if unknown.
-// [IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_LINKED_TOGGLE] [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE] [REQ:TOOLBAR_COMPARE_BUTTON]
+// [IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_LINKED_TOGGLE] [IMPL:TOOLBAR_COMPARE_BUTTON] [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE] [REQ:TOOLBAR_COMPARE_BUTTON] [REQ:TOOLBAR_SYNC_BUTTONS]
 func InvokeToolbarButton(name string) bool {
 	switch name {
 	case "parent":
@@ -116,6 +166,30 @@ func InvokeToolbarButton(name string) bool {
 		// [IMPL:TOOLBAR_COMPARE_BUTTON] Calculate digests for all shared files
 		if toolbarCompareDigestFn != nil {
 			toolbarCompareDigestFn()
+			return true
+		}
+	case "synccopy":
+		// [IMPL:TOOLBAR_SYNC_COPY] Trigger sync or single-window copy based on Linked mode
+		if toolbarSyncCopyFn != nil {
+			toolbarSyncCopyFn()
+			return true
+		}
+	case "syncdelete":
+		// [IMPL:TOOLBAR_SYNC_DELETE] Trigger sync or single-window delete based on Linked mode
+		if toolbarSyncDeleteFn != nil {
+			toolbarSyncDeleteFn()
+			return true
+		}
+	case "syncrename":
+		// [IMPL:TOOLBAR_SYNC_RENAME] Trigger sync or single-window rename based on Linked mode
+		if toolbarSyncRenameFn != nil {
+			toolbarSyncRenameFn()
+			return true
+		}
+	case "ignorefailures":
+		// [IMPL:TOOLBAR_IGNORE_FAILURES] Toggle ignore-failures mode for sync operations
+		if toolbarIgnoreFailuresFn != nil {
+			toolbarIgnoreFailuresFn()
 			return true
 		}
 	}
@@ -387,6 +461,46 @@ func (f *Filer) drawHeader() {
 	x = widget.SetCells(x, y, compareBtn, look.Default())
 	compareX2 := x - 1
 	toolbarButtons["compare"] = toolbarBounds{x1: compareX1, y: y, x2: compareX2}
+	x = widget.SetCells(x, y, " ", look.Default())
+
+	// [IMPL:TOOLBAR_SYNC_COPY] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Draw sync copy button - normal style (action button)
+	syncCopyBtn := "[C]"
+	syncCopyX1 := x
+	x = widget.SetCells(x, y, syncCopyBtn, look.Default())
+	syncCopyX2 := x - 1
+	toolbarButtons["synccopy"] = toolbarBounds{x1: syncCopyX1, y: y, x2: syncCopyX2}
+	x = widget.SetCells(x, y, " ", look.Default())
+
+	// [IMPL:TOOLBAR_SYNC_DELETE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Draw sync delete button - normal style (action button)
+	syncDeleteBtn := "[D]"
+	syncDeleteX1 := x
+	x = widget.SetCells(x, y, syncDeleteBtn, look.Default())
+	syncDeleteX2 := x - 1
+	toolbarButtons["syncdelete"] = toolbarBounds{x1: syncDeleteX1, y: y, x2: syncDeleteX2}
+	x = widget.SetCells(x, y, " ", look.Default())
+
+	// [IMPL:TOOLBAR_SYNC_RENAME] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Draw sync rename button - normal style (action button)
+	syncRenameBtn := "[R]"
+	syncRenameX1 := x
+	x = widget.SetCells(x, y, syncRenameBtn, look.Default())
+	syncRenameX2 := x - 1
+	toolbarButtons["syncrename"] = toolbarBounds{x1: syncRenameX1, y: y, x2: syncRenameX2}
+	x = widget.SetCells(x, y, " ", look.Default())
+
+	// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Draw ignore-failures toggle button - reverse style when ON, normal when OFF
+	ignoreBtn := "[!]"
+	ignoreX1 := x
+	ignoreStyle := look.Default()
+	if syncIgnoreFailuresIndicator != nil && syncIgnoreFailuresIndicator() {
+		ignoreStyle = ignoreStyle.Reverse(true)
+	}
+	x = widget.SetCells(x, y, ignoreBtn, ignoreStyle)
+	ignoreX2 := x - 1
+	toolbarButtons["ignorefailures"] = toolbarBounds{x1: ignoreX1, y: y, x2: ignoreX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
 	for i, ws := range f.Workspaces {

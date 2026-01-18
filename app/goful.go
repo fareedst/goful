@@ -32,15 +32,16 @@ const pollerShutdownTimeout = 2 * time.Second
 // Goful represents a main application.
 type Goful struct {
 	*filer.Filer
-	shell     func(cmd string) []string
-	terminal  func(cmd string) []string
-	next      widget.Widget
-	event     chan tcell.Event
-	interrupt chan int
-	callback  chan func()
-	task      chan int
-	exit      bool
-	linkedNav bool // [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION] Linked navigation mode state
+	shell              func(cmd string) []string
+	terminal           func(cmd string) []string
+	next               widget.Widget
+	event              chan tcell.Event
+	interrupt          chan int
+	callback           chan func()
+	task               chan int
+	exit               bool
+	linkedNav          bool // [IMPL:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION] Linked navigation mode state
+	syncIgnoreFailures bool // [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS] Persistent ignore-failures mode for sync operations
 	// Double-click state tracking [IMPL:MOUSE_DOUBLE_CLICK] [ARCH:MOUSE_DOUBLE_CLICK] [REQ:MOUSE_DOUBLE_CLICK]
 	lastClickTime time.Time
 	lastClickX    int
@@ -506,6 +507,19 @@ func (g *Goful) IsLinkedNav() bool {
 // [IMPL:LINKED_NAVIGATION_AUTO_DISABLE] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 func (g *Goful) SetLinkedNav(enabled bool) {
 	g.linkedNav = enabled
+}
+
+// IsSyncIgnoreFailures returns true if ignore-failures mode is enabled for sync operations.
+// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+func (g *Goful) IsSyncIgnoreFailures() bool {
+	return g.syncIgnoreFailures
+}
+
+// ToggleSyncIgnoreFailures toggles the ignore-failures mode and returns the new state.
+// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+func (g *Goful) ToggleSyncIgnoreFailures() bool {
+	g.syncIgnoreFailures = !g.syncIgnoreFailures
+	return g.syncIgnoreFailures
 }
 
 // MoveCursorLinked moves cursor and syncs to other windows if linked mode is ON.

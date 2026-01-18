@@ -175,6 +175,72 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		message.Infof("[REQ:FILE_COMPARISON_COLORS] calculated digests for %d files across %d shared filenames", totalFiles, len(names))
 	})
 
+	// [IMPL:TOOLBAR_SYNC_COPY] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Wire toolbar sync copy button - uses Sync operation when Linked, single-window when not
+	filer.SetToolbarSyncCopyFn(func() {
+		if g.IsLinkedNav() {
+			// Sync copy - operates across all windows
+			file := g.File()
+			if file == nil || file.Name() == ".." {
+				message.Errorf("[REQ:TOOLBAR_SYNC_BUTTONS] no file selected")
+				return
+			}
+			g.StartSyncCopy(file.Name(), g.IsSyncIgnoreFailures())
+		} else {
+			// Single-window copy
+			g.Copy()
+		}
+	})
+
+	// [IMPL:TOOLBAR_SYNC_DELETE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Wire toolbar sync delete button - uses Sync operation when Linked, single-window when not
+	filer.SetToolbarSyncDeleteFn(func() {
+		if g.IsLinkedNav() {
+			// Sync delete - operates across all windows
+			file := g.File()
+			if file == nil || file.Name() == ".." {
+				message.Errorf("[REQ:TOOLBAR_SYNC_BUTTONS] no file selected")
+				return
+			}
+			g.StartSyncDelete(file.Name(), g.IsSyncIgnoreFailures())
+		} else {
+			// Single-window delete
+			g.Remove()
+		}
+	})
+
+	// [IMPL:TOOLBAR_SYNC_RENAME] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Wire toolbar sync rename button - uses Sync operation when Linked, single-window when not
+	filer.SetToolbarSyncRenameFn(func() {
+		if g.IsLinkedNav() {
+			// Sync rename - operates across all windows
+			file := g.File()
+			if file == nil || file.Name() == ".." {
+				message.Errorf("[REQ:TOOLBAR_SYNC_BUTTONS] no file selected")
+				return
+			}
+			g.StartSyncRename(file.Name(), g.IsSyncIgnoreFailures())
+		} else {
+			// Single-window rename
+			g.Rename()
+		}
+	})
+
+	// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Wire ignore-failures indicator for button styling
+	filer.SetSyncIgnoreFailuresIndicator(g.IsSyncIgnoreFailures)
+
+	// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+	// Wire toolbar ignore-failures toggle button
+	filer.SetToolbarIgnoreFailuresFn(func() {
+		enabled := g.ToggleSyncIgnoreFailures()
+		if enabled {
+			message.Info("[REQ:TOOLBAR_SYNC_BUTTONS] Sync ignore-failures mode ON")
+		} else {
+			message.Info("[REQ:TOOLBAR_SYNC_BUTTONS] Sync ignore-failures mode OFF")
+		}
+	})
+
 	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 	// Wire diff search status indicator to filer header
 	filer.SetDiffSearchStatusFn(g.DiffSearchStatus)

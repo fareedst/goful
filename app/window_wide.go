@@ -74,34 +74,34 @@ func (m *syncMode) Run(c *cmdline.Cmdline) {
 
 	switch key {
 	case "c":
-		m.startSyncCopy(filename, m.ignoreFailures)
+		m.StartSyncCopy(filename, m.ignoreFailures)
 	case "d":
-		m.startSyncDelete(filename, m.ignoreFailures)
+		m.StartSyncDelete(filename, m.ignoreFailures)
 	case "r":
-		m.startSyncRename(filename, m.ignoreFailures)
+		m.StartSyncRename(filename, m.ignoreFailures)
 	default:
 		// Any other key exits the mode silently
 	}
 }
 
-// startSyncCopy initiates the sync copy operation.
-// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
-func (g *Goful) startSyncCopy(filename string, ignoreFailures bool) {
+// StartSyncCopy initiates the sync copy operation.
+// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS] [IMPL:TOOLBAR_SYNC_COPY] [REQ:TOOLBAR_SYNC_BUTTONS]
+func (g *Goful) StartSyncCopy(filename string, ignoreFailures bool) {
 	c := cmdline.New(&syncCopyMode{g, filename, ignoreFailures}, g)
 	// Default to the same filename - user must change it to a different name
 	c.SetText(filename)
 	g.next = c
 }
 
-// startSyncDelete initiates the sync delete operation.
-// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
-func (g *Goful) startSyncDelete(filename string, ignoreFailures bool) {
+// StartSyncDelete initiates the sync delete operation.
+// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS] [IMPL:TOOLBAR_SYNC_DELETE] [REQ:TOOLBAR_SYNC_BUTTONS]
+func (g *Goful) StartSyncDelete(filename string, ignoreFailures bool) {
 	g.next = cmdline.New(&syncDeleteMode{g, filename, ignoreFailures}, g)
 }
 
-// startSyncRename initiates the sync rename operation.
-// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
-func (g *Goful) startSyncRename(filename string, ignoreFailures bool) {
+// StartSyncRename initiates the sync rename operation.
+// [IMPL:SYNC_EXECUTE] [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS] [IMPL:TOOLBAR_SYNC_RENAME] [REQ:TOOLBAR_SYNC_BUTTONS]
+func (g *Goful) StartSyncRename(filename string, ignoreFailures bool) {
 	c := cmdline.New(&syncRenameMode{g, filename, ignoreFailures}, g)
 	c.SetText(filename)
 	c.MoveCursor(-len(filepath.Ext(filename)))

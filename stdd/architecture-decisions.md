@@ -1166,6 +1166,50 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 **Cross-References**: [REQ:TOOLBAR_PARENT_BUTTON], [IMPL:TOOLBAR_PARENT_BUTTON], [REQ:TOOLBAR_LINKED_TOGGLE], [IMPL:TOOLBAR_LINKED_TOGGLE], [REQ:TOOLBAR_COMPARE_BUTTON], [IMPL:TOOLBAR_COMPARE_BUTTON], [REQ:LINKED_NAVIGATION], [REQ:FILE_COMPARISON_COLORS], [REQ:MODULE_VALIDATION]
 
+### Extension: Sync Operation Buttons [REQ:TOOLBAR_SYNC_BUTTONS]
+
+Extend the toolbar with four additional buttons after `[=]`:
+
+**New Button Layout:**
+```
+[^] [L] [=] [C] [D] [R] [!] | 1 | 2 | 3 | [1] path... [2] path...
+```
+
+**Button Specifications:**
+- `[C]` - Copy button (identifier: `"synccopy"`)
+  - Normal style (action button)
+  - Linked ON: Triggers `startSyncCopy(filename, ignoreFailures)`
+  - Linked OFF: Triggers `Copy()`
+
+- `[D]` - Delete button (identifier: `"syncdelete"`)
+  - Normal style (action button)
+  - Linked ON: Triggers `startSyncDelete(filename, ignoreFailures)`
+  - Linked OFF: Triggers `Remove()`
+
+- `[R]` - Rename button (identifier: `"syncrename"`)
+  - Normal style (action button)
+  - Linked ON: Triggers `startSyncRename(filename, ignoreFailures)`
+  - Linked OFF: Triggers `Rename()`
+
+- `[!]` - Ignore-failures toggle (identifier: `"ignorefailures"`)
+  - Reverse style when ignore-failures is ON, normal when OFF
+  - Toggles `g.syncIgnoreFailures` state
+  - Displays confirmation message
+
+**State Management:**
+- Add `syncIgnoreFailures bool` field to `Goful` struct
+- Add `IsSyncIgnoreFailures() bool` accessor
+- Add `ToggleSyncIgnoreFailures() bool` toggle method
+- State persists for session (not saved to state.json)
+
+**Module Boundaries:**
+- `ToolbarRenderer` extended with 4 new button render calls
+- `ToolbarHitTest` extended with 4 new button identifiers
+- `ToolbarDispatcher` extended with 4 new cases in `InvokeToolbarButton()`
+- `SyncIgnoreFailuresState` (Module in `app/goful.go`) - Pure state accessors
+
+**Cross-References**: [REQ:TOOLBAR_SYNC_BUTTONS], [IMPL:TOOLBAR_SYNC_COPY], [IMPL:TOOLBAR_SYNC_DELETE], [IMPL:TOOLBAR_SYNC_RENAME], [IMPL:TOOLBAR_IGNORE_FAILURES], [REQ:SYNC_COMMANDS], [REQ:LINKED_NAVIGATION]
+
 ## 37. Sync Mode [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
 
 ### Decision: Implement a two-stage prefix mode for executing synchronized file operations across all workspace panes.

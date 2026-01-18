@@ -52,6 +52,8 @@ Each requirement includes:
 | [REQ:NSYNC_CONFIRMATION] | Confirmation before multi-target copy/move | P1 | ✅ Implemented | [ARCH:NSYNC_CONFIRMATION] | [IMPL:NSYNC_CONFIRMATION] |
 | [REQ:TOOLBAR_PARENT_BUTTON] | Clickable parent navigation button in toolbar | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_PARENT_BUTTON] |
 | [REQ:TOOLBAR_LINKED_TOGGLE] | Clickable linked mode toggle button in toolbar | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_LINKED_TOGGLE] |
+| [REQ:TOOLBAR_COMPARE_BUTTON] | Clickable comparison button in toolbar | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_COMPARE_BUTTON] |
+| [REQ:TOOLBAR_SYNC_BUTTONS] | Toolbar sync operation buttons (C/D/R/!) | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES] |
 
 ### Non-Functional Requirements
 
@@ -1077,6 +1079,62 @@ Each requirement includes:
 - Implementation in `filer/compare.go`: `SharedFilenames()` method returns all filenames in the comparison index.
 - Implementation in `main.go`: Callback wiring iterates shared files and calls `CalculateDigestForFile()` for each, displays summary message.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1468 token references across 78 files.`
+
+### [REQ:TOOLBAR_SYNC_BUTTONS] Toolbar Sync Operation Buttons
+
+**Priority: P1 (Important)**
+
+- **Description**: Goful must provide four clickable buttons in the filer header toolbar after the `[=]` compare button:
+  - `[C]` - Copy operation button
+  - `[D]` - Delete operation button
+  - `[R]` - Rename operation button
+  - `[!]` - Ignore-failures mode toggle
+  
+  These buttons obey the Linked navigation mode:
+  - **Linked mode ON**: Buttons trigger Sync operations (copy/delete/rename the same-named file across ALL workspace windows)
+  - **Linked mode OFF**: Buttons trigger single-window operations (copy/delete/rename only in the focused window)
+  
+  The `[!]` button toggles a persistent ignore-failures mode that affects all Sync operations. When enabled, Sync operations continue even if some panes fail (file not found, permission denied, etc.). The button displays reverse style when ignore-failures is ON, normal style when OFF.
+
+- **Rationale**: The existing `S` prefix key for Sync operations requires multiple keystrokes and memorization. Toolbar buttons provide:
+  - Single-click access to common file operations
+  - Visual indication of the current ignore-failures mode state
+  - Consistent mouse-first experience matching the `[^]`, `[L]`, `[=]` buttons
+  - Context-aware behavior based on Linked mode without separate keyboard shortcuts
+
+- **Satisfaction Criteria**:
+  - Four clickable buttons `[C]`, `[D]`, `[R]`, `[!]` appear in the filer header after `[=]`
+  - `[C]`, `[D]`, `[R]` use normal style (action buttons)
+  - `[!]` uses reverse style when ignore-failures is ON, normal style when OFF
+  - When Linked mode is ON:
+    - `[C]` triggers `startSyncCopy` (copies file to new name across all panes)
+    - `[D]` triggers `startSyncDelete` (deletes same-named file in all panes)
+    - `[R]` triggers `startSyncRename` (renames same-named file in all panes)
+  - When Linked mode is OFF:
+    - `[C]` triggers `Copy()` (copy in current window only)
+    - `[D]` triggers `Remove()` (delete in current window only)
+    - `[R]` triggers `Rename()` (rename in current window only)
+  - `[!]` toggles ignore-failures state and displays confirmation message
+  - Buttons do not interfere with other header elements
+
+- **Validation Criteria**:
+  - Unit tests cover button bounds calculation and hit-testing for all four buttons
+  - Unit tests verify button invocation triggers correct callbacks
+  - Manual verification confirms buttons trigger correct operations based on Linked mode
+  - Token validation confirms `[REQ:TOOLBAR_SYNC_BUTTONS]`, `[ARCH:TOOLBAR_LAYOUT]`, and `[IMPL:TOOLBAR_SYNC_*]` references exist
+
+- **Architecture**: See `architecture-decisions.md` § Toolbar Layout [ARCH:TOOLBAR_LAYOUT]
+- **Implementation**: See `implementation-decisions/IMPL-TOOLBAR_SYNC_COPY.md`, `IMPL-TOOLBAR_SYNC_DELETE.md`, `IMPL-TOOLBAR_SYNC_RENAME.md`, `IMPL-TOOLBAR_IGNORE_FAILURES.md`
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-18)**:
+- Unit tests in `filer/toolbar_test.go` (`TestToolbarSyncButtonsHit_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncCopyButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncDeleteButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncRenameButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarIgnoreFailuresButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncButtonsWithNilCallback_REQ_TOOLBAR_SYNC_BUTTONS`, `TestIgnoreFailuresIndicator_REQ_TOOLBAR_SYNC_BUTTONS`) covering hit-testing and callback invocation.
+- Implementation in `filer/filer.go`: `drawHeader()` renders `[C]`, `[D]`, `[R]`, `[!]` buttons, stores bounds, `SetToolbarSyncCopyFn()`, `SetToolbarSyncDeleteFn()`, `SetToolbarSyncRenameFn()`, `SetToolbarIgnoreFailuresFn()`, `SetSyncIgnoreFailuresIndicator()` set callbacks, `InvokeToolbarButton()` handles new cases.
+- Implementation in `app/goful.go`: `syncIgnoreFailures`, `IsSyncIgnoreFailures()`, `ToggleSyncIgnoreFailures()` for state management.
+- Implementation in `app/window_wide.go`: `StartSyncCopy()`, `StartSyncDelete()`, `StartSyncRename()` exported for callback wiring.
+- Implementation in `main.go`: Callback wiring with Linked mode logic.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1621 token references across 79 files.`
 
 ### [REQ:IDENTIFIER] Requirement Name
 
