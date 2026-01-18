@@ -78,7 +78,7 @@ func TestFlowNavigateRename_REQ_INTEGRATION_FLOWS(t *testing.T) {
 	}
 	dir.Chdir(tmp)
 	dir.reload()
-	if idx := dir.IndexByName("file-renamed.txt"); idx == dir.Lower() {
+	if idx := dir.IndexByName("file-renamed.txt"); idx == -1 {
 		t.Fatalf("rename result not visible after reload")
 	}
 }
@@ -96,7 +96,7 @@ func TestFlowDelete_REQ_INTEGRATION_FLOWS(t *testing.T) {
 		t.Fatalf("remove: %v", err)
 	}
 	dir.reload()
-	if idx := dir.IndexByName("remove.me"); idx != dir.Lower() {
+	if idx := dir.IndexByName("remove.me"); idx != -1 {
 		t.Fatalf("deleted entry still present with index %d", idx)
 	}
 }

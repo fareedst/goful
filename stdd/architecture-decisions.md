@@ -1095,22 +1095,26 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 ## 40. Mouse Cross-Window Cursor Synchronization [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]
 
-### Decision: Synchronize cursor position across all windows when a file is selected via mouse click in the active window, with visual highlighting in all windows.
+### Decision: Synchronize cursor position across all windows when a file is selected via mouse click in the active window, with visual highlighting in matching windows and highlight erasure in non-matching windows.
 **Rationale:**
 - Users comparing directories need to see the same filename highlighted across all windows.
 - Reuses existing `SetCursorByNameAll()` method which already handles cursor positioning across directories.
 - Minimal change to existing `handleLeftClick` flow - just add synchronization call after cursor movement.
 - Works independently of Linked Navigation mode (always syncs on click).
-- Visual highlighting must appear in ALL windows, not just the focused one.
+- Visual highlighting must appear in ALL windows where the file exists, not just the focused one.
+- Windows without a matching file must have their highlight erased to avoid misleading visual feedback.
 
 **Architecture Outline:**
 - **Cursor Sync Point** (`app/goful.go`): After `dir.SetCursor(fileIdx)` in `handleLeftClick`, retrieve the filename and call `ws.SetCursorByNameAll(filename)`.
 - **Existing Infrastructure**: `filer.Workspace.SetCursorByNameAll(name string)` already iterates all directories and calls `SetCursorByName`.
-- **Rendering Invariant** (`filer/directory.go`): The `drawFilesWithComparison` function must highlight the cursor position (`isFocused := i == d.Cursor()`) independently of window focus, ensuring cross-window cursor visibility.
+- **Cursor Hidden State** (`widget/listbox.go`): The `ListBox` struct contains a `cursorHidden` bool field. When `SetCursorByName` finds no match, it sets `cursorHidden=true` to hide the highlight. When a match is found or when any direct cursor movement occurs (`SetCursor`, `MoveCursor`), `cursorHidden` is reset to `false`.
+- **IndexByName Contract** (`widget/listbox.go`): Returns `-1` when no match is found (not `b.lower`), allowing callers to distinguish "not found" from "found at first position".
+- **Rendering Invariant** (`filer/directory.go`): The `drawFilesWithComparison` function highlights the cursor position only when `i == d.Cursor() && !d.IsCursorHidden()`, ensuring cross-window cursor visibility while respecting the hidden state.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
 - `app/goful.go` includes `[IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]`.
-- `filer/directory.go` contains the rendering fix for cursor highlighting in unfocused windows.
+- `widget/listbox.go` contains `cursorHidden` field and `IsCursorHidden()` method with `[IMPL:MOUSE_CROSS_WINDOW_SYNC]` markers.
+- `filer/directory.go` contains the rendering fix for cursor highlighting with hidden state check.
 - Tests reference `[REQ:MOUSE_CROSS_WINDOW_SYNC]` in names/comments.
 
 **Cross-References**: [REQ:MOUSE_CROSS_WINDOW_SYNC], [IMPL:MOUSE_CROSS_WINDOW_SYNC], [REQ:MOUSE_FILE_SELECT], [ARCH:MOUSE_EVENT_ROUTING]

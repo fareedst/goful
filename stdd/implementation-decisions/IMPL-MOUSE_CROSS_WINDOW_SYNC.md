@@ -9,7 +9,7 @@
 
 ## Decision
 
-Add cross-window cursor synchronization to `handleLeftClick` in `app/goful.go`, and fix the rendering logic in `filer/directory.go` to display cursor highlights in unfocused windows.
+Add cross-window cursor synchronization to `handleLeftClick` in `app/goful.go`, fix the rendering logic in `filer/directory.go` to display cursor highlights in unfocused windows, and implement cursor hiding for windows without matching files.
 
 ## Rationale
 
@@ -17,6 +17,7 @@ Add cross-window cursor synchronization to `handleLeftClick` in `app/goful.go`, 
 - Single-line addition to existing mouse handling code
 - No new dependencies or complex logic required
 - Rendering fix ensures cursor is visually highlighted in all windows, not just the focused one
+- Cursor hiding prevents misleading highlights in windows that don't contain the clicked file
 
 ## Implementation
 
@@ -40,12 +41,57 @@ if fileIdx >= 0 {
 isFocused := focus && i == d.Cursor()  // BUG: Only highlights in focused window
 ```
 
-**Fix:** Decouple cursor highlighting from window focus:
+**Fix:** Decouple cursor highlighting from window focus, but respect cursorHidden state:
 ```go
-isFocused := i == d.Cursor()  // FIX: Highlight cursor in all windows
+isFocused := i == d.Cursor() && !d.IsCursorHidden()  // FIX: Highlight cursor in all windows, hide when no match
 ```
 
-This allows the cursor position to be visually highlighted in ALL windows, enabling users to see the synchronized cursor across all directory panes.
+This allows the cursor position to be visually highlighted in ALL windows where the file exists, while hiding the highlight in windows without a matching file.
+
+### 3. Cursor Hidden State in `widget/listbox.go`
+
+**Added `cursorHidden` field to `ListBox` struct:**
+```go
+type ListBox struct {
+    // ... existing fields ...
+    cursorHidden bool // [IMPL:MOUSE_CROSS_WINDOW_SYNC] when true, cursor highlight is not shown
+}
+```
+
+**Fixed `IndexByName` to return `-1` when not found:**
+```go
+func (b *ListBox) IndexByName(name string) int {
+    for i, content := range b.list {
+        if name == content.Name() {
+            return i
+        }
+    }
+    return -1  // Previously returned b.lower, causing incorrect cursor movement
+}
+```
+
+**Modified `SetCursorByName` to control cursor visibility:**
+```go
+func (b *ListBox) SetCursorByName(name string) {
+    idx := b.IndexByName(name)
+    if idx != -1 {
+        b.SetCursor(idx)
+        b.cursorHidden = false
+    } else {
+        b.cursorHidden = true  // Hide cursor when file not found
+    }
+}
+```
+
+**Added `IsCursorHidden()` method for rendering:**
+```go
+func (b *ListBox) IsCursorHidden() bool {
+    return b.cursorHidden
+}
+```
+
+**Modified `SetCursor` and `MoveCursor` to reset hidden state:**
+Direct cursor movements (from keyboard navigation) always show the cursor by resetting `cursorHidden = false`.
 
 ## Code Markers
 
@@ -73,6 +119,7 @@ Tests that must reference `[REQ:MOUSE_CROSS_WINDOW_SYNC]`:
 | Date | Issue | Root Cause | Fix |
 |------|-------|------------|-----|
 | 2026-01-18 | Cursor not visually highlighted in unfocused windows | `drawFilesWithComparison` in `filer/directory.go` conditioned highlighting on `focus && i == d.Cursor()` | Changed to `i == d.Cursor()` to decouple highlighting from window focus |
+| 2026-01-18 | Windows without matching file incorrectly highlight first directory | `IndexByName` returned `b.lower` instead of `-1` when file not found, causing `SetCursorByName` to always call `SetCursor()` | Fixed `IndexByName` to return `-1`; added `cursorHidden` flag to hide highlight when file not found; updated rendering to check `!d.IsCursorHidden()` |
 
 ## Related Decisions
 
@@ -82,3 +129,4 @@ Tests that must reference `[REQ:MOUSE_CROSS_WINDOW_SYNC]`:
 ---
 
 *Created as part of mouse cross-window cursor sync feature on 2026-01-17*
+*Updated 2026-01-18 with cursor hiding fix for non-matching windows*

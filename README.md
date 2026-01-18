@@ -113,7 +113,7 @@ The header row displays clickable toolbar buttons at the left edge:
 **File Selection**
 
 - **Left-click on a file**: Selects the file and moves the cursor. If clicking in an unfocused pane, switches focus to that pane first.
-- **Cross-window sync**: When you click a file, all other panes automatically move their cursors to any file with the same name (if it exists).
+- **Cross-window sync**: When you click a file, all other panes automatically move their cursors to any file with the same name (if it exists). Panes that don't contain a matching file have their cursor highlight erased to avoid confusion.
 - **Double-click on a directory**: Navigates into the directory. When linked mode is ON, all panes that contain a matching subdirectory navigate into it.
 - **Double-click on a file**: Opens the file using the system default application. When linked mode is ON, opens the same-named file from all panes where it exists.
 

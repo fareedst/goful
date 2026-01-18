@@ -78,12 +78,13 @@ func (e *highlightContent) Draw(x, y, width int, focus bool) {
 // ListBox is a scrollable window listing contents.
 type ListBox struct {
 	*Window
-	list   []Drawer
-	cursor int // index of a current content in the list
-	offset int // index of a top position to display
-	title  string
-	lower  int
-	column int
+	list         []Drawer
+	cursor       int // index of a current content in the list
+	offset       int // index of a top position to display
+	title        string
+	lower        int
+	column       int
+	cursorHidden bool // [IMPL:MOUSE_CROSS_WINDOW_SYNC] when true, cursor highlight is not shown
 }
 
 // NewListBox creates a new list box specified coordinates and sizes.
@@ -204,6 +205,7 @@ func (b *ListBox) SetOffsetCenteredCursor() {
 func (b *ListBox) Cursor() int { return b.cursor }
 
 // SetCursor sets the cursor.
+// [IMPL:MOUSE_CROSS_WINDOW_SYNC] Also shows cursor (resets cursorHidden)
 func (b *ListBox) SetCursor(x int) {
 	if x < b.Lower() {
 		b.cursor = b.Lower()
@@ -212,9 +214,11 @@ func (b *ListBox) SetCursor(x int) {
 	} else {
 		b.cursor = x
 	}
+	b.cursorHidden = false
 }
 
 // MoveCursor moves the cursor.
+// [IMPL:MOUSE_CROSS_WINDOW_SYNC] Also shows cursor (resets cursorHidden)
 func (b *ListBox) MoveCursor(amount int) {
 	b.cursor += amount
 	if b.cursor < b.Lower() {
@@ -222,6 +226,7 @@ func (b *ListBox) MoveCursor(amount int) {
 	} else if b.cursor > b.Upper()-1 {
 		b.cursor = b.Upper() - 1
 	}
+	b.cursorHidden = false
 }
 
 // CursorDown moves the cursor to the down.
@@ -253,20 +258,38 @@ func (b *ListBox) CursorToLeft() {
 }
 
 // SetCursorByName sets the cursor by the content name.
+// If the name is not found, hides the cursor highlight.
+// [IMPL:MOUSE_CROSS_WINDOW_SYNC] Controls cursorHidden flag for cross-window sync
 func (b *ListBox) SetCursorByName(name string) {
-	if idx := b.IndexByName(name); idx != -1 {
+	idx := b.IndexByName(name)
+	if idx != -1 {
 		b.SetCursor(idx)
+		b.cursorHidden = false
+	} else {
+		b.cursorHidden = true
 	}
 }
 
-// IndexByName returns the index to match content name.
+// IsCursorHidden returns whether the cursor highlight should be hidden.
+// [IMPL:MOUSE_CROSS_WINDOW_SYNC] Used by rendering to skip cursor highlight
+func (b *ListBox) IsCursorHidden() bool {
+	return b.cursorHidden
+}
+
+// ShowCursor unhides the cursor highlight.
+// [IMPL:MOUSE_CROSS_WINDOW_SYNC]
+func (b *ListBox) ShowCursor() {
+	b.cursorHidden = false
+}
+
+// IndexByName returns the index to match content name, or -1 if not found.
 func (b *ListBox) IndexByName(name string) int {
 	for i, content := range b.list {
 		if name == content.Name() {
 			return i
 		}
 	}
-	return b.lower
+	return -1
 }
 
 // MoveTop moves cursor to index of lower list.

@@ -25,9 +25,11 @@ func TestListBoxCursorClamping_REQ_UI_PRIMITIVE_TESTS(t *testing.T) {
 		t.Fatalf("SetCursorByName charlie -> %d, want 2", lb.Cursor())
 	}
 
+	// SetCursorByName with missing name should NOT move the cursor
+	prevCursor := lb.Cursor()
 	lb.SetCursorByName("missing")
-	if lb.Cursor() != lb.Lower() {
-		t.Fatalf("SetCursorByName fallback -> %d, want lower %d", lb.Cursor(), lb.Lower())
+	if lb.Cursor() != prevCursor {
+		t.Fatalf("SetCursorByName missing should not move cursor: got %d, want %d", lb.Cursor(), prevCursor)
 	}
 }
 

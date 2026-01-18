@@ -963,7 +963,8 @@ Each requirement includes:
 - **Satisfaction Criteria**:
   - Left-clicking a file in the active window moves cursors in all other windows to the same filename (if present).
   - Focus remains on the clicked window; other windows do not gain focus.
-  - Windows where the filename does not exist leave their cursor unchanged.
+  - Windows where the filename does not exist have their cursor highlight erased (no file highlighted).
+  - Keyboard navigation in any window restores the cursor highlight.
   - Works independently of Linked Navigation mode.
 - **Validation Criteria**:
   - Unit tests verify `SetCursorByNameAll` is called after cursor selection.
