@@ -43,7 +43,7 @@ key                  | function
 `C-b` `left` `h`     | Move cursor left
 `C-d`                | More move cursor down
 `C-u`                | More move cursor up
-`C-v` `pgdn`         | Page down
+`C-v` `pgdn`         | Page down (Note: On some macOS terminal configurations, Control-V may be intercepted for paste operations. Use `pgdn` key as an alternative.)
 `M-v` `pgup`         | Page up
 `M-n`                | Scroll down
 `M-p`                | Scroll up
@@ -144,7 +144,7 @@ Linked navigation synchronizes directory navigation and cursor position across a
 
 **Toggle**: Press `L` (uppercase L), `M-l` (Alt+l), or click the `[L]` toolbar button to enable or disable linked mode. The `[L]` button in the header is always visible: **highlighted** when linked mode is ON, normal when OFF.
 
-> **macOS note**: The Option key often produces special characters instead of acting as Meta/Alt, so use uppercase `L` (Shift+l) which works reliably across all platforms.
+> **macOS note**: The Option key often produces special characters instead of acting as Meta/Alt, so use uppercase `L` (Shift+l) which works reliably across all platforms. On default macOS systems, Control-V works as Page Down, but some terminal or shell configurations may intercept it for paste operations; in such cases, use the `pgdn` key instead.
 
 **Cursor synchronization**: When you move the cursor (via keyboard `j`/`k`/arrows/page keys or mouse click), all other panes move their cursors to the same filename if it exists. Panes without a matching file have their cursor highlight erased. When linked mode is OFF, cursor movements only affect the focused pane.
 

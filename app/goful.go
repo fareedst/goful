@@ -314,6 +314,11 @@ func (g *Goful) eventHandler(ev tcell.Event) {
 	case *tcell.EventMouse:
 		// [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
 		g.mouseHandler(ev)
+	case *tcell.EventPaste:
+		// [IMPL:CTRL_V_MACOS] [ARCH:KEY_TRANSLATION] [REQ:CTRL_V_PAGE_DOWN]
+		// Ignore paste events - we want Control-V to be Page Down, not paste
+		// On default macOS systems, Control-V works as Page Down, but some terminal
+		// configurations may intercept it for paste operations.
 	}
 }
 

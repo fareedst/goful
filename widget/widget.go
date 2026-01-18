@@ -264,6 +264,16 @@ func EventToString(ev *tcell.EventKey) string {
 		}
 		return meta + string(ev.Rune())
 	}
+	// [IMPL:CTRL_V_MACOS] [ARCH:KEY_TRANSLATION] [REQ:CTRL_V_PAGE_DOWN]
+	// On macOS, Control-V may arrive as KeyRune with ModCtrl modifier instead of KeyCtrlV.
+	// Check for Control-V (and other control keys) when they come as KeyRune with ModCtrl.
+	if ev.Key() == tcell.KeyRune && (ev.Modifiers()&tcell.ModCtrl != 0) {
+		r := ev.Rune()
+		// Map lowercase control keys (a-z) to their C-* equivalents
+		if r >= 'a' && r <= 'z' {
+			return "C-" + string(r)
+		}
+	}
 	if key, ok := keyToSting[ev.Key()]; ok {
 		return key
 	}
@@ -274,6 +284,8 @@ var screen tcell.Screen
 
 // Init initializes the tcell screen with mouse support enabled.
 // [IMPL:MOUSE_HIT_TEST] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+// [IMPL:CTRL_V_MACOS] [ARCH:KEY_TRANSLATION] [REQ:CTRL_V_PAGE_DOWN]
+// Disable bracketed paste mode to prevent terminal from intercepting Control-V for paste.
 func Init() {
 	s, err := tcell.NewScreen()
 	if err != nil {
@@ -284,6 +296,8 @@ func Init() {
 	screen = s
 	// [IMPL:MOUSE_HIT_TEST] Enable mouse events for file selection and scrolling
 	screen.EnableMouse()
+	// [IMPL:CTRL_V_MACOS] Disable bracketed paste mode so Control-V can be used for Page Down
+	screen.DisablePaste()
 }
 
 // EnableMouse enables mouse event handling.
