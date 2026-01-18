@@ -223,6 +223,7 @@ var keyToSting = map[tcell.Key]string{
 	tcell.KeyCtrlY:          "C-y",
 	tcell.KeyCtrlZ:          "C-z",
 	tcell.KeyCtrlLeftSq:     "C-[",
+	tcell.KeyEscape:         "C-[", // [IMPL:HELP_POPUP] Map Escape key same as Ctrl+[ for consistent exit behavior
 	tcell.KeyCtrlBackslash:  "C-\\",
 	tcell.KeyCtrlRightSq:    "C-]",
 	tcell.KeyCtrlCarat:      "C-^",

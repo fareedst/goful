@@ -1373,3 +1373,35 @@ func executeSync(ws *Workspace, filename string, newName string, op Operation, i
 - Tests reference `[REQ:HELP_POPUP_STYLING]` in names/comments.
 
 **Cross-References**: [REQ:HELP_POPUP_STYLING], [IMPL:HELP_STYLING], [REQ:MODULE_VALIDATION], [ARCH:HELP_WIDGET], [REQ:HELP_POPUP]
+
+## 51. Escape Key Translation [ARCH:ESCAPE_TRANSLATION] [REQ:ESCAPE_KEY_BEHAVIOR]
+
+### Decision: Map `tcell.KeyEscape` to `"C-["` in the key translator so modal widgets close with Escape using existing `case "C-["` exit handlers.
+
+**Rationale:**
+- tcell distinguishes `KeyEscape` (code 27) from `KeyCtrlLeftSq` (code 91) despite both representing terminal escape sequences
+- Only `KeyCtrlLeftSq` was mapped in `keyToSting`, so Escape caused `EventToString` to fall back to `string(ev.Rune())` returning `"\u0000"`
+- Modal widgets (help popup, menus) use `case "C-["` for exit, which never matched the null string
+- Adding `KeyEscape: "C-["` to the map provides expected UI behavior without widget-level changes
+
+**Architecture Outline:**
+
+1. **Key Translator Extension** (`widget/widget.go`):
+   - Add `tcell.KeyEscape: "C-["` entry to `keyToSting` map
+   - Parallels existing dual-key patterns (e.g., `KeyBackspace`/`KeyBackspace2` → `"backspace"`)
+
+2. **Modal Widget Compatibility**:
+   - No changes required—existing `case "C-["` handlers automatically work
+   - Help popup, menus, and dialogs all inherit the fix
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `InputEventTranslator` (`widget.EventToString`): Pure function mapping tcell key events to string keys. Single entry addition, no logic changes.
+
+**Alternatives Considered:**
+- **Add `case "Esc"` to widgets**: Rejected - requires changes to every modal widget.
+- **Create separate `KeyEscape: "Esc"` mapping**: Rejected - would require all widgets to handle both `"C-["` and `"Esc"`.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `widget/widget.go` includes `[IMPL:HELP_POPUP]` annotation on `KeyEscape` entry.
+
+**Cross-References**: [REQ:ESCAPE_KEY_BEHAVIOR], [IMPL:ESCAPE_TRANSLATION], [IMPL:BACKSPACE_TRANSLATION] (pattern source)

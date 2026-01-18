@@ -55,6 +55,7 @@ Each requirement includes:
 | [REQ:TOOLBAR_COMPARE_BUTTON] | Clickable comparison button in toolbar | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_COMPARE_BUTTON] |
 | [REQ:TOOLBAR_SYNC_BUTTONS] | Toolbar sync operation buttons (C/D/R/!) | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES] |
 | [REQ:HELP_POPUP_STYLING] | Help popup styling and mouse scroll support | P2 | ✅ Implemented | [ARCH:HELP_STYLING] | [IMPL:HELP_STYLING] |
+| [REQ:ESCAPE_KEY_BEHAVIOR] | Escape key closes modal widgets | P0 | ✅ Implemented | [ARCH:ESCAPE_TRANSLATION] | [IMPL:ESCAPE_TRANSLATION] |
 
 ### Non-Functional Requirements
 
@@ -1178,6 +1179,38 @@ Each requirement includes:
 - Implementation in `look/look.go`: Theme-aware help styles with `HelpBorder()`, `HelpHeader()`, `HelpKey()`, `HelpDesc()` accessors
 - Implementation in `help/help.go`: Custom `helpEntry` drawer with styled borders, headers, and key bindings
 - Implementation in `app/goful.go`: Mouse wheel forwarding to modal widgets for scroll support
+
+### [REQ:ESCAPE_KEY_BEHAVIOR] Escape Key Closes Modal Widgets
+
+**Priority: P0 (Critical)**
+
+- **Description**: The Escape key shall close modal widgets (help popup, menus, dialogs) with the same behavior as Ctrl+[.
+  - `tcell.KeyEscape` must be mapped to `"C-["` in `widget.EventToString`
+  - Modal widgets already handle `case "C-["` for exit, so no widget changes required
+
+- **Rationale**:
+  - tcell distinguishes `KeyEscape` (code 27) from `KeyCtrlLeftSq` (code 91) even though both represent escape sequences
+  - Without this mapping, pressing Escape caused `EventToString` to return `"\u0000"` (null) which never matched `"C-["` in exit cases
+  - Users expect Escape to close popups—this is a standard UI convention
+
+- **Satisfaction Criteria**:
+  - `tcell.KeyEscape` maps to `"C-["` in `keyToSting` map
+  - Help popup closes when Escape is pressed
+  - All modal widgets using `case "C-["` automatically work with Escape
+
+- **Validation Criteria**:
+  - Manual verification: press Escape in help popup, confirm it closes
+  - Runtime debug logs confirm: `KeyEscape` → `"C-["` → exit triggered
+
+- **Architecture**: See `architecture-decisions.md` § Escape Translation [ARCH:ESCAPE_TRANSLATION]
+- **Implementation**: See `implementation-decisions/IMPL-ESCAPE_TRANSLATION.md`
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-18)**:
+- `go test ./...` - all tests pass (darwin/arm64, Go 1.24.3)
+- Runtime debug confirmed: Before fix `"inKeyMap":false,"result":"\u0000"` → After fix `"inKeyMap":true,"result":"C-["`
+- Implementation in `widget/widget.go`: `tcell.KeyEscape: "C-["` entry in `keyToSting` map
 
 ### [REQ:IDENTIFIER] Requirement Name
 
