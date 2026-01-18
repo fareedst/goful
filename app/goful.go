@@ -319,14 +319,28 @@ func (g *Goful) eventHandler(ev tcell.Event) {
 
 // mouseHandler handles mouse events for file selection, focus switching, and scrolling.
 // [IMPL:MOUSE_FILE_SELECT] [ARCH:MOUSE_EVENT_ROUTING] [REQ:MOUSE_FILE_SELECT]
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
 func (g *Goful) mouseHandler(ev *tcell.EventMouse) {
-	x, y := ev.Position()
+	_, _ = ev.Position()
 	buttons := ev.Buttons()
 
-	// Handle modal widgets first - ignore mouse in modals for now
+	// Handle modal widgets first - forward wheel events for scrolling
+	// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
 	if !widget.IsNil(g.Next()) {
+		// Forward wheel events to modal widget for scrolling
+		if buttons&tcell.WheelUp != 0 {
+			g.Next().Input("M-p") // Scroll up
+			return
+		}
+		if buttons&tcell.WheelDown != 0 {
+			g.Next().Input("M-n") // Scroll down
+			return
+		}
+		// Ignore other mouse events for modals
 		return
 	}
+
+	x, y := ev.Position()
 
 	// Handle left click for file selection
 	// [IMPL:MOUSE_FILE_SELECT] Left-click selects files and switches focus

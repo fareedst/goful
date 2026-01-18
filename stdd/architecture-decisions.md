@@ -1321,3 +1321,55 @@ func executeSync(ws *Workspace, filename string, newName string, op Operation, i
 - Tests reference `[REQ:BATCH_DIFF_REPORT]` in names/comments.
 
 **Cross-References**: [REQ:BATCH_DIFF_REPORT], [IMPL:BATCH_DIFF_REPORT], [REQ:MODULE_VALIDATION], [ARCH:DIFF_SEARCH], [IMPL:DIFF_SEARCH]
+
+## 50. Help Popup Styling [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+
+### Decision: Extend the `look` package with help-specific styles and create a custom content drawer for the help popup that parses entry types. Add mouse wheel scroll support via event forwarding.
+
+**Rationale:**
+- Centralizing styles in `look` package follows existing patterns (`look.Directory()`, `look.Marked()`, etc.)
+- Custom drawer allows per-entry styling without modifying `widget.ListBox` internals
+- Mouse scroll forwarding reuses existing wheel handling patterns from `mouseHandler()`
+- Provides visual hierarchy in help content (section headers, key names, descriptions)
+
+**Architecture Outline:**
+
+1. **Help Style Accessors** (`look/look.go`):
+   - `HelpBorder()` - Border color for popup frame
+   - `HelpHeader()` - Section header style (bold, accent color)
+   - `HelpKey()` - Key binding name style (accent color)
+   - `HelpDesc()` - Description text style (default)
+
+2. **Custom Content Drawer** (`help/help.go`):
+   - `helpEntry` struct implementing `widget.Drawer`
+   - `Draw()` method detects entry type (header, binding, blank) and applies appropriate style
+   - Header detection: strings starting with `===`
+   - Binding parsing: split at fixed column position (first 20 chars = key, rest = description)
+
+3. **Colored Border Drawing** (`help/help.go`):
+   - Override `Draw()` to render borders using `look.HelpBorder()` style
+   - Call custom border method that uses `widget.SetCells()` with `look.HelpBorder()` for border characters
+
+4. **Mouse Scroll Forwarding** (`app/goful.go`):
+   - In `mouseHandler()`, forward wheel events to active modal via `g.Next().Input()` calls
+   - Wheel up maps to scroll up key (`M-p`)
+   - Wheel down maps to scroll down key (`M-n`)
+   - Other mouse events are ignored for modals
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `HelpStyler` (Module 1 - `look/look.go`): Pure style accessors, no logic. Variables and accessor/setter functions.
+- `HelpContentDrawer` (Module 2 - `help/help.go`): Content type detection and styled rendering. Implements `widget.Drawer` interface.
+- `MouseModalForwarder` (Module 3 - `app/goful.go`): Wheel event forwarding to modal widgets via Input method.
+
+**Alternatives Considered:**
+- **Modify ListBox to accept style parameters**: Rejected - too invasive, affects all ListBox users.
+- **Embed style in keystrokeCatalog entries**: Rejected - couples data to presentation.
+- **Add InputMouse interface method**: Rejected - over-engineering for simple scroll forwarding.
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `look/look.go` includes `[IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]`.
+- `help/help.go` includes `[IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]`.
+- `app/goful.go` includes `[IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]`.
+- Tests reference `[REQ:HELP_POPUP_STYLING]` in names/comments.
+
+**Cross-References**: [REQ:HELP_POPUP_STYLING], [IMPL:HELP_STYLING], [REQ:MODULE_VALIDATION], [ARCH:HELP_WIDGET], [REQ:HELP_POPUP]

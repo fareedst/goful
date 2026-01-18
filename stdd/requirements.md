@@ -54,6 +54,7 @@ Each requirement includes:
 | [REQ:TOOLBAR_LINKED_TOGGLE] | Clickable linked mode toggle button in toolbar | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_LINKED_TOGGLE] |
 | [REQ:TOOLBAR_COMPARE_BUTTON] | Clickable comparison button in toolbar | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_COMPARE_BUTTON] |
 | [REQ:TOOLBAR_SYNC_BUTTONS] | Toolbar sync operation buttons (C/D/R/!) | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES] |
+| [REQ:HELP_POPUP_STYLING] | Help popup styling and mouse scroll support | P2 | ✅ Implemented | [ARCH:HELP_STYLING] | [IMPL:HELP_STYLING] |
 
 ### Non-Functional Requirements
 
@@ -1135,6 +1136,48 @@ Each requirement includes:
 - Implementation in `app/window_wide.go`: `StartSyncCopy()`, `StartSyncDelete()`, `StartSyncRename()` exported for callback wiring.
 - Implementation in `main.go`: Callback wiring with Linked mode logic.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1621 token references across 79 files.`
+
+### [REQ:HELP_POPUP_STYLING] Help Popup Styling and Mouse Support
+
+**Priority: P2 (Nice-to-have)**
+
+- **Description**: The help popup shall display with a unified color scheme (border, section headers, key names, descriptions) and support mouse wheel scrolling for navigation.
+  - Section headers (`=== Navigation ===`) render with distinct highlight color
+  - Key names (left column) render with accent color
+  - Descriptions (right column) render with default/subtle color
+  - Popup border uses accent color distinguishing it from filer borders
+  - Mouse wheel up/down scrolls help content
+
+- **Rationale**:
+  - Improves visual distinction between help content types (headers vs. key bindings vs. descriptions)
+  - Mouse scroll support provides accessibility parity with keyboard navigation
+  - Unified styling aligns with goful's existing color themes (default, midnight, black, white)
+
+- **Satisfaction Criteria**:
+  - Section headers render with `look.HelpHeader()` style (bold, accent color)
+  - Key binding names render with `look.HelpKey()` style (accent color)
+  - Description text renders with `look.HelpDesc()` style (default)
+  - Popup border uses `look.HelpBorder()` style
+  - Mouse wheel events scroll the help popup when displayed
+  - Styling is consistent across all four themes
+
+- **Validation Criteria**:
+  - Manual visual verification across all four themes (default, midnight, black, white)
+  - Mouse wheel scrolls help popup when displayed
+  - Unit tests for content drawer style selection logic
+  - Token validation confirms `[REQ:HELP_POPUP_STYLING]`, `[ARCH:HELP_STYLING]`, and `[IMPL:HELP_STYLING]` references exist
+
+- **Architecture**: See `architecture-decisions.md` § Help Styling [ARCH:HELP_STYLING]
+- **Implementation**: See `implementation-decisions/IMPL-HELP_STYLING.md`
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-18)**:
+- `go test ./...` - all tests pass (darwin/arm64, Go 1.24.3)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1708 token references across 79 files.`
+- Implementation in `look/look.go`: Theme-aware help styles with `HelpBorder()`, `HelpHeader()`, `HelpKey()`, `HelpDesc()` accessors
+- Implementation in `help/help.go`: Custom `helpEntry` drawer with styled borders, headers, and key bindings
+- Implementation in `app/goful.go`: Mouse wheel forwarding to modal widgets for scroll support
 
 ### [REQ:IDENTIFIER] Requirement Name
 

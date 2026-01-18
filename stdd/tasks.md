@@ -1213,3 +1213,35 @@ The following tasks were identified during an STDD documentation review to addre
 - Unit tests: `TestToolbarSyncButtonsHit_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncCopyButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncDeleteButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncRenameButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarIgnoreFailuresButton_REQ_TOOLBAR_SYNC_BUTTONS`, `TestInvokeToolbarSyncButtonsWithNilCallback_REQ_TOOLBAR_SYNC_BUTTONS`, `TestIgnoreFailuresIndicator_REQ_TOOLBAR_SYNC_BUTTONS` in `filer/toolbar_test.go`
 
 **Priority Rationale**: P1 because mouse-first sync operations significantly improve accessibility and workflow efficiency, but keyboard shortcuts remain fully functional without them.
+
+## P2: Help Popup Styling and Mouse Support [REQ:HELP_POPUP_STYLING] [ARCH:HELP_STYLING] [IMPL:HELP_STYLING]
+
+**Status**: ✅ Complete
+
+**Description**: Add unified color scheme to help popup (border, headers, keys, descriptions) and mouse wheel scrolling support.
+
+**Dependencies**: [REQ:HELP_POPUP] (complete), [REQ:MOUSE_FILE_SELECT] (complete)
+
+**Module Boundaries**:
+- `HelpStyler` (Module 1 - `look/look.go`): Pure style accessors with theme-aware configuration.
+- `HelpContentDrawer` (Module 2 - `help/help.go`): Content type detection and styled rendering via `widget.Drawer` interface.
+- `MouseModalForwarder` (Module 3 - `app/goful.go`): Wheel event forwarding to modal widgets.
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] Visual verification across four themes
+- [x] Mouse wheel scrolls help content
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Validation Evidence (2026-01-18)**:
+- `go build ./...` - successful
+- `go test ./...` - all tests pass (darwin/arm64, Go 1.24.3)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1708 token references across 79 files.`
+- Implementation in `look/look.go`: `HelpBorder()`, `HelpHeader()`, `HelpKey()`, `HelpDesc()` accessors with theme configs
+- Implementation in `help/help.go`: `helpEntry` custom drawer, `drawColoredBorder()`, `drawColoredHeader()`, styled content rendering
+- Implementation in `app/goful.go`: `mouseHandler()` forwards wheel events to modal widgets via `g.Next().Input()`
+- README updated with Help Popup section documenting color styling and mouse scroll support
+
+**Priority Rationale**: P2 because visual styling and mouse scroll improve user experience but keyboard navigation remains fully functional without them.

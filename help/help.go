@@ -1,10 +1,15 @@
 // Package help provides a Help popup widget that displays the keystroke catalog.
 // [IMPL:HELP_POPUP] [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
 package help
 
 import (
+	"strings"
+
 	"github.com/anmitsu/goful/look"
 	"github.com/anmitsu/goful/widget"
+	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 )
 
 // keystrokeCatalog contains all key bindings displayed in the help popup.
@@ -98,6 +103,10 @@ var keystrokeCatalog = []string{
 	"Press ?, q, C-g, or Esc to close",
 }
 
+// keyColumnWidth is the fixed width for the key binding column.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+const keyColumnWidth = 21
+
 // Help is a popup widget displaying the keystroke catalog.
 // [IMPL:HELP_POPUP] [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
 type Help struct {
@@ -107,6 +116,7 @@ type Help struct {
 
 // New creates a new Help popup based on filer widget sizes.
 // [IMPL:HELP_POPUP] [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
 func New(filer widget.Widget) *Help {
 	screenWidth, screenHeight := widget.Size()
 
@@ -134,9 +144,10 @@ func New(filer widget.Widget) *Help {
 		filer:   filer,
 	}
 
-	// Populate the list with keystroke entries
+	// Populate the list with styled help entries
+	// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
 	for _, entry := range keystrokeCatalog {
-		h.AppendString(entry)
+		h.AppendList(newHelpEntry(entry))
 	}
 
 	h.SetBorderStyle(widget.AllBorder)
@@ -170,10 +181,118 @@ func (h *Help) Resize(x, y, width, height int) {
 	h.ListBox.Resize(newX, newY, w, ht)
 }
 
-// Draw the help popup with a distinct background.
+// Draw the help popup with styled borders.
 // [IMPL:HELP_POPUP] [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
 func (h *Help) Draw() {
-	h.ListBox.Draw()
+	if h.Upper() < 1 {
+		return
+	}
+	h.AdjustCursor()
+	h.AdjustOffset()
+	h.clearWithBackground()
+	h.drawColoredBorder()
+	h.drawColoredHeader()
+	h.drawScrollbar()
+	h.drawContents()
+}
+
+// clearWithBackground clears the window with the help description background.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func (h *Help) clearWithBackground() {
+	style := look.HelpDesc()
+	x, y := h.LeftTop()
+	xend, yend := h.RightBottom()
+	for row := y; row <= yend; row++ {
+		for col := x; col <= xend; col++ {
+			widget.SetCells(col, row, " ", style)
+		}
+	}
+}
+
+// drawColoredBorder draws the border using HelpBorder style.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func (h *Help) drawColoredBorder() {
+	style := look.HelpBorder()
+	x, y := h.LeftTop()
+	xend, yend := h.RightBottom()
+
+	// Horizontal lines (top and bottom)
+	for col := x; col <= xend; col++ {
+		widget.SetCells(col, y, string(tcell.RuneHLine), style)
+		widget.SetCells(col, yend, string(tcell.RuneHLine), style)
+	}
+
+	// Vertical lines (left and right)
+	for row := y + 1; row < yend; row++ {
+		widget.SetCells(x, row, string(tcell.RuneVLine), style)
+		widget.SetCells(xend, row, string(tcell.RuneVLine), style)
+	}
+
+	// Corners
+	widget.SetCells(x, y, string(tcell.RuneULCorner), style)
+	widget.SetCells(xend, y, string(tcell.RuneURCorner), style)
+	widget.SetCells(x, yend, string(tcell.RuneLLCorner), style)
+	widget.SetCells(xend, yend, string(tcell.RuneLRCorner), style)
+}
+
+// drawColoredHeader draws the title with HelpHeader style.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func (h *Help) drawColoredHeader() {
+	title := h.Title()
+	x, y := h.LeftTop()
+	style := look.HelpHeader()
+	widget.SetCells(x+1, y, " "+title+" ", style)
+}
+
+// drawScrollbar draws the scrollbar indicator.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func (h *Help) drawScrollbar() {
+	if h.Upper() <= (h.Height()-2)*h.Column() {
+		return
+	}
+	height := h.Height() - 2
+	rowCol := (h.Height() - 2) * h.Column()
+	offset := int(float64(h.Offset()) / float64(h.Upper()-rowCol) * float64(height))
+	if offset > height-1 {
+		offset = height - 1
+	}
+
+	x, y := h.RightTop()
+	y++
+	style := look.HelpBorder()
+	for i := 0; i < height; i++ {
+		if i == offset {
+			widget.SetCells(x, y+i, "█", style)
+		} else {
+			widget.SetCells(x, y+i, "│", style)
+		}
+	}
+}
+
+// drawContents draws the list entries.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func (h *Help) drawContents() {
+	width, height := h.Width()-2, h.Height()-2
+	shift := 2 // AllBorder has 2 char offset
+	colwidth := width/h.Column() - shift + 1
+	row, col := 1, 0
+
+	for i := h.Offset(); i < h.Upper(); i++ {
+		if col >= h.Column() {
+			col = 0
+			row++
+			if row > height {
+				break
+			}
+		}
+		x, y := h.LeftTop()
+		x += col*colwidth + shift
+		y += row
+		focus := i == h.Cursor()
+		h.List()[i].Draw(x, y, colwidth, focus)
+		col++
+	}
 }
 
 // Input handles keyboard input for the help popup.
@@ -219,27 +338,77 @@ func (h *Help) Next() widget.Widget {
 // [IMPL:HELP_POPUP] [ARCH:HELP_WIDGET] [REQ:HELP_POPUP]
 func (h *Help) Disconnect() {}
 
-// Custom content drawer for help entries that applies styling.
-type helpContent struct {
-	text string
+// helpEntry is a custom content drawer for help entries that applies styling.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+type helpEntry struct {
+	text     string
+	isHeader bool
 }
 
-func (c *helpContent) Name() string { return c.text }
+// newHelpEntry creates a new help entry with type detection.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func newHelpEntry(text string) *helpEntry {
+	return &helpEntry{
+		text:     text,
+		isHeader: strings.HasPrefix(text, "==="),
+	}
+}
 
-func (c *helpContent) Draw(x, y, width int, focus bool) {
-	style := look.Default()
+// Name returns the entry text for ListBox compatibility.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func (e *helpEntry) Name() string { return e.text }
+
+// Draw renders the help entry with appropriate styling.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func (e *helpEntry) Draw(x, y, width int, focus bool) {
+	if e.text == "" {
+		// Blank line - just fill with background
+		style := look.HelpDesc()
+		if focus {
+			style = style.Reverse(true)
+		}
+		widget.SetCells(x, y, strings.Repeat(" ", width), style)
+		return
+	}
+
+	if e.isHeader {
+		// Section header - use HelpHeader style
+		style := look.HelpHeader()
+		if focus {
+			style = style.Reverse(true)
+		}
+		text := runewidth.Truncate(e.text, width, "~")
+		text = runewidth.FillRight(text, width)
+		widget.SetCells(x, y, text, style)
+		return
+	}
+
+	// Key binding entry - split into key (left) and description (right)
+	keyPart := e.text
+	descPart := ""
+	if len(e.text) > keyColumnWidth {
+		keyPart = e.text[:keyColumnWidth]
+		descPart = e.text[keyColumnWidth:]
+	}
+
+	// Draw key part with HelpKey style
+	keyStyle := look.HelpKey()
 	if focus {
-		style = style.Reverse(true)
+		keyStyle = keyStyle.Reverse(true)
 	}
+	keyText := runewidth.Truncate(keyPart, keyColumnWidth, "")
+	keyText = runewidth.FillRight(keyText, keyColumnWidth)
+	pos := widget.SetCells(x, y, keyText, keyStyle)
 
-	// Pad or truncate to fit width
-	text := c.text
-	if len(text) > width {
-		text = text[:width-1] + "~"
+	// Draw description part with HelpDesc style
+	descStyle := look.HelpDesc()
+	if focus {
+		descStyle = descStyle.Reverse(true)
 	}
-	for len(text) < width {
-		text += " "
+	remaining := width - keyColumnWidth
+	if remaining > 0 {
+		descText := runewidth.Truncate(descPart, remaining, "~")
+		descText = runewidth.FillRight(descText, remaining)
+		widget.SetCells(pos, y, descText, descStyle)
 	}
-
-	widget.SetCells(x, y, text, style)
 }

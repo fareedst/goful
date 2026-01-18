@@ -123,6 +123,38 @@ func Progress() tcell.Style { return progress }
 // SetProgress sets a gauge look of the progress bar.
 func SetProgress(s tcell.Style) { progress = s }
 
+// HelpBorder is the help popup border style.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func HelpBorder() tcell.Style { return helpBorder }
+
+// SetHelpBorder sets the help popup border style.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func SetHelpBorder(s tcell.Style) { helpBorder = s }
+
+// HelpHeader is the help popup section header style (e.g., "=== Navigation ===").
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func HelpHeader() tcell.Style { return helpHeader }
+
+// SetHelpHeader sets the help popup section header style.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func SetHelpHeader(s tcell.Style) { helpHeader = s }
+
+// HelpKey is the help popup key binding name style (left column).
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func HelpKey() tcell.Style { return helpKey }
+
+// SetHelpKey sets the help popup key binding name style.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func SetHelpKey(s tcell.Style) { helpKey = s }
+
+// HelpDesc is the help popup description text style (right column).
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func HelpDesc() tcell.Style { return helpDesc }
+
+// SetHelpDesc sets the help popup description text style.
+// [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+func SetHelpDesc(s tcell.Style) { helpDesc = s }
+
 var (
 	defaultAttr    tcell.Style
 	messageInfo    tcell.Style
@@ -141,6 +173,11 @@ var (
 	marked         tcell.Style
 	finder         tcell.Style
 	progress       tcell.Style
+	// Help popup styles [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+	helpBorder tcell.Style
+	helpHeader tcell.Style
+	helpKey    tcell.Style
+	helpDesc   tcell.Style
 )
 
 // reference https://jonasjacek.github.io/colors/
@@ -168,6 +205,11 @@ func setDefault() {
 	marked = d.Foreground(tcell.ColorYellow).Bold(true)
 	finder = d.Foreground(tcell.ColorBlack).Background(tcell.ColorAqua)
 	progress = d.Background(tcell.ColorNavy)
+	// Help popup styles [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+	helpBorder = d.Foreground(tcell.ColorAqua)
+	helpHeader = d.Foreground(tcell.ColorYellow).Bold(true)
+	helpKey = d.Foreground(tcell.ColorLime).Bold(true)
+	helpDesc = d
 }
 
 func setMidnight() {
@@ -190,6 +232,11 @@ func setMidnight() {
 	marked = d.Foreground(tcell.ColorYellow).Background(bg).Bold(true)
 	finder = d.Foreground(tcell.ColorBlack).Background(tcell.ColorAqua)
 	progress = d.Foreground(tcell.ColorWhite).Background(tcell.ColorAqua)
+	// Help popup styles [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+	helpBorder = d.Foreground(tcell.ColorAqua).Background(bg)
+	helpHeader = d.Foreground(tcell.ColorYellow).Background(bg).Bold(true)
+	helpKey = d.Foreground(tcell.ColorYellow).Background(bg).Bold(true)
+	helpDesc = d.Foreground(tcell.ColorWhite).Background(bg)
 }
 
 func setBlack() {
@@ -212,6 +259,11 @@ func setBlack() {
 	marked = d.Foreground(tcell.ColorYellow).Background(bg).Bold(true)
 	finder = d.Foreground(tcell.ColorBlack).Background(tcell.ColorAqua)
 	progress = d.Foreground(tcell.ColorWhite).Background(tcell.ColorNavy)
+	// Help popup styles [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+	helpBorder = d.Foreground(tcell.ColorAqua).Background(bg)
+	helpHeader = d.Foreground(tcell.ColorYellow).Background(bg).Bold(true)
+	helpKey = d.Foreground(tcell.ColorLime).Background(bg).Bold(true)
+	helpDesc = d.Foreground(tcell.ColorWhite).Background(bg)
 }
 
 func setWhite() {
@@ -234,4 +286,9 @@ func setWhite() {
 	marked = d.Foreground(tcell.ColorOlive).Background(bg).Bold(true)
 	finder = d.Foreground(tcell.ColorBlack).Background(tcell.ColorAqua)
 	progress = d.Foreground(tcell.ColorWhite).Background(tcell.ColorNavy)
+	// Help popup styles [IMPL:HELP_STYLING] [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING]
+	helpBorder = d.Foreground(tcell.ColorNavy).Background(bg)
+	helpHeader = d.Foreground(tcell.ColorOlive).Background(bg).Bold(true)
+	helpKey = d.Foreground(tcell.ColorGreen).Background(bg).Bold(true)
+	helpDesc = d.Foreground(tcell.ColorBlack).Background(bg)
 }

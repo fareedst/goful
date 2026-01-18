@@ -91,7 +91,7 @@ key                  | function
 `g`                  | Glob
 `G`                  | Glob recursive
 `C-g` `C-[`          | Cancel
-`?`                  | Help (keystroke catalog)
+`?`                  | Help (keystroke catalog with color styling and mouse scroll)
 `q` `Q`              | Quit
 
 For more see [main.go](main.go)
@@ -120,6 +120,23 @@ The header row displays clickable toolbar buttons at the left edge:
 **Scrolling**
 
 - **Mouse wheel up/down**: Scrolls the file list in the pane under the cursor (3 lines per scroll).
+
+### Help Popup `[REQ:HELP_POPUP_ENHANCEMENTS]`
+
+Press `?` to open a styled help popup displaying the complete keystroke catalog. The help popup features:
+
+**Color Styling**
+- **Border**: Distinct color matching the current theme
+- **Header**: Bold title with theme-aware highlighting
+- **Keybindings**: Color-coded key combinations for easy scanning
+- **Descriptions**: Styled command descriptions
+
+The colors automatically adapt to the active theme (default, midnight, black, or white).
+
+**Navigation**
+- **Keyboard**: `j`/`k` or arrow keys move the cursor, `pgup`/`pgdn` for page scrolling, `M-n`/`M-p` for smooth scroll
+- **Mouse wheel**: Scroll up/down through the help content
+- **Exit**: Press `?`, `q`, `C-g`, or `Esc` to close
 
 ### Linked navigation mode `[REQ:LINKED_NAVIGATION]`
 
