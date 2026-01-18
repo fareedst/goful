@@ -197,6 +197,47 @@ func InvokeToolbarButton(name string) bool {
 	return false
 }
 
+// workspaceTabBounds tracks clickable workspace tab regions.
+// Key is the workspace index, value is the screen bounds.
+// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+type workspaceTabBounds struct {
+	x1, y, x2 int
+}
+
+var workspaceTabs = make(map[int]workspaceTabBounds)
+
+// WorkspaceTabAt returns the workspace index at (x, y), or -1 if none.
+// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+func WorkspaceTabAt(x, y int) int {
+	for idx, bounds := range workspaceTabs {
+		if y == bounds.y && x >= bounds.x1 && x <= bounds.x2 {
+			return idx
+		}
+	}
+	return -1
+}
+
+// workspaceTabClickFn is a callback invoked when a workspace tab is clicked.
+// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+var workspaceTabClickFn func(index int)
+
+// SetWorkspaceTabClickFn sets the callback for workspace tab clicks.
+// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+func SetWorkspaceTabClickFn(fn func(index int)) {
+	workspaceTabClickFn = fn
+}
+
+// InvokeWorkspaceTab invokes the workspace tab click callback.
+// Returns true if handled, false if no callback set.
+// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+func InvokeWorkspaceTab(index int) bool {
+	if workspaceTabClickFn != nil {
+		workspaceTabClickFn(index)
+		return true
+	}
+	return false
+}
+
 // New creates a new filer based on specified size and coordinates.
 // Creates five workspaces and default path is home directory.
 func New(x, y, width, height int) *Filer {
@@ -332,6 +373,17 @@ func (f *Filer) MoveWorkspace(amount int) {
 	} else if f.Current < 0 {
 		f.Current = len(f.Workspaces) - 1
 	}
+	f.Workspace().visible(true)
+}
+
+// SwitchToWorkspace switches directly to the workspace at the given index.
+// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+func (f *Filer) SwitchToWorkspace(index int) {
+	if index < 0 || index >= len(f.Workspaces) || index == f.Current {
+		return
+	}
+	f.Workspace().visible(false)
+	f.Current = index
 	f.Workspace().visible(true)
 }
 
@@ -505,15 +557,7 @@ func (f *Filer) drawHeader() {
 	toolbarButtons["ignorefailures"] = toolbarBounds{x1: ignoreX1, y: y, x2: ignoreX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
-	for i, ws := range f.Workspaces {
-		s := fmt.Sprintf(" %s ", ws.Title)
-		if f.Current != i {
-			x = widget.SetCells(x, y, s, look.Default())
-		} else {
-			x = widget.SetCells(x, y, s, look.Default().Reverse(true))
-		}
-	}
-	x = widget.SetCells(x, y, " | ", look.Default())
+	x = widget.SetCells(x, y, "| ", look.Default())
 
 	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 	// Show diff search status when active
@@ -524,8 +568,20 @@ func (f *Filer) drawHeader() {
 		}
 	}
 
+	// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+	// Calculate space needed for workspace tabs (guillemets + title + space per tab)
+	tabsWidth := 0
+	for _, ws := range f.Workspaces {
+		tabsWidth += len("«") + len(ws.Title) + len("»") + 1 // +1 for space
+	}
+
+	// Render directory paths first
 	ws := f.Workspace()
-	width := (f.Width() - x) / len(ws.Dirs)
+	availableWidth := f.Width() - x - tabsWidth - 1 // -1 for final space
+	if availableWidth < 10*len(ws.Dirs) {
+		availableWidth = 10 * len(ws.Dirs) // minimum width per dir
+	}
+	dirWidth := availableWidth / len(ws.Dirs)
 	for i := 0; i < len(ws.Dirs); i++ {
 		style := look.Default()
 		if ws.Focus == i {
@@ -533,11 +589,35 @@ func (f *Filer) drawHeader() {
 		}
 		s := fmt.Sprintf("[%d] ", i+1)
 		x = widget.SetCells(x, y, s, style)
-		w := width - len(s)
+		w := dirWidth - len(s)
+		if w < 1 {
+			w = 1
+		}
 		s = util.ShortenPath(ws.Dirs[i].Title(), w)
 		s = runewidth.Truncate(s, w, "~")
 		s = runewidth.FillRight(s, w)
 		x = widget.SetCells(x, y, s, style)
+	}
+
+	// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+	// Clear workspace tab bounds for this frame
+	workspaceTabs = make(map[int]workspaceTabBounds)
+
+	// Workspace tabs: Current uses REVERSE video (universal visibility), others use Aqua background
+	// This provides clear visual distinction between active and inactive workspaces
+	pillStyle := look.Default().Foreground(tcell.ColorBlack).Background(tcell.ColorAqua)
+	pillStyleCurrent := look.Default().Reverse(true).Bold(true)
+
+	for i, wspace := range f.Workspaces {
+		s := fmt.Sprintf("«%s»", wspace.Title)
+		tabX1 := x
+		style := pillStyle
+		if f.Current == i {
+			style = pillStyleCurrent
+		}
+		x = widget.SetCells(x, y, s, style)
+		workspaceTabs[i] = workspaceTabBounds{x1: tabX1, y: y, x2: x - 1}
+		x = widget.SetCells(x, y, " ", look.Default())
 	}
 }
 

@@ -241,6 +241,12 @@ func config(g *app.Goful, is_tmux bool, paths configpaths.Paths) {
 		}
 	})
 
+	// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+	// Wire workspace tab clicks to switch workspaces
+	filer.SetWorkspaceTabClickFn(func(index int) {
+		g.Filer.SwitchToWorkspace(index)
+	})
+
 	// [IMPL:DIFF_SEARCH] [ARCH:DIFF_SEARCH] [REQ:DIFF_SEARCH]
 	// Wire diff search status indicator to filer header
 	filer.SetDiffSearchStatusFn(g.DiffSearchStatus)

@@ -446,3 +446,96 @@ func TestIgnoreFailuresIndicator_REQ_TOOLBAR_SYNC_BUTTONS(t *testing.T) {
 		t.Errorf("syncIgnoreFailuresIndicator() = false, want true")
 	}
 }
+
+// resetWorkspaceTabsForTest clears the workspace tab bounds map.
+func resetWorkspaceTabsForTest() {
+	workspaceTabs = make(map[int]workspaceTabBounds)
+}
+
+// TestWorkspaceTabAt_REQ_CLICKABLE_WORKSPACE_TABS tests hit-testing for workspace tabs.
+// [REQ:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [IMPL:CLICKABLE_WORKSPACE_TABS]
+func TestWorkspaceTabAt_REQ_CLICKABLE_WORKSPACE_TABS(t *testing.T) {
+	t.Cleanup(resetWorkspaceTabsForTest)
+
+	// Setup: Register workspace tabs as they would appear in the header
+	// Layout: «1» «2» «3» (guillemet + number + guillemet = 3 chars each, with space between)
+	// Assuming they start at x=50 on row 0
+	workspaceTabs[0] = workspaceTabBounds{x1: 50, y: 0, x2: 52} // «1»
+	workspaceTabs[1] = workspaceTabBounds{x1: 54, y: 0, x2: 56} // «2»
+	workspaceTabs[2] = workspaceTabBounds{x1: 58, y: 0, x2: 60} // «3»
+
+	tests := []struct {
+		name     string
+		x, y     int
+		expected int
+	}{
+		{"click on workspace 1", 50, 0, 0},
+		{"click on workspace 1 middle", 51, 0, 0},
+		{"click on workspace 1 end", 52, 0, 0},
+		{"click on workspace 2", 54, 0, 1},
+		{"click on workspace 3", 58, 0, 2},
+		{"click between tabs (space)", 53, 0, -1},
+		{"click before all tabs", 49, 0, -1},
+		{"click after all tabs", 61, 0, -1},
+		{"click on wrong row", 50, 1, -1},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := WorkspaceTabAt(tc.x, tc.y)
+			if result != tc.expected {
+				t.Errorf("WorkspaceTabAt(%d, %d) = %d, want %d", tc.x, tc.y, result, tc.expected)
+			}
+		})
+	}
+}
+
+// TestInvokeWorkspaceTab_REQ_CLICKABLE_WORKSPACE_TABS tests that tab click invokes callback.
+// [REQ:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [IMPL:CLICKABLE_WORKSPACE_TABS]
+func TestInvokeWorkspaceTab_REQ_CLICKABLE_WORKSPACE_TABS(t *testing.T) {
+	// Setup: Track callback invocation
+	var clickedIndex int = -1
+	originalFn := workspaceTabClickFn
+	t.Cleanup(func() {
+		workspaceTabClickFn = originalFn
+	})
+
+	SetWorkspaceTabClickFn(func(index int) {
+		clickedIndex = index
+	})
+
+	// Test invoking tab 0
+	handled := InvokeWorkspaceTab(0)
+	if !handled {
+		t.Errorf("InvokeWorkspaceTab(0) = false, want true")
+	}
+	if clickedIndex != 0 {
+		t.Errorf("Callback received index %d, want 0", clickedIndex)
+	}
+
+	// Test invoking tab 2
+	handled = InvokeWorkspaceTab(2)
+	if !handled {
+		t.Errorf("InvokeWorkspaceTab(2) = false, want true")
+	}
+	if clickedIndex != 2 {
+		t.Errorf("Callback received index %d, want 2", clickedIndex)
+	}
+}
+
+// TestInvokeWorkspaceTabWithNilCallback_REQ_CLICKABLE_WORKSPACE_TABS tests behavior when no callback is set.
+// [REQ:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [IMPL:CLICKABLE_WORKSPACE_TABS]
+func TestInvokeWorkspaceTabWithNilCallback_REQ_CLICKABLE_WORKSPACE_TABS(t *testing.T) {
+	// Setup: Clear the callback
+	originalFn := workspaceTabClickFn
+	t.Cleanup(func() {
+		workspaceTabClickFn = originalFn
+	})
+	workspaceTabClickFn = nil
+
+	// Should return false when no callback is set
+	handled := InvokeWorkspaceTab(0)
+	if handled {
+		t.Errorf("InvokeWorkspaceTab(0) with nil callback = true, want false")
+	}
+}

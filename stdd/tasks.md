@@ -1402,3 +1402,37 @@ The following tasks were identified during an STDD documentation review to addre
 - Unit tests in `filer/toolbar_test.go` updated with new button bounds
 
 **Priority Rationale**: P1 because consistent visual language improves toolbar usability and accessibility, but does not block core functionality.
+
+## P1: Clickable Workspace Tabs [REQ:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [IMPL:CLICKABLE_WORKSPACE_TABS]
+
+**Status**: ✅ Complete
+
+**Description**: Make workspace tabs clickable and relocate them to the right edge of the header (after directory paths). Tabs use pill styling with guillemets (`«1»`), aqua background, and bold for current tab. This enables macOS users to switch workspaces via mouse clicks since Meta key combinations are unreliable.
+
+**Dependencies**: [ARCH:TOOLBAR_LAYOUT] (complete)
+
+**Subtasks**:
+- [x] Add `workspaceTabBounds` type and map in `filer/filer.go`
+- [x] Add `WorkspaceTabAt(x, y int) int` hit-test function
+- [x] Add `SetWorkspaceTabClickFn()` and `InvokeWorkspaceTab()` callback mechanism
+- [x] Reorder `drawHeader()` to render directory paths before workspace tabs
+- [x] Apply pill styling (guillemets, aqua background, bold current)
+- [x] Track tab bounds during rendering
+- [x] Extend `handleLeftClick()` in `app/goful.go` for workspace tab clicks
+- [x] Wire callback in `main.go` to switch workspaces
+- [x] Add `SwitchToWorkspace(index int)` method to `Filer`
+- [x] Add unit tests for `WorkspaceTabAt()` and `InvokeWorkspaceTab()`
+- [x] Run `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]`
+
+**Completion Criteria**:
+- [x] Workspace tabs render at right edge with pill styling
+- [x] Clicking a tab switches to that workspace
+- [x] All tests pass
+- [x] Token validation passes
+
+**Validation Evidence (2026-01-18)**:
+- `go build ./...` - successful
+- `go test ./...` - all tests pass
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1823 token references across 85 files.`
+
+**Priority Rationale**: P1 because it enables macOS users to switch workspaces, which is currently blocked by unreliable Meta key handling in macOS terminals.

@@ -149,6 +149,7 @@ When referencing other tokens:
 - `[REQ:DOCKER_INTERACTIVE_SETUP]` - Docker-based interactive Goful execution in Linux containers
 - `[REQ:DOCKER_WINDOWS_CONTAINER]` - Windows container support for Goful testing on Windows Server
 - `[REQ:CTRL_V_PAGE_DOWN]` - Control-V works as Page Down on macOS terminals with paste interception
+- `[REQ:CLICKABLE_WORKSPACE_TABS]` - Clickable workspace tabs with pill styling for macOS accessibility
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -206,6 +207,7 @@ When referencing other tokens:
 - `[ARCH:DOCKER_BUILD_STRATEGY]` - Docker build strategy for containerized Goful execution [REQ:DOCKER_INTERACTIVE_SETUP]
 - `[ARCH:DOCKER_WINDOWS_BUILD]` - Docker Windows build strategy for Windows container support [REQ:DOCKER_WINDOWS_CONTAINER]
 - `[ARCH:KEY_TRANSLATION]` - Key translation architecture for platform-specific key handling [REQ:CTRL_V_PAGE_DOWN]
+- `[ARCH:CLICKABLE_WORKSPACE_TABS]` - Clickable workspace tabs with pill styling and hit-testing [REQ:CLICKABLE_WORKSPACE_TABS]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -277,6 +279,7 @@ When referencing other tokens:
 - `[IMPL:DOCKER_COMPOSE_CONFIG]` - Docker Compose configuration for service management and volume mounts [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]
 - `[IMPL:DOCKERFILE_WINDOWS]` - Windows Dockerfile for Windows container support [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]
 - `[IMPL:CTRL_V_MACOS]` - Control-V key translation for macOS terminal compatibility [ARCH:KEY_TRANSLATION] [REQ:CTRL_V_PAGE_DOWN]
+- `[IMPL:CLICKABLE_WORKSPACE_TABS]` - Clickable workspace tabs with pill styling [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

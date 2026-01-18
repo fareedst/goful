@@ -1528,3 +1528,70 @@ func executeSync(ws *Workspace, filename string, newName string, op Operation, i
 - `Makefile` Docker targets include `[IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]`
 
 **Cross-References**: [REQ:DOCKER_WINDOWS_CONTAINER], [IMPL:DOCKERFILE_WINDOWS], [ARCH:DOCKER_BUILD_STRATEGY], [REQ:DOCKER_INTERACTIVE_SETUP]
+
+---
+
+## [ARCH:CLICKABLE_WORKSPACE_TABS] Clickable Workspace Tabs
+
+**Decision**: Make workspace tabs clickable with pill-style visual appearance, repositioned to the right edge of the header toolbar.
+
+**Context**: macOS terminals often intercept Meta (Alt) key combinations, making the existing workspace shortcuts (`M-f`, `M-b`, `M-C-o`, `M-C-w`) unreliable. The existing toolbar button infrastructure (`ToolbarButtonAt`, `InvokeToolbarButton`) provides a proven pattern for clickable header elements.
+
+**Architecture Outline:**
+
+- **Header Layout Reorder** (`filer/filer.go`): Modify `drawHeader()` to render elements in this order:
+  1. Toolbar buttons (`^ L = C D R !`)
+  2. Separator (`|`)
+  3. Directory paths (`[1] path... [2] path...`)
+  4. Workspace tabs (`«1» «2» «3»`)
+
+- **Tab Bounds Tracking** (`filer/filer.go`): Introduce `workspaceTabBounds` map (similar to `toolbarButtons`) that tracks each tab's screen coordinates (x1, y, x2) keyed by workspace index.
+
+- **Tab Hit-Testing** (`filer/filer.go`): Add `WorkspaceTabAt(x, y int) int` function that returns workspace index if coordinates fall within a tab, or -1 otherwise.
+
+- **Tab Invocation** (`filer/filer.go`): Add callback mechanism:
+  - `workspaceTabClickFn func(index int)` - callback variable
+  - `SetWorkspaceTabClickFn(fn func(index int))` - setter
+  - `InvokeWorkspaceTab(index int) bool` - invokes callback
+
+- **Mouse Dispatch Extension** (`app/goful.go`): Extend `handleLeftClick()` to check workspace tabs after toolbar buttons:
+  ```
+  if wsIdx := filer.WorkspaceTabAt(x, y); wsIdx >= 0 {
+      filer.InvokeWorkspaceTab(wsIdx)
+      return
+  }
+  ```
+
+- **Callback Wiring** (`main.go`): Register callback that switches to clicked workspace.
+
+**Visual Design:**
+
+```
+^ L = C D R ! | [1] /Users/foo [2] /Users/bar «1» «2» «3»
+                                              ^^^  ^^^  ^^^
+                                              LIME aqua aqua
+                                             (current)
+```
+
+- **Guillemets** (`«»`): Unique visual delimiter not used elsewhere in the header
+- **Current tab**: Lime (bright green) background + bold - clearly indicates active workspace
+- **Other tabs**: Aqua (cyan) background with black foreground (pill style)
+- **Spacing**: Single space between tabs
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `WorkspaceTabRenderer` (in `filer/filer.go`) - Pure rendering, stores bounds in map
+- `WorkspaceTabHitTest` (in `filer/filer.go`) - Pure coordinate lookup, returns index or -1
+- `WorkspaceTabDispatcher` (in `app/goful.go`) - Orchestrates hit-test and callback invocation
+
+**Alternatives Considered:**
+- **Number keys (`1`, `2`, `3`)**: Considered as keyboard alternative, may conflict with finder input
+- **Ctrl+number shortcuts**: Less discoverable than clickable tabs
+- **Keep existing position**: Rejected - tabs relate to directory paths, grouping them together is more logical
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/filer.go` includes `[IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]`
+- `app/goful.go` includes same tokens for dispatch logic
+- `main.go` includes same tokens for callback wiring
+- Tests reference `[REQ:CLICKABLE_WORKSPACE_TABS]` in names/comments
+
+**Cross-References**: [REQ:CLICKABLE_WORKSPACE_TABS], [IMPL:CLICKABLE_WORKSPACE_TABS], [ARCH:TOOLBAR_LAYOUT], [REQ:MODULE_VALIDATION]

@@ -1463,3 +1463,46 @@ These may be considered for future iterations but are not required for the initi
 - ✅ README documentation added with Docker section
 - ⏳ Windows host testing deferred (requires Windows host with Docker in Windows containers mode)
 
+### [REQ:CLICKABLE_WORKSPACE_TABS] Clickable Workspace Tabs
+
+**Priority: P1 (Important)**
+
+- **Description**: Make workspace tabs clickable and relocate them to the right edge of the toolbar (after directory paths). This enables macOS users to switch workspaces via mouse clicks, since macOS terminals often do not support Meta (Alt) key combinations (`M-f`, `M-b`, `M-C-o`, `M-C-w`) that are the only keyboard shortcuts for workspace switching.
+
+  The workspace tabs use a distinctive "pill" style to differentiate them from other header elements:
+  - **Guillemets** (`«1»`) as delimiters - visually unique from brackets used elsewhere
+  - **Current tab**: Lime (bright green) background with bold text - clearly indicates the active workspace
+  - **Other tabs**: Aqua (cyan) background with black foreground - visually distinct from current and toolbar buttons
+
+- **Rationale**: 
+  - macOS Terminal.app and iTerm2 often intercept or modify Meta key combinations, making `M-f`, `M-b` unreliable for workspace switching
+  - Mouse-based workspace switching provides an accessible alternative that works on all platforms
+  - The pill styling creates clear visual affordance that tabs are clickable, distinct from toolbar action buttons
+  - Moving tabs to the right edge groups them with directory paths (which they relate to) rather than action buttons
+
+- **Satisfaction Criteria**:
+  - Workspace tabs render at the right edge of the header, after directory path indicators
+  - Tabs use guillemet delimiters (`«1»`, `«2»`, `«3»`) with aqua background
+  - Current workspace tab is bold, others are normal weight
+  - Clicking a workspace tab switches to that workspace
+  - Tab bounds are tracked for hit-testing
+  - Clicking does not interfere with other header elements
+
+- **Validation Criteria**:
+  - Unit tests cover tab bounds calculation and hit-testing
+  - Unit tests verify tab click invokes workspace switch callback
+  - Manual verification confirms click-to-switch works on macOS
+  - Token validation confirms `[REQ:CLICKABLE_WORKSPACE_TABS]`, `[ARCH:CLICKABLE_WORKSPACE_TABS]`, and `[IMPL:CLICKABLE_WORKSPACE_TABS]` references exist
+
+- **Architecture**: See `architecture-decisions.md` § Clickable Workspace Tabs [ARCH:CLICKABLE_WORKSPACE_TABS]
+- **Implementation**: See `implementation-decisions/IMPL-CLICKABLE_WORKSPACE_TABS.md`
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-18)**:
+- Unit tests in `filer/toolbar_test.go` (`TestWorkspaceTabAt_REQ_CLICKABLE_WORKSPACE_TABS`, `TestInvokeWorkspaceTab_REQ_CLICKABLE_WORKSPACE_TABS`, `TestInvokeWorkspaceTabWithNilCallback_REQ_CLICKABLE_WORKSPACE_TABS`) covering hit-testing and callback invocation.
+- Implementation in `filer/filer.go`: `workspaceTabBounds`, `WorkspaceTabAt()`, `SetWorkspaceTabClickFn()`, `InvokeWorkspaceTab()`, `SwitchToWorkspace()`, `drawHeader()` with pill styling.
+- Implementation in `app/goful.go`: `handleLeftClick()` workspace tab check.
+- Implementation in `main.go`: Callback wiring to `SwitchToWorkspace()`.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1823 token references across 85 files.`
+

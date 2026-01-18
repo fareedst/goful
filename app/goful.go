@@ -393,6 +393,13 @@ func (g *Goful) handleLeftClick(x, y int) {
 		return
 	}
 
+	// [IMPL:CLICKABLE_WORKSPACE_TABS] [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+	// Check for workspace tab clicks
+	if wsIdx := filer.WorkspaceTabAt(x, y); wsIdx >= 0 {
+		filer.InvokeWorkspaceTab(wsIdx)
+		return
+	}
+
 	ws := g.Workspace()
 	dir, idx := ws.DirectoryAt(x, y)
 	if dir == nil {
