@@ -1142,6 +1142,46 @@ Each requirement includes:
 - Implementation in `main.go`: Callback wiring with Linked mode logic.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1621 token references across 79 files.`
 
+### [REQ:TOOLBAR_BUTTON_STYLING] Toolbar Button Type Classification and Styling
+
+**Priority: P1 (Important)**
+
+- **Description**: Toolbar buttons must be visually classified into two categories based on their behavior:
+  1. **Action buttons** (`^`, `=`, `C`, `D`, `R`): Trigger one-time operations with no persistent state. Display as plain text without highlighting.
+  2. **Toggle buttons** (`L`, `!`): Toggle persistent state. Display with color-coded styling to indicate ON/OFF state.
+  
+  The parent button changes from bracketed `[^]` with reverse highlight to plain `^` with default style, clarifying that it is an action (not a toggle).
+
+- **Rationale**: 
+  - Highlighting (reverse style or color) should be reserved for state indicators, not action buttons
+  - Consistent visual language across all toggle buttons improves usability
+  - Plain action buttons reduce visual clutter and clarify button semantics
+  - Color-coded toggle states are more accessible than reverse video which may not be visible on all terminals
+
+- **Satisfaction Criteria**:
+  - Action buttons (`^`, `=`, `C`, `D`, `R`) use `look.Default()` (plain text, no reverse, no color)
+  - Toggle buttons (`L`, `!`) use `Foreground(tcell.ColorLime).Bold(true)` when ON (green), `Foreground(tcell.ColorYellow)` when OFF (yellow)
+  - Parent button displays as single character `^` (no brackets)
+  - Toggle button styling is consistent across all toggle buttons
+
+- **Validation Criteria**:
+  - Visual verification confirms action buttons appear as plain text
+  - Visual verification confirms toggle buttons show Lime+Bold when ON, plain when OFF
+  - Unit tests verify parent button width is 1 character (not 3)
+  - Token validation confirms `[REQ:TOOLBAR_BUTTON_STYLING]`, `[ARCH:TOOLBAR_LAYOUT]`, `[IMPL:TOOLBAR_BUTTON_STYLING]` references exist
+
+- **Architecture**: See `architecture-decisions.md` § Toolbar Layout [ARCH:TOOLBAR_LAYOUT]
+- **Implementation**: See `implementation-decisions/IMPL-TOOLBAR_BUTTON_STYLING.md`
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-18)**:
+- Implementation in `filer/filer.go`: `drawHeader()` renders toolbar with button type classification
+- Action buttons (`^`, `=`, `C`, `D`, `R`): Single character, `look.Default()` style
+- Toggle buttons (`L`, `!`): Single character, `tcell.ColorLime` + Bold when ON, `look.Default()` when OFF
+- Unit tests updated in `filer/toolbar_test.go` with new single-character button bounds
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1784 token references across 85 files.`
+
 ### [REQ:HELP_POPUP_STYLING] Help Popup Styling and Mouse Support
 
 **Priority: P2 (Nice-to-have)**

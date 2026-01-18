@@ -101,6 +101,7 @@ Example: `[IMPL:CONFIG_STRUCT]` → `implementation-decisions/IMPL-CONFIG_STRUCT
 | `[IMPL:TOOLBAR_SYNC_DELETE]` | Toolbar Sync Delete Button | Active | [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS] | [Detail](implementation-decisions/IMPL-TOOLBAR_SYNC_DELETE.md) |
 | `[IMPL:TOOLBAR_SYNC_RENAME]` | Toolbar Sync Rename Button | Active | [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS] | [Detail](implementation-decisions/IMPL-TOOLBAR_SYNC_RENAME.md) |
 | `[IMPL:TOOLBAR_IGNORE_FAILURES]` | Toolbar Ignore Failures Toggle | Active | [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS] | [Detail](implementation-decisions/IMPL-TOOLBAR_IGNORE_FAILURES.md) |
+| `[IMPL:TOOLBAR_BUTTON_STYLING]` | Toolbar Button Styling | Active | [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_BUTTON_STYLING] | [Detail](implementation-decisions/IMPL-TOOLBAR_BUTTON_STYLING.md) |
 | `[IMPL:LINKED_CURSOR_SYNC]` | Linked Cursor Synchronization | Active | [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION] | [Detail](implementation-decisions/IMPL-LINKED_CURSOR_SYNC.md) |
 | `[IMPL:BATCH_DIFF_REPORT]` | Batch Diff Report CLI | Active | [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT] | [Detail](implementation-decisions/IMPL-BATCH_DIFF_REPORT.md) |
 | `[IMPL:HELP_STYLING]` | Help Popup Styling and Mouse Scroll | Active | [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING] | [Detail](implementation-decisions/IMPL-HELP_STYLING.md) |

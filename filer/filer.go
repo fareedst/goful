@@ -13,6 +13,7 @@ import (
 	"github.com/anmitsu/goful/message"
 	"github.com/anmitsu/goful/util"
 	"github.com/anmitsu/goful/widget"
+	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -432,71 +433,72 @@ func (f *Filer) Input(key string) {
 func (f *Filer) drawHeader() {
 	x, y := f.LeftTop()
 
-	// [IMPL:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
+	// [IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_BUTTON_STYLING]
 	// Draw parent directory button at the start of the header
-	parentBtn := "[^]"
+	// Action button: plain text, no highlight
+	parentBtn := "^"
 	parentX1 := x
-	x = widget.SetCells(x, y, parentBtn, look.Default().Reverse(true))
+	x = widget.SetCells(x, y, parentBtn, look.Default())
 	parentX2 := x - 1
 	toolbarButtons["parent"] = toolbarBounds{x1: parentX1, y: y, x2: parentX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
-	// [IMPL:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE]
-	// Draw linked mode toggle button - reverse style when ON, normal when OFF
-	linkedBtn := "[L]"
+	// [IMPL:TOOLBAR_LINKED_TOGGLE] [IMPL:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE] [REQ:TOOLBAR_BUTTON_STYLING]
+	// Draw linked mode toggle button - Lime+Bold when ON, Yellow when OFF
+	linkedBtn := "L"
 	linkedX1 := x
-	linkedStyle := look.Default()
+	linkedStyle := look.Default().Foreground(tcell.ColorYellow)
 	if linkedNavIndicator != nil && linkedNavIndicator() {
-		linkedStyle = linkedStyle.Reverse(true)
+		linkedStyle = look.Default().Foreground(tcell.ColorLime).Bold(true)
 	}
 	x = widget.SetCells(x, y, linkedBtn, linkedStyle)
 	linkedX2 := x - 1
 	toolbarButtons["linked"] = toolbarBounds{x1: linkedX1, y: y, x2: linkedX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
-	// [IMPL:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON]
-	// Draw compare digest button - normal style (action button, not state toggle)
-	compareBtn := "[=]"
+	// [IMPL:TOOLBAR_COMPARE_BUTTON] [IMPL:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON] [REQ:TOOLBAR_BUTTON_STYLING]
+	// Draw compare digest button - action button, plain text
+	compareBtn := "="
 	compareX1 := x
 	x = widget.SetCells(x, y, compareBtn, look.Default())
 	compareX2 := x - 1
 	toolbarButtons["compare"] = toolbarBounds{x1: compareX1, y: y, x2: compareX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
-	// [IMPL:TOOLBAR_SYNC_COPY] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
-	// Draw sync copy button - normal style (action button)
-	syncCopyBtn := "[C]"
+	// [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS] [REQ:TOOLBAR_BUTTON_STYLING]
+	// Draw sync copy button - action button, plain text
+	syncCopyBtn := "C"
 	syncCopyX1 := x
 	x = widget.SetCells(x, y, syncCopyBtn, look.Default())
 	syncCopyX2 := x - 1
 	toolbarButtons["synccopy"] = toolbarBounds{x1: syncCopyX1, y: y, x2: syncCopyX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
-	// [IMPL:TOOLBAR_SYNC_DELETE] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
-	// Draw sync delete button - normal style (action button)
-	syncDeleteBtn := "[D]"
+	// [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS] [REQ:TOOLBAR_BUTTON_STYLING]
+	// Draw sync delete button - action button, plain text
+	syncDeleteBtn := "D"
 	syncDeleteX1 := x
 	x = widget.SetCells(x, y, syncDeleteBtn, look.Default())
 	syncDeleteX2 := x - 1
 	toolbarButtons["syncdelete"] = toolbarBounds{x1: syncDeleteX1, y: y, x2: syncDeleteX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
-	// [IMPL:TOOLBAR_SYNC_RENAME] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
-	// Draw sync rename button - normal style (action button)
-	syncRenameBtn := "[R]"
+	// [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS] [REQ:TOOLBAR_BUTTON_STYLING]
+	// Draw sync rename button - action button, plain text
+	syncRenameBtn := "R"
 	syncRenameX1 := x
 	x = widget.SetCells(x, y, syncRenameBtn, look.Default())
 	syncRenameX2 := x - 1
 	toolbarButtons["syncrename"] = toolbarBounds{x1: syncRenameX1, y: y, x2: syncRenameX2}
 	x = widget.SetCells(x, y, " ", look.Default())
 
-	// [IMPL:TOOLBAR_IGNORE_FAILURES] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
-	// Draw ignore-failures toggle button - reverse style when ON, normal when OFF
-	ignoreBtn := "[!]"
+	// [IMPL:TOOLBAR_IGNORE_FAILURES] [IMPL:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS] [REQ:TOOLBAR_BUTTON_STYLING]
+	// Draw ignore-failures toggle button - Lime+Bold when ON, Yellow when OFF
+	ignoreBtn := "!"
 	ignoreX1 := x
-	ignoreStyle := look.Default()
+	ignoreStyle := look.Default().Foreground(tcell.ColorYellow)
 	if syncIgnoreFailuresIndicator != nil && syncIgnoreFailuresIndicator() {
-		ignoreStyle = ignoreStyle.Reverse(true)
+		ignoreStyle = look.Default().Foreground(tcell.ColorLime).Bold(true)
 	}
 	x = widget.SetCells(x, y, ignoreBtn, ignoreStyle)
 	ignoreX2 := x - 1

@@ -144,6 +144,7 @@ When referencing other tokens:
 - `[REQ:TOOLBAR_LINKED_TOGGLE]` - Clickable linked mode toggle button in filer header toolbar
 - `[REQ:TOOLBAR_COMPARE_BUTTON]` - Clickable comparison button in filer header toolbar for batch digest calculation
 - `[REQ:TOOLBAR_SYNC_BUTTONS]` - Toolbar sync operation buttons (C/D/R/!) with Linked mode awareness
+- `[REQ:TOOLBAR_BUTTON_STYLING]` - Toolbar button type classification and styling semantics (action vs toggle)
 - `[REQ:BATCH_DIFF_REPORT]` - Batch diff report CLI command for non-interactive directory comparison
 - `[REQ:DOCKER_INTERACTIVE_SETUP]` - Docker-based interactive Goful execution in Linux containers
 - `[REQ:DOCKER_WINDOWS_CONTAINER]` - Windows container support for Goful testing on Windows Server
@@ -269,6 +270,7 @@ When referencing other tokens:
 - `[IMPL:TOOLBAR_SYNC_DELETE]` - Toolbar sync delete button implementation [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
 - `[IMPL:TOOLBAR_SYNC_RENAME]` - Toolbar sync rename button implementation [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
 - `[IMPL:TOOLBAR_IGNORE_FAILURES]` - Toolbar ignore-failures toggle implementation [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
+- `[IMPL:TOOLBAR_BUTTON_STYLING]` - Toolbar button styling with color-coded toggle states [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_BUTTON_STYLING]
 - `[IMPL:LINKED_CURSOR_SYNC]` - Linked cursor synchronization for mouse and keyboard [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 - `[IMPL:BATCH_DIFF_REPORT]` - Batch diff report CLI implementation with headless navigator [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
 - `[IMPL:DOCKERFILE_MULTISTAGE]` - Multi-stage Dockerfile for building static Goful binary [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]

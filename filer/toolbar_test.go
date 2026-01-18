@@ -8,22 +8,20 @@ func resetToolbarButtonsForTest() {
 }
 
 // TestToolbarButtonAt_REQ_TOOLBAR_PARENT_BUTTON tests hit-testing for toolbar buttons.
-// [REQ:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_PARENT_BUTTON]
+// [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_BUTTON_STYLING]
 func TestToolbarButtonAt_REQ_TOOLBAR_PARENT_BUTTON(t *testing.T) {
 	t.Cleanup(resetToolbarButtonsForTest)
 
-	// Setup: Register a parent button at x=0 to x=2, y=0 (representing "[^]")
-	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 2}
+	// Setup: Register a parent button at x=0, y=0 (single char "^")
+	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 0}
 
 	tests := []struct {
 		name     string
 		x, y     int
 		expected string
 	}{
-		{"click at x=0, y=0 (left edge)", 0, 0, "parent"},
-		{"click at x=1, y=0 (middle)", 1, 0, "parent"},
-		{"click at x=2, y=0 (right edge)", 2, 0, "parent"},
-		{"click at x=3, y=0 (just outside)", 3, 0, ""},
+		{"click at x=0, y=0 (on button)", 0, 0, "parent"},
+		{"click at x=1, y=0 (just outside)", 1, 0, ""},
 		{"click at x=0, y=1 (wrong row)", 0, 1, ""},
 		{"click at x=-1, y=0 (before button)", -1, 0, ""},
 	}
@@ -39,23 +37,23 @@ func TestToolbarButtonAt_REQ_TOOLBAR_PARENT_BUTTON(t *testing.T) {
 }
 
 // TestToolbarButtonAtMultipleButtons_REQ_TOOLBAR_PARENT_BUTTON tests hit-testing with multiple buttons.
-// [REQ:TOOLBAR_PARENT_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_PARENT_BUTTON]
+// [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_PARENT_BUTTON] [IMPL:TOOLBAR_BUTTON_STYLING]
 func TestToolbarButtonAtMultipleButtons_REQ_TOOLBAR_PARENT_BUTTON(t *testing.T) {
 	t.Cleanup(resetToolbarButtonsForTest)
 
-	// Setup: Register multiple buttons on the same row
-	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 2} // "[^]"
-	toolbarButtons["reload"] = toolbarBounds{x1: 4, y: 0, x2: 6} // "[R]" hypothetical
+	// Setup: Register multiple buttons on the same row (single char buttons with space between)
+	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 0} // "^"
+	toolbarButtons["reload"] = toolbarBounds{x1: 2, y: 0, x2: 2} // hypothetical
 
 	tests := []struct {
 		name     string
 		x, y     int
 		expected string
 	}{
-		{"click on parent button", 1, 0, "parent"},
-		{"click on reload button", 5, 0, "reload"},
-		{"click between buttons", 3, 0, ""},
-		{"click after all buttons", 7, 0, ""},
+		{"click on parent button", 0, 0, "parent"},
+		{"click on reload button", 2, 0, "reload"},
+		{"click between buttons", 1, 0, ""},
+		{"click after all buttons", 3, 0, ""},
 	}
 
 	for _, tc := range tests {
@@ -116,26 +114,24 @@ func TestInvokeToolbarButtonWithNilCallback_REQ_TOOLBAR_PARENT_BUTTON(t *testing
 }
 
 // TestToolbarLinkedButtonHit_REQ_TOOLBAR_LINKED_TOGGLE tests hit-testing for the linked button.
-// [REQ:TOOLBAR_LINKED_TOGGLE] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_LINKED_TOGGLE]
+// [REQ:TOOLBAR_LINKED_TOGGLE] [REQ:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_LINKED_TOGGLE] [IMPL:TOOLBAR_BUTTON_STYLING]
 func TestToolbarLinkedButtonHit_REQ_TOOLBAR_LINKED_TOGGLE(t *testing.T) {
 	t.Cleanup(resetToolbarButtonsForTest)
 
 	// Setup: Register parent and linked buttons as they would appear in the header
-	// Layout: [^] [L] ...
-	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 2} // "[^]"
-	toolbarButtons["linked"] = toolbarBounds{x1: 4, y: 0, x2: 6} // "[L]"
+	// Layout: ^ L ... (single char buttons with space between)
+	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 0} // "^"
+	toolbarButtons["linked"] = toolbarBounds{x1: 2, y: 0, x2: 2} // "L"
 
 	tests := []struct {
 		name     string
 		x, y     int
 		expected string
 	}{
-		{"click on parent button", 1, 0, "parent"},
-		{"click on linked button left edge", 4, 0, "linked"},
-		{"click on linked button middle", 5, 0, "linked"},
-		{"click on linked button right edge", 6, 0, "linked"},
-		{"click between buttons (space)", 3, 0, ""},
-		{"click after linked button", 7, 0, ""},
+		{"click on parent button", 0, 0, "parent"},
+		{"click on linked button", 2, 0, "linked"},
+		{"click between buttons (space)", 1, 0, ""},
+		{"click after linked button", 3, 0, ""},
 	}
 
 	for _, tc := range tests {
@@ -190,28 +186,26 @@ func TestInvokeToolbarLinkedButtonWithNilCallback_REQ_TOOLBAR_LINKED_TOGGLE(t *t
 }
 
 // TestToolbarCompareButtonHit_REQ_TOOLBAR_COMPARE_BUTTON tests hit-testing for the compare button.
-// [REQ:TOOLBAR_COMPARE_BUTTON] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON]
+// [REQ:TOOLBAR_COMPARE_BUTTON] [REQ:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_COMPARE_BUTTON] [IMPL:TOOLBAR_BUTTON_STYLING]
 func TestToolbarCompareButtonHit_REQ_TOOLBAR_COMPARE_BUTTON(t *testing.T) {
 	t.Cleanup(resetToolbarButtonsForTest)
 
 	// Setup: Register parent, linked, and compare buttons as they would appear in the header
-	// Layout: [^] [L] [=] ...
-	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 2}   // "[^]"
-	toolbarButtons["linked"] = toolbarBounds{x1: 4, y: 0, x2: 6}   // "[L]"
-	toolbarButtons["compare"] = toolbarBounds{x1: 8, y: 0, x2: 10} // "[=]"
+	// Layout: ^ L = ... (single char buttons with space between)
+	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 0}  // "^"
+	toolbarButtons["linked"] = toolbarBounds{x1: 2, y: 0, x2: 2}  // "L"
+	toolbarButtons["compare"] = toolbarBounds{x1: 4, y: 0, x2: 4} // "="
 
 	tests := []struct {
 		name     string
 		x, y     int
 		expected string
 	}{
-		{"click on parent button", 1, 0, "parent"},
-		{"click on linked button", 5, 0, "linked"},
-		{"click on compare button left edge", 8, 0, "compare"},
-		{"click on compare button middle", 9, 0, "compare"},
-		{"click on compare button right edge", 10, 0, "compare"},
-		{"click between linked and compare", 7, 0, ""},
-		{"click after compare button", 11, 0, ""},
+		{"click on parent button", 0, 0, "parent"},
+		{"click on linked button", 2, 0, "linked"},
+		{"click on compare button", 4, 0, "compare"},
+		{"click between linked and compare", 3, 0, ""},
+		{"click after compare button", 5, 0, ""},
 	}
 
 	for _, tc := range tests {
@@ -266,31 +260,31 @@ func TestInvokeToolbarCompareButtonWithNilCallback_REQ_TOOLBAR_COMPARE_BUTTON(t 
 }
 
 // TestToolbarSyncButtonsHit_REQ_TOOLBAR_SYNC_BUTTONS tests hit-testing for all sync buttons.
-// [REQ:TOOLBAR_SYNC_BUTTONS] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES]
+// [REQ:TOOLBAR_SYNC_BUTTONS] [REQ:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES] [IMPL:TOOLBAR_BUTTON_STYLING]
 func TestToolbarSyncButtonsHit_REQ_TOOLBAR_SYNC_BUTTONS(t *testing.T) {
 	t.Cleanup(resetToolbarButtonsForTest)
 
 	// Setup: Register all toolbar buttons as they would appear in the header
-	// Layout: [^] [L] [=] [C] [D] [R] [!] ...
-	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 2}           // "[^]"
-	toolbarButtons["linked"] = toolbarBounds{x1: 4, y: 0, x2: 6}           // "[L]"
-	toolbarButtons["compare"] = toolbarBounds{x1: 8, y: 0, x2: 10}         // "[=]"
-	toolbarButtons["synccopy"] = toolbarBounds{x1: 12, y: 0, x2: 14}       // "[C]"
-	toolbarButtons["syncdelete"] = toolbarBounds{x1: 16, y: 0, x2: 18}     // "[D]"
-	toolbarButtons["syncrename"] = toolbarBounds{x1: 20, y: 0, x2: 22}     // "[R]"
-	toolbarButtons["ignorefailures"] = toolbarBounds{x1: 24, y: 0, x2: 26} // "[!]"
+	// Layout: ^ L = C D R ! ... (single char buttons with space between)
+	toolbarButtons["parent"] = toolbarBounds{x1: 0, y: 0, x2: 0}           // "^"
+	toolbarButtons["linked"] = toolbarBounds{x1: 2, y: 0, x2: 2}           // "L"
+	toolbarButtons["compare"] = toolbarBounds{x1: 4, y: 0, x2: 4}          // "="
+	toolbarButtons["synccopy"] = toolbarBounds{x1: 6, y: 0, x2: 6}         // "C"
+	toolbarButtons["syncdelete"] = toolbarBounds{x1: 8, y: 0, x2: 8}       // "D"
+	toolbarButtons["syncrename"] = toolbarBounds{x1: 10, y: 0, x2: 10}     // "R"
+	toolbarButtons["ignorefailures"] = toolbarBounds{x1: 12, y: 0, x2: 12} // "!"
 
 	tests := []struct {
 		name     string
 		x, y     int
 		expected string
 	}{
-		{"click on synccopy button", 13, 0, "synccopy"},
-		{"click on syncdelete button", 17, 0, "syncdelete"},
-		{"click on syncrename button", 21, 0, "syncrename"},
-		{"click on ignorefailures button", 25, 0, "ignorefailures"},
-		{"click between compare and synccopy", 11, 0, ""},
-		{"click after ignorefailures button", 27, 0, ""},
+		{"click on synccopy button", 6, 0, "synccopy"},
+		{"click on syncdelete button", 8, 0, "syncdelete"},
+		{"click on syncrename button", 10, 0, "syncrename"},
+		{"click on ignorefailures button", 12, 0, "ignorefailures"},
+		{"click between compare and synccopy", 5, 0, ""},
+		{"click after ignorefailures button", 13, 0, ""},
 	}
 
 	for _, tc := range tests {

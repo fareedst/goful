@@ -1210,6 +1210,36 @@ Extend the toolbar with four additional buttons after `[=]`:
 
 **Cross-References**: [REQ:TOOLBAR_SYNC_BUTTONS], [IMPL:TOOLBAR_SYNC_COPY], [IMPL:TOOLBAR_SYNC_DELETE], [IMPL:TOOLBAR_SYNC_RENAME], [IMPL:TOOLBAR_IGNORE_FAILURES], [REQ:SYNC_COMMANDS], [REQ:LINKED_NAVIGATION]
 
+### Extension: Button Type Classification [REQ:TOOLBAR_BUTTON_STYLING]
+
+Toolbar buttons are classified into two visual categories based on their behavior:
+
+**Action Buttons** (one-time trigger, no persistent state):
+- Parent `^`: Plain text, triggers parent navigation
+- Compare `=`: Plain text, triggers batch digest calculation
+- Copy `C`, Delete `D`, Rename `R`: Plain text, triggers sync operations
+
+**Toggle Buttons** (toggle persistent state):
+- Linked `L`: Toggles linked navigation mode
+- Ignore-failures `!`: Toggles ignore-failures flag
+
+**Styling Contract**:
+- Action buttons: `look.Default()` (plain text, no reverse, no color)
+- Toggle ON: `look.Default().Foreground(tcell.ColorLime).Bold(true)` (green)
+- Toggle OFF: `look.Default().Foreground(tcell.ColorYellow)` (yellow)
+
+**Rationale**:
+- Highlighting (reverse or color) reserved for state indicators
+- Consistent visual language across all toggle buttons
+- Lime+Bold chosen for consistency with existing "active" indicators (messageInfo, cmdlineCommand)
+- Parent button simplified from `[^]` to `^` to clarify it is an action, not a toggle
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `filer/filer.go` includes `[IMPL:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_BUTTON_STYLING]` comments.
+- `filer/toolbar_test.go` includes tests with `[REQ:TOOLBAR_BUTTON_STYLING]` references.
+
+**Cross-References**: [REQ:TOOLBAR_BUTTON_STYLING], [IMPL:TOOLBAR_BUTTON_STYLING]
+
 ## 37. Sync Mode [ARCH:SYNC_MODE] [REQ:SYNC_COMMANDS]
 
 ### Decision: Implement a two-stage prefix mode for executing synchronized file operations across all workspace panes.

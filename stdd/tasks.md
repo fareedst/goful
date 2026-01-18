@@ -1375,3 +1375,30 @@ The following tasks were identified during an STDD documentation review to addre
 - nsync features remain stub-only on Windows (darwin-only implementation)
 
 **Priority Rationale**: P2 because Windows container support extends testing capabilities but does not block development workflows. Most developers can test with the existing Linux container or native Windows development.
+
+## P1: Toolbar Button Styling Refinement [REQ:TOOLBAR_BUTTON_STYLING] [ARCH:TOOLBAR_LAYOUT] [IMPL:TOOLBAR_BUTTON_STYLING]
+
+**Status**: ✅ Complete
+
+**Description**: Refine toolbar button styling to distinguish action buttons (plain text) from toggle buttons (color-coded states). Parent button changes from `[^]` with reverse highlight to plain `^`. Toggle buttons L and ! use Lime+Bold when ON instead of reverse highlight.
+
+**Dependencies**: [REQ:TOOLBAR_PARENT_BUTTON] (complete), [REQ:TOOLBAR_LINKED_TOGGLE] (complete), [REQ:TOOLBAR_SYNC_BUTTONS] (complete)
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] Parent button displays as plain `^`
+- [x] Toggle buttons L and ! show Lime+Bold when ON
+- [x] Tests pass with updated bounds
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Validation Evidence (2026-01-18)**:
+- `go build ./...` - successful
+- `go test ./...` - all tests pass (darwin/arm64)
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1784 token references across 85 files.`
+- Implementation in `filer/filer.go`: `drawHeader()` renders all buttons as single characters with appropriate styling
+- Action buttons (`^`, `=`, `C`, `D`, `R`): plain text with `look.Default()`
+- Toggle buttons (`L`, `!`): `tcell.ColorLime` + Bold when ON, `look.Default()` when OFF
+- Unit tests in `filer/toolbar_test.go` updated with new button bounds
+
+**Priority Rationale**: P1 because consistent visual language improves toolbar usability and accessibility, but does not block core functionality.
