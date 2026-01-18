@@ -1,0 +1,18 @@
+# Docker Compose configuration for Goful on Windows
+# [IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]
+
+services:
+  goful:
+    build:
+      context: .
+      dockerfile: Dockerfile.windows
+    image: goful:windows
+    volumes:
+      # Mount current directory for file operations (Windows paths)
+      - .:C:/workspace
+    # Enable interactive terminal
+    stdin_open: true
+    tty: true
+    working_dir: C:/workspace
+    # Pass through any command-line arguments to goful
+    command: []

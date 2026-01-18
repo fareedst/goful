@@ -1,0 +1,18 @@
+# .dockerignore for Goful Docker builds
+# [IMPL:DOCKERFILE_MULTISTAGE] [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]
+
+# Exclude build artifacts
+bin/
+dist/
+
+# Exclude git
+.git/
+
+# Exclude IDE files
+.vscode/
+.idea/
+.DS_Store
+
+# Exclude test output
+*.test
+*.out

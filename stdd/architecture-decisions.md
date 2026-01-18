@@ -1405,3 +1405,96 @@ func executeSync(ws *Workspace, filename string, newName string, op Operation, i
 - `widget/widget.go` includes `[IMPL:HELP_POPUP]` annotation on `KeyEscape` entry.
 
 **Cross-References**: [REQ:ESCAPE_KEY_BEHAVIOR], [IMPL:ESCAPE_TRANSLATION], [IMPL:BACKSPACE_TRANSLATION] (pattern source)
+
+## 52. Docker Build Strategy [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]
+
+### Decision: Use multi-stage Docker builds with build-tagged platform stubs to enable Linux container execution while preserving macOS-specific functionality.
+
+**Rationale:**
+- The nsync SDK (`github.com/fareedst/nsync`) uses macOS-specific syscalls (`stat.Fsid.Val`, `stat.Fstypename`) that don't compile on Linux
+- Multi-stage builds minimize runtime image size by separating build dependencies from runtime
+- Build tags allow graceful degradation of platform-specific features without code duplication
+- `GOTOOLCHAIN=auto` enables Go 1.24.3 toolchain download within Go 1.23-alpine base image
+
+**Architecture Outline:**
+
+1. **Multi-Stage Dockerfile** (`Dockerfile`):
+   - Stage 1 (builder): `golang:1.23-alpine` with `GOTOOLCHAIN=auto` to download Go 1.24.3
+   - Stage 2 (runtime): `alpine:latest` with only the binary and ca-certificates
+   - Static binary via `CGO_ENABLED=0 GOOS=linux`
+   - Terminal environment: `TERM=xterm-256color`, `COLORTERM=truecolor`
+
+2. **Platform-Specific Build Tags** (`app/nsync*.go`):
+   - `app/nsync.go` with `//go:build darwin` - full nsync implementation
+   - `app/nsync_stub.go` with `//go:build !darwin` - fallback stubs that redirect to regular copy/move
+   - `app/nsync_test.go` with `//go:build darwin` - tests only run on macOS
+
+3. **Docker Compose** (`docker-compose.yml`):
+   - Volume mounts for workspace (`.:/workspace`) and config persistence (`goful-config:/root/.goful`)
+   - Interactive terminal via `stdin_open: true` and `tty: true`
+
+4. **Helper Script** (`docker-run.sh`):
+   - Auto-builds image if not present
+   - Uses docker-compose when available, falls back to docker run
+   - Passes through CLI arguments to goful
+
+**Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
+- `Dockerfile` (build configuration): Stateless, deterministic build process
+- `nsync_stub.go` (platform adapter): Implements same interface as `nsync.go` with graceful fallback
+- `docker-run.sh` (orchestration): Pure shell script, no Go dependencies
+
+**Alternatives Considered:**
+- **Build for macOS in container**: Rejected - no official macOS Docker images
+- **Remove nsync entirely for Linux**: Rejected - breaks build for all platforms
+- **Fix nsync for Linux**: Deferred - requires upstream changes to external dependency
+- **Use Ubuntu instead of Alpine**: Rejected - Alpine is smaller and works correctly
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `Dockerfile` includes `[IMPL:DOCKERFILE_MULTISTAGE] [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]`
+- `docker-compose.yml` includes `[IMPL:DOCKER_COMPOSE_CONFIG] [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]`
+- `docker-run.sh` includes `[IMPL:DOCKER_COMPOSE_CONFIG] [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]`
+- `.dockerignore` includes `[IMPL:DOCKERFILE_MULTISTAGE] [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]`
+- `app/nsync_stub.go` includes `[IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]`
+
+**Cross-References**: [REQ:DOCKER_INTERACTIVE_SETUP], [IMPL:DOCKERFILE_MULTISTAGE], [IMPL:DOCKER_COMPOSE_CONFIG], [PROC:DOCKER_CONTAINER_SETUP], [REQ:NSYNC_MULTI_TARGET]
+
+## 53. Docker Windows Build Strategy [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]
+
+### Decision: Use separate Windows-specific Dockerfile with Windows Server Core base image for Windows container support.
+
+**Rationale:**
+- Windows containers require completely different base images (`mcr.microsoft.com/windows/servercore`) than Linux containers
+- Windows containers can only run on Windows hosts, making a separate Dockerfile with separate compose file the cleanest approach
+- tcell library supports Windows console applications, making interactive TUI possible in Windows containers
+- The existing codebase already has Windows-specific code (`info/info_windows.go`) with proper build tags
+
+**Architecture Outline:**
+- **Separate Dockerfile**: `Dockerfile.windows` contains Windows-specific multi-stage build
+- **Build Stage**: Uses `golang:1.23` (not Alpine) to cross-compile for Windows (`GOOS=windows GOARCH=amd64`)
+- **Runtime Stage**: Uses `mcr.microsoft.com/windows/servercore:ltsc2022` for full console API support
+- **Compose File**: `docker-compose.windows.yml` provides Windows-specific volume paths and service configuration
+- **Helper Script**: `docker-run.ps1` PowerShell script for Windows hosts
+
+**Key Differences from Linux Container:**
+
+| Aspect | Linux (Alpine) | Windows (ServerCore) |
+|--------|----------------|---------------------|
+| Base image size | ~5MB | ~5GB |
+| Host requirement | Any Docker host | Windows host only |
+| TTY support | Full PTY | Windows Console API |
+| Volume paths | `/workspace` | `C:\workspace` |
+| Shell script | `docker-run.sh` | `docker-run.ps1` |
+| Build flag | `GOOS=linux` | `GOOS=windows` |
+
+**Alternatives Considered:**
+- **Multi-platform Docker image**: Rejected - Windows containers require fundamentally different base images and cannot share a single Dockerfile
+- **Windows Nanoserver base**: Rejected - lacks full console APIs needed for interactive terminal applications
+- **WSL2 Linux containers**: Rejected - does not test actual Windows binary, only Linux binary on Windows
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `Dockerfile.windows` includes `[IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]`
+- `docker-compose.windows.yml` includes `[IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]`
+- `docker-run.ps1` includes `[IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]`
+- `Makefile` Docker targets include `[IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]`
+
+**Cross-References**: [REQ:DOCKER_WINDOWS_CONTAINER], [IMPL:DOCKERFILE_WINDOWS], [ARCH:DOCKER_BUILD_STRATEGY], [REQ:DOCKER_INTERACTIVE_SETUP]

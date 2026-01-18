@@ -56,6 +56,8 @@ Each requirement includes:
 | [REQ:TOOLBAR_SYNC_BUTTONS] | Toolbar sync operation buttons (C/D/R/!) | P1 | ✅ Implemented | [ARCH:TOOLBAR_LAYOUT] | [IMPL:TOOLBAR_SYNC_COPY] [IMPL:TOOLBAR_SYNC_DELETE] [IMPL:TOOLBAR_SYNC_RENAME] [IMPL:TOOLBAR_IGNORE_FAILURES] |
 | [REQ:HELP_POPUP_STYLING] | Help popup styling and mouse scroll support | P2 | ✅ Implemented | [ARCH:HELP_STYLING] | [IMPL:HELP_STYLING] |
 | [REQ:ESCAPE_KEY_BEHAVIOR] | Escape key closes modal widgets | P0 | ✅ Implemented | [ARCH:ESCAPE_TRANSLATION] | [IMPL:ESCAPE_TRANSLATION] |
+| [REQ:DOCKER_INTERACTIVE_SETUP] | Docker-based interactive Goful execution | P2 | ✅ Implemented | [ARCH:DOCKER_BUILD_STRATEGY] | [IMPL:DOCKERFILE_MULTISTAGE], [IMPL:DOCKER_COMPOSE_CONFIG] |
+| [REQ:DOCKER_WINDOWS_CONTAINER] | Windows container support for Goful testing | P2 | ✅ Implemented | [ARCH:DOCKER_WINDOWS_BUILD] | [IMPL:DOCKERFILE_WINDOWS] |
 
 ### Non-Functional Requirements
 
@@ -72,6 +74,8 @@ Each requirement includes:
 | Token | Requirement | Priority | Status | Architecture | Implementation |
 |-------|------------|----------|--------|--------------|----------------|
 | [REQ:BATCH_DIFF_REPORT] | Batch diff report CLI command | P1 | ✅ Implemented | [ARCH:BATCH_DIFF_REPORT] | [IMPL:BATCH_DIFF_REPORT] |
+| [REQ:DOCKER_INTERACTIVE_SETUP] | Docker-based interactive Goful execution | P2 | ✅ Implemented | [ARCH:DOCKER_BUILD_STRATEGY] | [IMPL:DOCKERFILE_MULTISTAGE], [IMPL:DOCKER_COMPOSE_CONFIG] |
+| [REQ:DOCKER_WINDOWS_CONTAINER] | Windows container support for Goful testing | P2 | ✅ Implemented | [ARCH:DOCKER_WINDOWS_BUILD] | [IMPL:DOCKERFILE_WINDOWS] |
 
 ---
 
@@ -1353,4 +1357,69 @@ The following features are documented but marked as future enhancements:
 - Feature 3
 
 These may be considered for future iterations but are not required for the initial implementation.
+
+---
+
+### [REQ:DOCKER_INTERACTIVE_SETUP] Docker-Based Interactive Goful Execution
+
+**Priority: P2 (Nice-to-Have)**
+
+- **Description**: Provide a Docker-based setup that allows running Goful interactively in a Linux container with volume mounts for file operations. The setup should include a Dockerfile for building the Goful binary, docker-compose.yml for easy management, a helper script for quick launches, and proper terminal environment configuration.
+- **Rationale**: Enables cross-platform development and testing workflows without requiring local Go toolchain installation. Allows developers to test Goful in a consistent Linux environment regardless of their host OS. Useful for CI/CD pipelines and reproducible development environments.
+- **Satisfaction Criteria**:
+  - Dockerfile builds Goful binary successfully in a Linux container
+  - Container runs interactively with proper terminal emulation (`-it` flags)
+  - Volume mounts allow file operations on host filesystem
+  - Terminal environment variables (`TERM`, `COLORTERM`) configured correctly for tcell
+  - Helper script simplifies container execution
+  - docker-compose.yml provides convenient service management
+- **Validation Criteria**:
+  - Docker image builds without errors: `docker build -t goful:latest .`
+  - Container runs interactively: `docker run -it --rm goful:latest`
+  - Volume mounts work: files created/modified in container are visible on host
+  - TUI renders correctly with colors (verify `TERM=xterm-256color` and `COLORTERM=truecolor`)
+  - Helper script executes and passes arguments correctly
+  - Manual verification on macOS/Windows hosts confirms cross-platform compatibility
+- **Architecture**: See `architecture-decisions.md` § Docker Build Strategy [ARCH:DOCKER_BUILD_STRATEGY]
+- **Implementation**: See `implementation-decisions.md` § Dockerfile Multistage Build [IMPL:DOCKERFILE_MULTISTAGE] and Docker Compose Configuration [IMPL:DOCKER_COMPOSE_CONFIG]
+
+**Status**: ✅ Implemented
+
+### [REQ:DOCKER_WINDOWS_CONTAINER] Windows Container Support for Goful Testing
+
+**Priority: P2 (Nice-to-Have)**
+
+- **Description**: Extend the existing Docker setup to support Windows containers, enabling testing of Goful on Windows Server environments. This requires a separate Dockerfile targeting Windows Server Core base images, Windows-specific docker-compose configuration, and a PowerShell helper script for Windows hosts.
+- **Rationale**: Enables testing Goful on Windows Server environments without requiring dedicated Windows hardware. Complements the existing Alpine-based Linux container for cross-platform development validation. Windows containers can only run on Windows hosts (Docker Desktop with Windows containers mode or Windows Server with containers feature).
+- **Satisfaction Criteria**:
+  - `Dockerfile.windows` builds Goful binary for Windows (`GOOS=windows`)
+  - Windows container runs interactively with proper console emulation (`-it` flags)
+  - Volume mounts work with Windows paths (`C:\workspace`)
+  - tcell terminal initialization works in Windows console environment
+  - PowerShell helper script simplifies container execution on Windows hosts
+  - docker-compose.windows.yml provides convenient Windows service management
+- **Validation Criteria**:
+  - Docker image builds without errors: `docker build -f Dockerfile.windows -t goful:windows .`
+  - Container runs interactively on Windows host: `docker run -it --rm goful:windows`
+  - Volume mounts work: files created/modified in container are visible on Windows host
+  - TUI renders correctly in Windows console (basic keyboard and display functionality)
+  - PowerShell helper script executes and passes arguments correctly
+  - Testing on Windows Server 2022 or Windows 10/11 with Docker Desktop confirms compatibility
+- **Limitations**:
+  - Windows containers require Windows host (cannot run on Linux/macOS Docker hosts)
+  - Windows Server Core base image is larger (~5GB vs Alpine's ~5MB)
+  - Some terminal features (mouse input, resize events) may be limited in Windows containers
+  - nsync features remain stub-only on Windows (darwin-only implementation)
+- **Architecture**: See `architecture-decisions.md` § Docker Windows Build [ARCH:DOCKER_WINDOWS_BUILD]
+- **Implementation**: See `implementation-decisions.md` § Windows Dockerfile [IMPL:DOCKERFILE_WINDOWS]
+
+**Status**: ✅ Implemented (Windows host testing deferred)
+
+**Implementation Progress (2026-01-18)**:
+- ✅ `Dockerfile.windows` created with multi-stage build
+- ✅ `docker-compose.windows.yml` created with Windows paths
+- ✅ `docker-run.ps1` PowerShell helper script created
+- ✅ Makefile targets added (`docker-build-windows`, `docker-run-windows`, `docker-clean`)
+- ✅ README documentation added with Docker section
+- ⏳ Windows host testing deferred (requires Windows host with Docker in Windows containers mode)
 

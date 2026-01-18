@@ -662,6 +662,60 @@ $ goful ~/src/dotfiles ~/src/goful ~/Downloads
 - CI job `release-matrix` (in `.github/workflows/ci.yml`) reuses the same Makefile target so every PR proves artifacts remain reproducible before merge.
 - Tag pushes `v*` trigger `.github/workflows/release.yml`, which re-runs the matrix, logs deterministic filenames/checksums, and publishes the binaries + digest files to the GitHub Release via `softprops/action-gh-release`.
 
+## Docker
+
+Goful can run in Docker containers for cross-platform testing and development without requiring a local Go toolchain.
+
+### Linux Container (Alpine) `[REQ:DOCKER_INTERACTIVE_SETUP]`
+
+The default Docker setup uses a minimal Alpine Linux image (~5MB runtime).
+
+```bash
+# Build and run interactively
+make docker-run
+
+# Or use the helper script
+./docker-run.sh
+
+# Or use docker-compose
+docker compose run --rm goful
+```
+
+The container mounts the current directory at `/workspace` for file operations. Terminal environment variables (`TERM=xterm-256color`, `COLORTERM=truecolor`) are configured for proper color support.
+
+### Windows Container (Server Core) `[REQ:DOCKER_WINDOWS_CONTAINER]`
+
+Windows container support enables testing Goful on Windows Server environments.
+
+> **Note**: Windows containers require a Windows host with Docker Desktop in Windows containers mode or Windows Server with the containers feature enabled. They cannot run on macOS or Linux Docker hosts.
+
+```powershell
+# Using Makefile (cross-platform build command)
+make docker-build-windows
+make docker-run-windows
+
+# Using PowerShell helper script
+.\docker-run.ps1
+
+# Using docker-compose
+docker-compose -f docker-compose.windows.yml run --rm goful
+```
+
+**Limitations**:
+- Windows Server Core base image is ~5GB (vs Alpine's ~5MB)
+- Some terminal features (mouse input, resize events) may be limited in Windows containers
+- nsync multi-target copy/move features are not available (darwin-only implementation)
+
+### Docker Makefile Targets
+
+| Target | Description |
+|--------|-------------|
+| `docker-build` | Build Linux (Alpine) Docker image |
+| `docker-run` | Run goful in Linux container interactively |
+| `docker-build-windows` | Build Windows (ServerCore) Docker image |
+| `docker-run-windows` | Run goful in Windows container interactively |
+| `docker-clean` | Remove goful Docker images |
+
 ## Contributing
 
 Read the [Contributing Guide](CONTRIBUTING.md) before opening a PR so you follow the STDD workflow, semantic token discipline, and module validation rules.

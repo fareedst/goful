@@ -353,3 +353,40 @@ func (t *tScreen) Colors() int {
 #### Artifacts & Metrics
 - **Artifacts** — Saved `DEBUG: [IMPL:TERMINAL_ADAPTER]` logs from macOS/Linux runs, operator notes linked in `stdd/tasks.md`.
 - **Success Metrics** — macOS Terminal opens in the focused directory with the pause tail, Linux overrides behave predictably, and tmux detection always routes through `tmux new-window` when active.
+
+---
+
+### `[PROC:DOCKER_CONTAINER_SETUP]`
+- **Purpose** — Provide a reproducible Docker-based environment for running Goful interactively in a Linux container, enabling cross-platform development and testing workflows without requiring local Go toolchain installation.
+- **Scope** — Applies to Docker image builds, container runtime configuration, volume mounts, and helper scripts that simplify containerized Goful execution.
+- **Token references** — `[REQ:DOCKER_INTERACTIVE_SETUP]`, `[ARCH:DOCKER_BUILD_STRATEGY]`, `[IMPL:DOCKERFILE_MULTISTAGE]`, `[IMPL:DOCKER_COMPOSE_CONFIG]`.
+- **Status** — Active.
+
+#### Core Activities
+1. **Survey the Project**
+   - Identify Go version requirements from `go.mod` (currently Go 1.24.3).
+   - Review terminal environment requirements from `[REQ:TERMINAL_PORTABILITY]` and `[IMPL:TERMINAL_ADAPTER]` to ensure containerized terminal emulation matches host behavior.
+   - Document volume mount requirements for file operations and state persistence.
+2. **Build Work**
+   - Create multi-stage Dockerfile using `golang:1.24-alpine` as builder stage.
+   - Build static Goful binary with `CGO_ENABLED=0` for portability.
+   - Create minimal runtime stage (alpine:latest) with only the binary and required certificates.
+   - Configure `.dockerignore` to exclude build artifacts, git files, and IDE-specific files.
+3. **Test Work**
+   - Verify Docker image builds successfully: `docker build -t goful:latest .`
+   - Validate container runs interactively with proper terminal: `docker run -it --rm goful:latest`
+   - Test volume mounts: verify file operations work within mounted directories.
+   - Confirm TUI rendering: ensure `TERM=xterm-256color` and `COLORTERM=truecolor` produce correct color output.
+   - Test helper script execution and argument passthrough.
+4. **Deploy Work**
+   - Document Docker setup in README or CONTRIBUTING guide.
+   - Provide docker-compose.yml for simplified service management.
+   - Create helper script (`docker-run.sh` or `docker-goful.sh`) for one-command execution.
+5. **Requirements Stewardship**
+   - Record Docker setup process in `stdd/processes.md` with `[PROC:DOCKER_CONTAINER_SETUP]` token.
+   - Update `stdd/tasks.md` with Docker setup task and completion criteria.
+   - Link Docker setup to any related requirements (e.g., `[REQ:TERMINAL_PORTABILITY]` for terminal emulation).
+
+#### Artifacts & Metrics
+- **Artifacts** — Dockerfile, docker-compose.yml, helper script, .dockerignore, updated documentation.
+- **Success Metrics** — Docker image builds successfully, container runs interactively with proper terminal emulation, volume mounts work correctly, Goful TUI renders with colors, helper script executes without errors.

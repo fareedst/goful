@@ -105,6 +105,9 @@ Example: `[IMPL:CONFIG_STRUCT]` → `implementation-decisions/IMPL-CONFIG_STRUCT
 | `[IMPL:BATCH_DIFF_REPORT]` | Batch Diff Report CLI | Active | [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT] | [Detail](implementation-decisions/IMPL-BATCH_DIFF_REPORT.md) |
 | `[IMPL:HELP_STYLING]` | Help Popup Styling and Mouse Scroll | Active | [ARCH:HELP_STYLING] [REQ:HELP_POPUP_STYLING] | [Detail](implementation-decisions/IMPL-HELP_STYLING.md) |
 | `[IMPL:ESCAPE_TRANSLATION]` | Escape Key Translation to C-[ | Active | [ARCH:ESCAPE_TRANSLATION] [REQ:ESCAPE_KEY_BEHAVIOR] | [Detail](implementation-decisions/IMPL-ESCAPE_TRANSLATION.md) |
+| `[IMPL:DOCKERFILE_MULTISTAGE]` | Multi-Stage Dockerfile | Active | [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP] | [Detail](implementation-decisions/IMPL-DOCKERFILE_MULTISTAGE.md) |
+| `[IMPL:DOCKER_COMPOSE_CONFIG]` | Docker Compose Configuration | Active | [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP] | [Detail](implementation-decisions/IMPL-DOCKER_COMPOSE_CONFIG.md) |
+| `[IMPL:DOCKERFILE_WINDOWS]` | Windows Dockerfile | Active | [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER] | [Detail](implementation-decisions/IMPL-DOCKERFILE_WINDOWS.md) |
 
 ### Status Values
 

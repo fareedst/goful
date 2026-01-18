@@ -1,0 +1,32 @@
+# Windows Dockerfile for Goful
+# [IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]
+
+# Build stage: Cross-compile Go binary for Windows
+FROM golang:1.23 AS builder
+
+WORKDIR /build
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+
+# Enable automatic toolchain download for Go 1.24+
+ENV GOTOOLCHAIN=auto
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build static binary for Windows
+RUN CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o goful.exe .
+
+# Runtime stage: Windows Server Core for full console API support
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
+
+# Copy binary from builder stage
+COPY --from=builder /build/goful.exe C:/goful/goful.exe
+
+# Set working directory
+WORKDIR C:/workspace
+
+# Default entrypoint: run goful interactively
+ENTRYPOINT ["C:\\goful\\goful.exe"]

@@ -1,3 +1,6 @@
+//go:build darwin
+// +build darwin
+
 // Package app provides nsync SDK integration for multi-target copy/move operations.
 // [IMPL:NSYNC_OBSERVER] [IMPL:NSYNC_COPY_MOVE] [ARCH:NSYNC_INTEGRATION] [REQ:NSYNC_MULTI_TARGET]
 package app

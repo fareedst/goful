@@ -1,4 +1,5 @@
-.PHONY: help build run install test fmt vet lint tidy clean clean-release release app clean-app
+.PHONY: help build run install test fmt vet lint tidy clean clean-release release app clean-app \
+       docker-build docker-run docker-build-windows docker-run-windows docker-clean
 
 GO        ?= go
 BIN_DIR   ?= bin
@@ -9,6 +10,13 @@ DIST_DIR  ?= dist
 RELEASE_PLATFORMS ?= linux/amd64 linux/arm64 darwin/arm64
 RELEASE_LDFLAGS   ?= -s -w
 SHASUM    ?= shasum -a 256
+
+# Docker variables
+# [IMPL:DOCKERFILE_MULTISTAGE] [IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_BUILD_STRATEGY] [ARCH:DOCKER_WINDOWS_BUILD]
+DOCKER         ?= docker
+DOCKER_COMPOSE ?= docker compose
+DOCKER_IMAGE   ?= goful:latest
+DOCKER_IMAGE_WIN ?= goful:windows
 
 # macOS .app bundle variables
 APP_NAME      ?= PanelDemo
@@ -29,6 +37,13 @@ help:
 	@echo "  tidy    - Sync go.mod/go.sum with imports"
 	@echo "  clean   - Remove build artifacts"
 	@echo "  clean-release - Remove $(DIST_DIR)/ release artifacts"
+	@echo ""
+	@echo "Docker targets:"
+	@echo "  docker-build         - Build Linux (Alpine) Docker image"
+	@echo "  docker-run           - Run goful in Linux container interactively"
+	@echo "  docker-build-windows - Build Windows (ServerCore) Docker image"
+	@echo "  docker-run-windows   - Run goful in Windows container interactively"
+	@echo "  docker-clean         - Remove goful Docker images"
 
 $(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
@@ -120,3 +135,39 @@ app:
 
 clean-app:
 	rm -rf $(APP_DIR)
+
+# Docker targets
+# [IMPL:DOCKERFILE_MULTISTAGE] [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]
+docker-build:
+	@echo "Building Linux Docker image: $(DOCKER_IMAGE)"
+	$(DOCKER) build -t $(DOCKER_IMAGE) .
+
+# [IMPL:DOCKERFILE_MULTISTAGE] [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]
+docker-run: docker-build
+	@echo "Running goful in Linux container..."
+	$(DOCKER) run -it --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-e TERM=xterm-256color \
+		-e COLORTERM=truecolor \
+		$(DOCKER_IMAGE)
+
+# [IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]
+docker-build-windows:
+	@echo "Building Windows Docker image: $(DOCKER_IMAGE_WIN)"
+	@echo "Note: Requires Windows host with Docker in Windows containers mode"
+	$(DOCKER) build -f Dockerfile.windows -t $(DOCKER_IMAGE_WIN) .
+
+# [IMPL:DOCKERFILE_WINDOWS] [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]
+docker-run-windows: docker-build-windows
+	@echo "Running goful in Windows container..."
+	@echo "Note: Requires Windows host with Docker in Windows containers mode"
+	$(DOCKER) run -it --rm \
+		-v "$$(pwd):C:\workspace" \
+		-w "C:\workspace" \
+		$(DOCKER_IMAGE_WIN)
+
+docker-clean:
+	@echo "Removing goful Docker images..."
+	-$(DOCKER) rmi $(DOCKER_IMAGE) 2>/dev/null || true
+	-$(DOCKER) rmi $(DOCKER_IMAGE_WIN) 2>/dev/null || true

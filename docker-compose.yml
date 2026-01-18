@@ -1,0 +1,28 @@
+# Docker Compose configuration for Goful
+# [IMPL:DOCKER_COMPOSE_CONFIG] [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]
+
+services:
+  goful:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: goful:latest
+    volumes:
+      # Mount current directory for file operations
+      - .:/workspace
+      # Mount config directory for state persistence (optional)
+      - goful-config:/root/.goful
+    environment:
+      # Terminal environment variables required for tcell color support
+      - TERM=xterm-256color
+      - COLORTERM=truecolor
+    # Enable interactive terminal
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    # Pass through any command-line arguments to goful
+    command: []
+
+volumes:
+  # Named volume for goful config persistence
+  goful-config:

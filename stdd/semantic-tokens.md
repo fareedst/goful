@@ -145,6 +145,9 @@ When referencing other tokens:
 - `[REQ:TOOLBAR_COMPARE_BUTTON]` - Clickable comparison button in filer header toolbar for batch digest calculation
 - `[REQ:TOOLBAR_SYNC_BUTTONS]` - Toolbar sync operation buttons (C/D/R/!) with Linked mode awareness
 - `[REQ:BATCH_DIFF_REPORT]` - Batch diff report CLI command for non-interactive directory comparison
+- `[REQ:DOCKER_INTERACTIVE_SETUP]` - Docker-based interactive Goful execution in Linux containers
+- `[REQ:DOCKER_WINDOWS_CONTAINER]` - Windows container support for Goful testing on Windows Server
+- `[REQ:CTRL_V_PAGE_DOWN]` - Control-V works as Page Down on macOS terminals with paste interception
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -199,6 +202,9 @@ When referencing other tokens:
 - `[ARCH:MOUSE_CROSS_WINDOW_SYNC]` - Cross-window cursor sync architecture [REQ:MOUSE_CROSS_WINDOW_SYNC]
 - `[ARCH:TOOLBAR_LAYOUT]` - Toolbar layout and button rendering architecture [REQ:TOOLBAR_PARENT_BUTTON] [REQ:TOOLBAR_LINKED_TOGGLE]
 - `[ARCH:BATCH_DIFF_REPORT]` - Batch diff report CLI architecture for headless directory comparison [REQ:BATCH_DIFF_REPORT]
+- `[ARCH:DOCKER_BUILD_STRATEGY]` - Docker build strategy for containerized Goful execution [REQ:DOCKER_INTERACTIVE_SETUP]
+- `[ARCH:DOCKER_WINDOWS_BUILD]` - Docker Windows build strategy for Windows container support [REQ:DOCKER_WINDOWS_CONTAINER]
+- `[ARCH:KEY_TRANSLATION]` - Key translation architecture for platform-specific key handling [REQ:CTRL_V_PAGE_DOWN]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -265,6 +271,10 @@ When referencing other tokens:
 - `[IMPL:TOOLBAR_IGNORE_FAILURES]` - Toolbar ignore-failures toggle implementation [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_SYNC_BUTTONS]
 - `[IMPL:LINKED_CURSOR_SYNC]` - Linked cursor synchronization for mouse and keyboard [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 - `[IMPL:BATCH_DIFF_REPORT]` - Batch diff report CLI implementation with headless navigator [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
+- `[IMPL:DOCKERFILE_MULTISTAGE]` - Multi-stage Dockerfile for building static Goful binary [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]
+- `[IMPL:DOCKER_COMPOSE_CONFIG]` - Docker Compose configuration for service management and volume mounts [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP]
+- `[IMPL:DOCKERFILE_WINDOWS]` - Windows Dockerfile for Windows container support [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]
+- `[IMPL:CTRL_V_MACOS]` - Control-V key translation for macOS terminal compatibility [ARCH:KEY_TRANSLATION] [REQ:CTRL_V_PAGE_DOWN]
 - Add your implementation tokens here
 
 ## Test Tokens Registry
@@ -294,6 +304,7 @@ When referencing other tokens:
 - `[PROC:TOKEN_VALIDATION]` - Automated validation workflow (e.g., `./scripts/validate_tokens.sh`) that proves all referenced tokens exist in the registry
 - `[PROC:TERMINAL_VALIDATION]` - Manual macOS/Linux terminal checklist safeguarding `[REQ:TERMINAL_PORTABILITY]`, `[REQ:TERMINAL_CWD]`, and `[ARCH:TERMINAL_LAUNCHER]`
 - `[PROC:DEMO_GENERATION]` - Reproducible workflow for creating terminal demo GIFs using asciinema + agg, supporting feature documentation in README
+- `[PROC:DOCKER_CONTAINER_SETUP]` - Docker-based container setup process for interactive Goful execution [REQ:DOCKER_INTERACTIVE_SETUP] [ARCH:DOCKER_BUILD_STRATEGY]
 - Add your process tokens here
 
 ## Usage Examples
