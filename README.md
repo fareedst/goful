@@ -113,7 +113,7 @@ The header row displays clickable toolbar buttons at the left edge:
 **File Selection**
 
 - **Left-click on a file**: Selects the file and moves the cursor. If clicking in an unfocused pane, switches focus to that pane first.
-- **Cross-window sync**: When you click a file, all other panes automatically move their cursors to any file with the same name (if it exists). Panes that don't contain a matching file have their cursor highlight erased to avoid confusion.
+- **Cross-window cursor sync**: When linked mode is ON, clicking a file syncs all other panes to the same filename (if it exists). When linked mode is OFF, only the clicked pane is affected. Panes that don't contain a matching file have their cursor highlight erased to avoid confusion.
 - **Double-click on a directory**: Navigates into the directory. When linked mode is ON, all panes that contain a matching subdirectory navigate into it.
 - **Double-click on a file**: Opens the file using the system default application. When linked mode is ON, opens the same-named file from all panes where it exists.
 
@@ -123,11 +123,13 @@ The header row displays clickable toolbar buttons at the left edge:
 
 ### Linked navigation mode `[REQ:LINKED_NAVIGATION]`
 
-Linked navigation synchronizes directory navigation across all open panes. When enabled, navigating into a subdirectory or pressing backspace (parent directory) in the focused window causes all other windows to attempt the same navigation.
+Linked navigation synchronizes directory navigation and cursor position across all open panes. When enabled, navigating into a subdirectory, pressing backspace (parent directory), or moving the cursor in the focused window causes all other windows to sync accordingly.
 
 **Toggle**: Press `L` (uppercase L), `M-l` (Alt+l), or click the `[L]` toolbar button to enable or disable linked mode. The `[L]` button in the header is always visible: **highlighted** when linked mode is ON, normal when OFF.
 
 > **macOS note**: The Option key often produces special characters instead of acting as Meta/Alt, so use uppercase `L` (Shift+l) which works reliably across all platforms.
+
+**Cursor synchronization**: When you move the cursor (via keyboard `j`/`k`/arrows/page keys or mouse click), all other panes move their cursors to the same filename if it exists. Panes without a matching file have their cursor highlight erased. When linked mode is OFF, cursor movements only affect the focused pane.
 
 **Subdirectory navigation**: When you enter a subdirectory named `foo`, all other panes that also contain a subdirectory named `foo` will navigate into it. Panes without a matching subdirectory stay on their current path.
 
@@ -139,6 +141,7 @@ Linked navigation synchronizes directory navigation across all open panes. When 
 - Comparing parallel directory structures (e.g., syncing `src/` and `backup/src/`)
 - Navigating release versions side-by-side (`v1.0/`, `v2.0/`)
 - Keeping workspace panes aligned when exploring mirrored folder hierarchies
+- Quickly finding matching files across panes by moving cursor in any single pane
 
 The mode is **on by default** and does not persist across restarts. Press `L` or click the `[L]` toolbar button to toggle it off if you prefer independent navigation.
 

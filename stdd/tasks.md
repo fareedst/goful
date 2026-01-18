@@ -1149,3 +1149,29 @@ The following tasks were identified during an STDD documentation review to addre
 - Unit tests: `TestToolbarCompareButtonHit_REQ_TOOLBAR_COMPARE_BUTTON`, `TestInvokeToolbarCompareButton_REQ_TOOLBAR_COMPARE_BUTTON`, `TestSharedFilenames_*_REQ_TOOLBAR_COMPARE_BUTTON` in `filer/toolbar_test.go` and `filer/compare_test.go`
 
 **Priority Rationale**: P1 because batch digest comparison significantly improves file verification workflows but does not block core navigation.
+
+## P1: Unify Linked Cursor Synchronization [REQ:LINKED_NAVIGATION] [ARCH:LINKED_NAVIGATION] [IMPL:LINKED_CURSOR_SYNC]
+
+**Status**: ✅ Complete (2026-01-18)
+
+**Description**: Make both mouse and keyboard cursor movements respect the Linked toggle. When linked is ON, sync highlights across all windows. When OFF, only affect the focused window.
+
+**Dependencies**: [REQ:MOUSE_CROSS_WINDOW_SYNC] (complete), [IMPL:MOUSE_CROSS_WINDOW_SYNC] (complete)
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] Mouse and keyboard both respect Linked toggle for cursor sync
+- [x] Tests pass with semantic token references
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Validation Evidence (2026-01-18)**:
+- `go test ./app/... -run "REQ_LINKED_NAVIGATION"` (darwin/arm64, Go 1.24.3) - 5 tests pass
+- `go test ./...` - all tests pass
+- `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1491 token references across 78 files.`
+- Implementation: `MoveCursorLinked()`, `MoveTopLinked()`, `MoveBottomLinked()`, `PageUpLinked()`, `PageDownLinked()` in `app/goful.go`
+- Mouse click `SetCursorByNameAll` now conditional on `g.IsLinkedNav()` in `handleLeftClick()`
+- Keymap updated in `main.go` to use linked cursor movement methods
+- Unit tests: `TestMoveCursorLinked_REQ_LINKED_NAVIGATION`, `TestMoveCursorLinkedOff_REQ_LINKED_NAVIGATION`, `TestMoveTopLinked_REQ_LINKED_NAVIGATION`, `TestMoveBottomLinked_REQ_LINKED_NAVIGATION`, `TestLinkedCursorSyncMissingFile_REQ_LINKED_NAVIGATION` in `app/linked_cursor_test.go`
+
+**Priority Rationale**: P1 because this unifies existing behavior and improves consistency between mouse and keyboard workflows.

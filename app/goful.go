@@ -388,10 +388,12 @@ func (g *Goful) handleLeftClick(x, y int) {
 	fileIdx := dir.FileIndexAtY(y)
 	if fileIdx >= 0 {
 		dir.SetCursor(fileIdx)
-		// [IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]
-		// Sync cursor to same filename in all other windows
-		filename := dir.File().Name()
-		ws.SetCursorByNameAll(filename)
+		// [IMPL:LINKED_CURSOR_SYNC] [IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]
+		// Sync cursor to same filename in all other windows when linked mode is ON
+		if g.IsLinkedNav() {
+			filename := dir.File().Name()
+			ws.SetCursorByNameAll(filename)
+		}
 	}
 
 	// Check for double-click after selection
@@ -504,6 +506,51 @@ func (g *Goful) IsLinkedNav() bool {
 // [IMPL:LINKED_NAVIGATION_AUTO_DISABLE] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 func (g *Goful) SetLinkedNav(enabled bool) {
 	g.linkedNav = enabled
+}
+
+// MoveCursorLinked moves cursor and syncs to other windows if linked mode is ON.
+// [IMPL:LINKED_CURSOR_SYNC] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (g *Goful) MoveCursorLinked(amount int) {
+	g.Dir().MoveCursor(amount)
+	if g.IsLinkedNav() {
+		g.Workspace().SetCursorByNameAll(g.File().Name())
+	}
+}
+
+// MoveTopLinked moves cursor to top and syncs to other windows if linked mode is ON.
+// [IMPL:LINKED_CURSOR_SYNC] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (g *Goful) MoveTopLinked() {
+	g.Dir().MoveTop()
+	if g.IsLinkedNav() {
+		g.Workspace().SetCursorByNameAll(g.File().Name())
+	}
+}
+
+// MoveBottomLinked moves cursor to bottom and syncs to other windows if linked mode is ON.
+// [IMPL:LINKED_CURSOR_SYNC] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (g *Goful) MoveBottomLinked() {
+	g.Dir().MoveBottom()
+	if g.IsLinkedNav() {
+		g.Workspace().SetCursorByNameAll(g.File().Name())
+	}
+}
+
+// PageUpLinked moves cursor up a page and syncs to other windows if linked mode is ON.
+// [IMPL:LINKED_CURSOR_SYNC] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (g *Goful) PageUpLinked() {
+	g.Dir().PageUp()
+	if g.IsLinkedNav() {
+		g.Workspace().SetCursorByNameAll(g.File().Name())
+	}
+}
+
+// PageDownLinked moves cursor down a page and syncs to other windows if linked mode is ON.
+// [IMPL:LINKED_CURSOR_SYNC] [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
+func (g *Goful) PageDownLinked() {
+	g.Dir().PageDown()
+	if g.IsLinkedNav() {
+		g.Workspace().SetCursorByNameAll(g.File().Name())
+	}
 }
 
 // DiffSearchStatus returns the current diff search status text for the header.

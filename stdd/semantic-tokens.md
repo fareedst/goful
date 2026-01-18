@@ -252,6 +252,7 @@ When referencing other tokens:
 - `[IMPL:TOOLBAR_PARENT_BUTTON]` - Toolbar parent button rendering, hit-testing, and dispatch [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_PARENT_BUTTON]
 - `[IMPL:TOOLBAR_LINKED_TOGGLE]` - Toolbar linked toggle button rendering and dispatch [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_LINKED_TOGGLE]
 - `[IMPL:TOOLBAR_COMPARE_BUTTON]` - Toolbar compare button rendering, hit-testing, and dispatch [ARCH:TOOLBAR_LAYOUT] [REQ:TOOLBAR_COMPARE_BUTTON]
+- `[IMPL:LINKED_CURSOR_SYNC]` - Linked cursor synchronization for mouse and keyboard [ARCH:LINKED_NAVIGATION] [REQ:LINKED_NAVIGATION]
 - `[IMPL:BATCH_DIFF_REPORT]` - Batch diff report CLI implementation with headless navigator [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
 - Add your implementation tokens here
 

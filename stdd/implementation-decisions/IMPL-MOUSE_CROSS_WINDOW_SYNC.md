@@ -1,6 +1,6 @@
 # [IMPL:MOUSE_CROSS_WINDOW_SYNC] Mouse Cross-Window Cursor Synchronization
 
-**Cross-References**: [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]  
+**Cross-References**: [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC] [IMPL:LINKED_CURSOR_SYNC]  
 **Status**: Active  
 **Created**: 2026-01-17  
 **Last Updated**: 2026-01-18
@@ -9,12 +9,12 @@
 
 ## Decision
 
-Add cross-window cursor synchronization to `handleLeftClick` in `app/goful.go`, fix the rendering logic in `filer/directory.go` to display cursor highlights in unfocused windows, and implement cursor hiding for windows without matching files.
+Add cross-window cursor synchronization to `handleLeftClick` in `app/goful.go` that respects Linked navigation mode, fix the rendering logic in `filer/directory.go` to display cursor highlights in unfocused windows, and implement cursor hiding for windows without matching files.
 
 ## Rationale
 
 - Reuses existing `SetCursorByNameAll()` infrastructure from diff search feature
-- Single-line addition to existing mouse handling code
+- Conditional sync based on `IsLinkedNav()` state provides consistent behavior with keyboard navigation
 - No new dependencies or complex logic required
 - Rendering fix ensures cursor is visually highlighted in all windows, not just the focused one
 - Cursor hiding prevents misleading highlights in windows that don't contain the clicked file
@@ -28,9 +28,11 @@ Add cross-window cursor synchronization to `handleLeftClick` in `app/goful.go`, 
 fileIdx := dir.FileIndexAtY(y)
 if fileIdx >= 0 {
     dir.SetCursor(fileIdx)
-    // [IMPL:MOUSE_CROSS_WINDOW_SYNC] Sync cursor to same filename in all windows
-    filename := dir.File().Name()
-    ws.SetCursorByNameAll(filename)
+    // [IMPL:LINKED_CURSOR_SYNC] [IMPL:MOUSE_CROSS_WINDOW_SYNC] Sync cursor when linked mode is ON
+    if g.IsLinkedNav() {
+        filename := dir.File().Name()
+        ws.SetCursorByNameAll(filename)
+    }
 }
 ```
 
@@ -113,20 +115,23 @@ Tests that must reference `[REQ:MOUSE_CROSS_WINDOW_SYNC]`:
 |------|--------|-------------------|-------|
 | 2026-01-17 | — | ✅ Pass | Initial implementation. `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1298 token references across 77 files.` |
 | 2026-01-18 | — | ✅ Pass | Rendering fix applied. `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1299 token references across 77 files.` |
+| 2026-01-18 | — | ✅ Pass | Linked mode integration. `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1491 token references across 78 files.` |
 
-## Bug Fix History
+## Bug Fix / Enhancement History
 
 | Date | Issue | Root Cause | Fix |
 |------|-------|------------|-----|
 | 2026-01-18 | Cursor not visually highlighted in unfocused windows | `drawFilesWithComparison` in `filer/directory.go` conditioned highlighting on `focus && i == d.Cursor()` | Changed to `i == d.Cursor()` to decouple highlighting from window focus |
 | 2026-01-18 | Windows without matching file incorrectly highlight first directory | `IndexByName` returned `b.lower` instead of `-1` when file not found, causing `SetCursorByName` to always call `SetCursor()` | Fixed `IndexByName` to return `-1`; added `cursorHidden` flag to hide highlight when file not found; updated rendering to check `!d.IsCursorHidden()` |
+| 2026-01-18 | Mouse click always syncs, ignoring Linked mode toggle | Sync was unconditional | Made `SetCursorByNameAll` call conditional on `g.IsLinkedNav()` for consistency with keyboard navigation. See [IMPL:LINKED_CURSOR_SYNC] |
 
 ## Related Decisions
 
-- Depends on: [IMPL:MOUSE_FILE_SELECT], [IMPL:MOUSE_HIT_TEST]
-- See also: [ARCH:MOUSE_CROSS_WINDOW_SYNC], [REQ:MOUSE_CROSS_WINDOW_SYNC], [REQ:MODULE_VALIDATION]
+- Depends on: [IMPL:MOUSE_FILE_SELECT], [IMPL:MOUSE_HIT_TEST], [IMPL:LINKED_CURSOR_SYNC]
+- See also: [ARCH:MOUSE_CROSS_WINDOW_SYNC], [REQ:MOUSE_CROSS_WINDOW_SYNC], [REQ:LINKED_NAVIGATION], [REQ:MODULE_VALIDATION]
 
 ---
 
 *Created as part of mouse cross-window cursor sync feature on 2026-01-17*
 *Updated 2026-01-18 with cursor hiding fix for non-matching windows*
+*Updated 2026-01-18 to respect Linked navigation mode toggle*

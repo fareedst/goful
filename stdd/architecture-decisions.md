@@ -779,13 +779,16 @@ func formatDirs(paths []string, quote bool) string {
 **Architecture Outline:**
 - **State Management**: Add `linkedNav bool` field to `app.Goful` struct with getter/toggle methods.
 - **Navigation Helpers**: Add `ChdirAllToSubdir(name string)` and `ChdirAllToParent()` to `filer.Workspace` that iterate non-focused directories and attempt navigation.
-- **Header Indicator**: Extend `filer.Filer.drawHeader()` to show `[LINKED]` when the mode is enabled, using a callback or exported flag.
+- **Header Indicator**: Extend `filer.Filer.drawHeader()` to show `[L]` toolbar button (reverse style when ON) indicating the current mode state.
 - **Keymap Integration**: Wrap existing navigation callbacks (backspace, enter-dir) to check linked state and invoke the appropriate helper.
+- **Cursor Sync Integration**: When linked mode is ON, all cursor movements (mouse clicks, keyboard navigation) sync the cursor position to the same filename in all windows via `SetCursorByNameAll()`. When OFF, movements only affect the focused window.
+- **Wrapper Methods** (`app/goful.go`): `MoveCursorLinked()`, `MoveTopLinked()`, `MoveBottomLinked()`, `PageUpLinked()`, `PageDownLinked()` wrap cursor movement and conditionally sync based on linked state.
 
 **Module Boundaries & Contracts `[REQ:MODULE_VALIDATION]`:**
 - `LinkedNavState` (Module 1 in `app/goful.go`) – Pure toggle and query methods; no side effects beyond flipping the boolean.
 - `LinkedNavigationHelpers` (Module 2 in `filer/workspace.go`) – Pure workspace methods that iterate directories and call `Chdir`; do not mutate linked state.
 - `LinkedNavIndicator` (Module 3 in `filer/filer.go`) – Header rendering that consumes an external flag/callback; no business logic.
+- `LinkedCursorSync` (Module 4 in `app/goful.go`) – Wrapper methods that move cursor and conditionally call `SetCursorByNameAll()` based on linked state.
 
 **Alternatives Considered:**
 - **Per-workspace linked state**: Rejected because operators typically want global linked mode, and per-workspace adds UI complexity.
@@ -1095,21 +1098,22 @@ func findNextDifference(dirs []*Directory, startAfter string) (name string, reas
 
 ## 40. Mouse Cross-Window Cursor Synchronization [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]
 
-### Decision: Synchronize cursor position across all windows when a file is selected via mouse click in the active window, with visual highlighting in matching windows and highlight erasure in non-matching windows.
+### Decision: Synchronize cursor position across all windows when a file is selected via mouse click in the active window (when Linked mode is ON), with visual highlighting in matching windows and highlight erasure in non-matching windows.
 **Rationale:**
 - Users comparing directories need to see the same filename highlighted across all windows.
 - Reuses existing `SetCursorByNameAll()` method which already handles cursor positioning across directories.
-- Minimal change to existing `handleLeftClick` flow - just add synchronization call after cursor movement.
-- Works independently of Linked Navigation mode (always syncs on click).
-- Visual highlighting must appear in ALL windows where the file exists, not just the focused one.
-- Windows without a matching file must have their highlight erased to avoid misleading visual feedback.
+- Minimal change to existing `handleLeftClick` flow - add conditional synchronization call after cursor movement based on linked state.
+- Respects Linked Navigation mode: syncs to all windows when linked mode is ON, affects only focused window when OFF. This provides consistent behavior between mouse and keyboard navigation.
+- Visual highlighting must appear in ALL windows where the file exists, not just the focused one (when linked).
+- Windows without a matching file must have their highlight erased to avoid misleading visual feedback (when linked).
 
 **Architecture Outline:**
-- **Cursor Sync Point** (`app/goful.go`): After `dir.SetCursor(fileIdx)` in `handleLeftClick`, retrieve the filename and call `ws.SetCursorByNameAll(filename)`.
+- **Cursor Sync Point** (`app/goful.go`): After `dir.SetCursor(fileIdx)` in `handleLeftClick`, check `g.IsLinkedNav()` and conditionally call `ws.SetCursorByNameAll(filename)` only when linked mode is ON.
 - **Existing Infrastructure**: `filer.Workspace.SetCursorByNameAll(name string)` already iterates all directories and calls `SetCursorByName`.
 - **Cursor Hidden State** (`widget/listbox.go`): The `ListBox` struct contains a `cursorHidden` bool field. When `SetCursorByName` finds no match, it sets `cursorHidden=true` to hide the highlight. When a match is found or when any direct cursor movement occurs (`SetCursor`, `MoveCursor`), `cursorHidden` is reset to `false`.
 - **IndexByName Contract** (`widget/listbox.go`): Returns `-1` when no match is found (not `b.lower`), allowing callers to distinguish "not found" from "found at first position".
 - **Rendering Invariant** (`filer/directory.go`): The `drawFilesWithComparison` function highlights the cursor position only when `i == d.Cursor() && !d.IsCursorHidden()`, ensuring cross-window cursor visibility while respecting the hidden state.
+- **Linked Mode Gate**: The `handleLeftClick` function checks `g.IsLinkedNav()` before calling `SetCursorByNameAll()`, ensuring mouse clicks respect the same toggle as keyboard navigation.
 
 **Token Coverage** `[PROC:TOKEN_AUDIT]`:
 - `app/goful.go` includes `[IMPL:MOUSE_CROSS_WINDOW_SYNC] [ARCH:MOUSE_CROSS_WINDOW_SYNC] [REQ:MOUSE_CROSS_WINDOW_SYNC]`.

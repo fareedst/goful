@@ -684,15 +684,18 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: Goful must support a toggleable "linked" navigation mode where directory navigation in the focused window propagates to all other directory windows in the current workspace. When enabled and the user navigates into a subdirectory, all other windows that contain a matching subdirectory also navigate to it. When the user presses backspace (parent directory), all windows navigate to their respective parent directories. The mode is on by default.
-- **Rationale**: Operators comparing similar directory structures (e.g., syncing folder hierarchies, comparing release versions) benefit from synchronized navigation across panes. Manual navigation in each pane is tedious and error-prone when directory structures mirror each other.
+- **Description**: Goful must support a toggleable "linked" navigation mode where directory navigation in the focused window propagates to all other directory windows in the current workspace. When enabled and the user navigates into a subdirectory, all other windows that contain a matching subdirectory also navigate to it. When the user presses backspace (parent directory), all windows navigate to their respective parent directories. When linked mode is ON, cursor movements (via mouse clicks or keyboard navigation) synchronize the highlight position across all windows by filename. When linked mode is OFF, cursor movements only affect the focused window. The mode is on by default.
+- **Rationale**: Operators comparing similar directory structures (e.g., syncing folder hierarchies, comparing release versions) benefit from synchronized navigation across panes. Manual navigation in each pane is tedious and error-prone when directory structures mirror each other. Synchronized cursor highlighting provides visual feedback showing matching files across all windows.
 - **Satisfaction Criteria**:
   - A toggle mechanism (`L` uppercase or `M-l` Alt+l) enables/disables linked navigation mode.
   - When disabled, navigation in the focused window affects only that window (historical behavior).
   - When enabled, entering a subdirectory attempts to navigate all other workspace windows to a matching subdirectory (by name) if it exists in each window's current path.
   - When enabled, pressing backspace (parent navigation) causes all windows to navigate to their respective parent directories.
   - When enabled, changing sort order applies the same sort type to all windows in the workspace.
-  - A visual indicator (`[LINKED]`) appears in the filer header when the mode is active.
+  - When enabled, mouse single-click file selection syncs cursor to same filename in all windows.
+  - When enabled, keyboard cursor movement (up/down/page/home/end) syncs cursor to same filename in all windows.
+  - When disabled, both mouse and keyboard cursor movements only affect the focused window.
+  - A visual indicator (`[L]` button in toolbar, reverse style when ON) shows the current mode state.
   - The mode state is per-session and does not persist across restarts.
   - When enabled and subdirectory navigation cannot complete in one or more windows (subdirectory missing) but succeeds in at least one window, linked navigation is automatically disabled with a message informing the user of the divergent directory structures.
 - **Validation Criteria**:
@@ -705,11 +708,14 @@ Each requirement includes:
 
 **Status**: ✅ Implemented
 
-**Validation Evidence (2026-01-09)**:
+**Validation Evidence (2026-01-18)**:
 - `TestChdirAllToSubdir_REQ_LINKED_NAVIGATION`, `TestChdirAllToParent_REQ_LINKED_NAVIGATION`, `TestLinkedNavigationSingleWindow_REQ_LINKED_NAVIGATION`, `TestSortAllBy_REQ_LINKED_NAVIGATION` in `filer/integration_test.go` covering the workspace navigation and sort helpers.
-- Toggle keystroke: `L` (uppercase, works on all platforms) or `M-l` (Alt+l, may not work on macOS where Option produces special characters).
-- Header indicator `[LINKED]` displayed when mode is active.
+- `TestMoveCursorLinked_REQ_LINKED_NAVIGATION`, `TestMoveCursorLinkedOff_REQ_LINKED_NAVIGATION`, `TestMoveTopLinked_REQ_LINKED_NAVIGATION`, `TestMoveBottomLinked_REQ_LINKED_NAVIGATION`, `TestLinkedCursorSyncMissingFile_REQ_LINKED_NAVIGATION` in `app/linked_cursor_test.go` covering cursor synchronization.
+- Toggle keystroke: `L` (uppercase, works on all platforms) or `M-l` (Alt+l, may not work on macOS where Option produces special characters), or click `[L]` toolbar button.
+- Header toolbar button `[L]` displayed with reverse style when mode is active.
+- Cursor sync: mouse clicks and keyboard cursor movements sync across windows when linked mode is enabled.
 - Sort synchronization: all sort menu options apply to all windows when linked mode is enabled.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1491 token references across 78 files.`
 
 ### [REQ:DIFF_SEARCH] Cross-Window Difference Search
 
@@ -958,14 +964,15 @@ Each requirement includes:
 
 **Priority: P1 (Important)**
 
-- **Description**: When a user clicks on a file in the active (focused) window, the cursor in all other windows should move to the same filename if it exists. Focus remains on the active window. This provides visual feedback showing matching files across all workspace panes.
-- **Rationale**: Users comparing directories benefit from seeing the same file highlighted across all windows. This complements the comparison color feature and helps users quickly identify matching files without manually navigating each pane.
+- **Description**: When a user clicks on a file in the active (focused) window and Linked navigation mode is ON, the cursor in all other windows should move to the same filename if it exists. When Linked mode is OFF, only the focused window's cursor moves. Focus remains on the active window. This provides visual feedback showing matching files across all workspace panes.
+- **Rationale**: Users comparing directories benefit from seeing the same file highlighted across all windows. This complements the comparison color feature and helps users quickly identify matching files without manually navigating each pane. Respecting the Linked toggle provides consistent behavior with keyboard navigation.
 - **Satisfaction Criteria**:
-  - Left-clicking a file in the active window moves cursors in all other windows to the same filename (if present).
+  - When Linked mode is ON, left-clicking a file in the active window moves cursors in all other windows to the same filename (if present).
+  - When Linked mode is OFF, left-clicking a file only moves the cursor in the clicked window.
   - Focus remains on the clicked window; other windows do not gain focus.
-  - Windows where the filename does not exist have their cursor highlight erased (no file highlighted).
+  - Windows where the filename does not exist have their cursor highlight erased (no file highlighted) when Linked mode is ON.
   - Keyboard navigation in any window restores the cursor highlight.
-  - Works independently of Linked Navigation mode.
+  - Respects Linked Navigation mode: syncs when ON, individual when OFF.
 - **Validation Criteria**:
   - Unit tests verify `SetCursorByNameAll` is called after cursor selection.
   - Manual verification confirms cross-window highlighting with 2+ panes.
@@ -975,10 +982,11 @@ Each requirement includes:
 
 **Status**: ✅ Implemented
 
-**Validation Evidence (2026-01-17)**:
+**Validation Evidence (2026-01-18)**:
 - Unit tests in `filer/integration_test.go` (`TestSetCursorByNameAll_REQ_MOUSE_CROSS_WINDOW_SYNC`, `TestSetCursorByNameAllFocusUnchanged_REQ_MOUSE_CROSS_WINDOW_SYNC`) covering cursor sync and focus preservation.
-- Implementation in `app/goful.go`: `handleLeftClick` calls `SetCursorByNameAll` after cursor selection.
-- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1298 token references across 77 files.`
+- Implementation in `app/goful.go`: `handleLeftClick` conditionally calls `SetCursorByNameAll` when `g.IsLinkedNav()` is true.
+- Linked cursor sync tests in `app/linked_cursor_test.go` verifying behavior respects Linked mode toggle.
+- Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1491 token references across 78 files.`
 
 ### [REQ:TOOLBAR_PARENT_BUTTON] Toolbar Parent Navigation Button
 
