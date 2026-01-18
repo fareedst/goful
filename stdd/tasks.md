@@ -1245,3 +1245,37 @@ The following tasks were identified during an STDD documentation review to addre
 - README updated with Help Popup section documenting color styling and mouse scroll support
 
 **Priority Rationale**: P2 because visual styling and mouse scroll improve user experience but keyboard navigation remains fully functional without them.
+
+## P2: Three-Window Demo GIFs [PROC:DEMO_GENERATION] [REQ:BATCH_DIFF_REPORT] [REQ:FILE_COMPARISON_COLORS] [REQ:LINKED_NAVIGATION]
+
+**Status**: ✅ Complete (2026-01-17)
+
+**Description**: Create three GIF demos showcasing goful's 3-window comparison features for README documentation: batch diff report CLI, hash comparison with `=` key, and linked navigation mode.
+
+**Dependencies**: asciinema, agg (asciinema-agg)
+
+**Subtasks**:
+- [x] Install prerequisites (asciinema 2.4.0, agg 1.6.0)
+- [x] Build goful binary
+- [x] Create demo directories with test files (alpha/beta/gamma with size variations)
+- [x] Record and convert demo_diff_report.gif (CLI batch comparison)
+- [x] Record and convert demo_compare.gif (hash comparison with = key)
+- [x] Record and convert demo_linked.gif (linked navigation)
+- [x] Update README.md to embed new demo GIFs
+- [x] Document demo generation process in stdd/processes.md
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] Three GIF demos created in .github/ directory
+- [x] README.md updated with demo embeds
+- [x] Demo generation process documented as `[PROC:DEMO_GENERATION]`
+
+**Validation Evidence (2026-01-17)**:
+- `demo_diff_report.gif` (82KB) - CLI batch diff report demo
+- `demo_compare.gif` (38KB) - Interactive hash comparison demo
+- `demo_linked.gif` (35KB) - Interactive linked navigation demo
+- Demo directories: `/tmp/demo/{alpha,beta,gamma}` with file1, file2, file3, subdir/
+- Recording tools: asciinema with TERM=xterm-256color, expect scripts for TUI automation
+- Troubleshooting: Fixed "terminal not cursor addressable" panic by setting TERM in expect scripts
+
+**Priority Rationale**: P2 because visual demos improve documentation and user onboarding but do not affect functionality.

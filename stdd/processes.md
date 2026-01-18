@@ -126,6 +126,206 @@ Use the structure below for every process you document. Each entry should be kep
 - **Artifacts** — Script output recorded in tasks and implementation decisions, CI job logs referencing `[PROC:TOKEN_VALIDATION]`.
 - **Success Metrics** — Latest run shows zero missing tokens; CI fails fast if drift occurs; every completed task links to a successful validation run.
 
+### `[PROC:DEMO_GENERATION]`
+- **Purpose** — Provide a reproducible workflow for creating terminal demo recordings (GIFs) that showcase goful features for documentation and README.
+- **Scope** — Applies whenever new features need visual documentation or existing demos need updating.
+- **Token references** — `[REQ:BATCH_DIFF_REPORT]`, `[REQ:FILE_COMPARISON_COLORS]`, `[REQ:LINKED_NAVIGATION]`, `[IMPL:DIGEST_COMPARISON]`.
+- **Status** — Active.
+
+#### Core Activities
+1. **Prepare Environment**
+   - Install prerequisites: `asciinema` (terminal recording) and `agg` (GIF conversion).
+   - Build the goful binary: `go build -o bin/goful .`
+   - Set terminal size to 120x35 columns/rows (matching existing demos).
+   - Create demo directories with appropriate test files that demonstrate the feature.
+
+2. **Create Demo Scripts**
+   - For CLI-only demos (e.g., `--diff-report`): Create a bash script that runs the commands with appropriate pauses (`sleep`) for readability.
+   - For interactive TUI demos: Create a bash wrapper script using tmux (see Working Configuration below).
+
+3. **Record Demo** (see Working Configuration for the correct approach)
+
+4. **Convert to GIF**
+   - Use agg with asciinema theme to preserve original terminal colors:
+     ```bash
+     agg --theme asciinema /tmp/demo_name.cast .github/demo_name.gif
+     ```
+
+5. **Update Documentation**
+   - Add GIF embed to README.md in the relevant feature section: `![demo_name](.github/demo_name.gif)`
+   - Verify the GIF renders correctly in markdown preview.
+
+6. **Requirements Stewardship**
+   - Record demo creation in `stdd/tasks.md` if part of a larger feature task.
+   - Update this process if new tools or techniques are discovered.
+
+#### Artifacts & Metrics
+- **Artifacts** — `.cast` recording files (temporary), `.gif` demo files in `.github/`, updated README.md with embeds.
+- **Success Metrics** — GIF plays correctly, shows the intended feature clearly, file size is reasonable (<1MB), and README embeds display properly.
+
+---
+
+#### Working Configuration (Colors + Timing)
+
+The following approach successfully captures both **colors** and **intermediate timing** for interactive TUI demos:
+
+**Requirements:**
+- tmux (for proper keystroke timing via `send-keys`)
+- asciinema (for terminal recording)
+- agg (for GIF conversion)
+
+**Critical Environment Settings:**
+```bash
+unset NO_COLOR                    # CRITICAL: tcell checks this and disables all colors if set
+export TERM=xterm-256color        # Required for tcell color detection
+export COLORTERM=truecolor        # Enables 24-bit color support
+```
+
+**Recording Script Template:**
+```bash
+#!/bin/bash
+SESSION="demo_name"
+CAST_FILE="/tmp/demo_name.cast"
+
+# Kill any existing session
+tmux kill-session -t $SESSION 2>/dev/null
+
+# Create new tmux session with specific dimensions
+tmux new-session -d -s $SESSION -x 120 -y 35
+
+# Start asciinema INSIDE tmux with proper environment
+# CRITICAL: unset NO_COLOR and set TERM/COLORTERM before asciinema starts
+tmux send-keys -t $SESSION "unset NO_COLOR && export TERM=xterm-256color COLORTERM=truecolor && asciinema rec --overwrite --cols 120 --rows 35 $CAST_FILE" Enter
+sleep 3
+
+# Start goful
+tmux send-keys -t $SESSION "/path/to/goful /tmp/demo/dir1 /tmp/demo/dir2" Enter
+sleep 4
+
+# Send keystrokes with pauses (timing is preserved by tmux send-keys)
+tmux send-keys -t $SESSION "j"
+sleep 2
+tmux send-keys -t $SESSION "="
+sleep 3
+# ... more keystrokes ...
+
+# Quit goful
+tmux send-keys -t $SESSION "q"
+sleep 1
+tmux send-keys -t $SESSION "y"
+sleep 2
+
+# Exit asciinema recording
+tmux send-keys -t $SESSION "exit" Enter
+sleep 2
+
+# Cleanup
+tmux kill-session -t $SESSION 2>/dev/null
+```
+
+**Why This Works:**
+1. **tmux send-keys** sends keystrokes to the PTY with real-time execution, so `sleep` commands in the wrapper script create actual pauses that asciinema captures.
+2. **asciinema runs inside tmux** where the environment variables are properly set before goful starts.
+3. **NO_COLOR is unset** inside the tmux session, not in the outer shell, ensuring tcell sees the correct environment.
+
+---
+
+#### Approaches That Did NOT Work
+
+The following configurations were tested and failed to capture both colors and timing correctly:
+
+**1. asciinema + expect (no tmux)**
+```bash
+# Configuration:
+export TERM=xterm-256color
+export COLORTERM=truecolor
+asciinema rec -c "expect demo.exp" output.cast
+```
+- **Result:** Colors worked (after unsetting NO_COLOR), but **timing was lost**.
+- **Cause:** expect's `sleep` commands pause the script but don't flush output. All UI changes are buffered and appear at once in the recording.
+- **Symptoms:** Recording shows goful UI appearing instantly with quit prompt visible immediately; no intermediate states.
+
+**2. expect with output waiting**
+```bash
+# In expect script:
+send "j"
+expect -re "."   # Wait for any output
+sleep 2
+```
+- **Result:** Same as above—timing still lost.
+- **Cause:** `expect -re "."` matches output but doesn't force synchronous display.
+
+**3. asciinema + stdbuf**
+```bash
+stdbuf -o0 expect demo.exp  # Disable output buffering
+```
+- **Result:** Did not improve timing capture.
+- **Cause:** stdbuf affects stdio buffering but not PTY buffering.
+
+**4. tmux without unsetting NO_COLOR inside the session**
+```bash
+# In wrapper script (outer shell):
+unset NO_COLOR
+export TERM=xterm-256color
+# Then start tmux session...
+tmux send-keys "asciinema rec..." Enter
+```
+- **Result:** **Timing worked but colors were black/white**.
+- **Cause:** tmux sessions don't inherit the parent shell's unset variables. NO_COLOR remained set inside the tmux session (from user's shell profile).
+- **Symptoms:** tcell's `Colors()` method returns 0; only bold/reverse video codes in recording, no color codes.
+
+**5. Setting TERM before tmux session creation**
+```bash
+TERM=xterm-256color tmux new-session -d -s $SESSION
+tmux set-environment -t $SESSION TERM xterm-256color
+```
+- **Result:** Colors still not working.
+- **Cause:** Environment variables set via `tmux set-environment` affect new windows but asciinema was already running. Also, NO_COLOR was still the root cause.
+
+**6. TCELL_TRUECOLOR=enable**
+```bash
+export TCELL_TRUECOLOR=enable
+```
+- **Result:** Did not help when NO_COLOR was set.
+- **Cause:** tcell checks NO_COLOR first in its `Colors()` method. If NO_COLOR is set (to any value), it returns 0 immediately, before checking TCELL_TRUECOLOR or TERM.
+
+---
+
+#### Root Cause Analysis: NO_COLOR Environment Variable
+
+The primary blocker for color recording was the `NO_COLOR` environment variable. This is a [standard](https://no-color.org/) that many CLI tools honor to disable colored output.
+
+**tcell's behavior** (from `tscreen.go`):
+```go
+func (t *tScreen) Colors() int {
+    if os.Getenv("NO_COLOR") != "" {
+        return 0  // Returns 0 if NO_COLOR is set to ANY value
+    }
+    // ... rest of color detection
+}
+```
+
+**Diagnosis steps used:**
+1. Created a test program to check `screen.Colors()` inside asciinema—returned 0.
+2. Checked tcell's terminfo lookup—correctly returned 256 colors.
+3. Examined tcell source code and found the NO_COLOR check.
+4. Verified `echo $NO_COLOR` showed `NO_COLOR=1` in the environment.
+5. Unset NO_COLOR and re-tested—`Colors()` returned 16777216 (truecolor).
+
+---
+
+#### Troubleshooting Quick Reference
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Black/white output, no colors | `NO_COLOR` environment variable is set | `unset NO_COLOR` inside tmux session before starting asciinema |
+| Colors work but timing is lost | Using expect directly with asciinema | Use tmux with `send-keys` instead of expect |
+| "terminal not cursor addressable" panic | TERM not set or set to "dumb" | Set `TERM=xterm-256color` before launching goful |
+| tcell `Colors()` returns 0 | NO_COLOR set, or TERM not recognized | Check and unset NO_COLOR; verify TERM has valid terminfo |
+| agg converts to wrong colors | Using themed palette (e.g., monokai) | Use `--theme asciinema` to preserve original colors |
+
+---
+
 ### `[PROC:TERMINAL_VALIDATION]`
 - **Purpose** — Provide a reproducible manual checklist that proves `[REQ:TERMINAL_PORTABILITY]` and `[REQ:TERMINAL_CWD]` remain satisfied after adapter changes.
 - **Scope** — Applies to macOS Terminal.app, Linux desktop sessions (gnome-terminal or equivalent), and tmux environments touched by `[ARCH:TERMINAL_LAUNCHER]` and `[IMPL:TERMINAL_ADAPTER]`.

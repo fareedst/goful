@@ -293,6 +293,7 @@ When referencing other tokens:
 - `[PROC:TOKEN_AUDIT]` - Mandatory checklist ensuring every requirement → architecture → implementation → code/test path is annotated and documented
 - `[PROC:TOKEN_VALIDATION]` - Automated validation workflow (e.g., `./scripts/validate_tokens.sh`) that proves all referenced tokens exist in the registry
 - `[PROC:TERMINAL_VALIDATION]` - Manual macOS/Linux terminal checklist safeguarding `[REQ:TERMINAL_PORTABILITY]`, `[REQ:TERMINAL_CWD]`, and `[ARCH:TERMINAL_LAUNCHER]`
+- `[PROC:DEMO_GENERATION]` - Reproducible workflow for creating terminal demo GIFs using asciinema + agg, supporting feature documentation in README
 - Add your process tokens here
 
 ## Usage Examples

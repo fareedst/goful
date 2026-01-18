@@ -162,6 +162,8 @@ Linked navigation synchronizes directory navigation and cursor position across a
 
 The mode is **on by default** and does not persist across restarts. Press `L` or click the `[L]` toolbar button to toggle it off if you prefer independent navigation.
 
+![demo_linked](.github/demo_linked.gif)
+
 ### Difference search `[REQ:DIFF_SEARCH]`
 
 Difference search finds files and directories that differ across your workspace panes. It's designed for comparing similar directory structures—like backup copies, release versions, or synced folders—by highlighting entries that are missing or have different sizes.
@@ -202,6 +204,8 @@ Goful offers a **unique n-way directory comparison** capability that goes beyond
 - **Parallel backup verification**: Validate that local, remote, and archive copies are identical
 - **Multi-version analysis**: Track changes across several release versions at once
 - **Distributed system checks**: Verify configuration consistency across multiple servers
+
+![demo_diff_report](.github/demo_diff_report.gif)
 
 **CLI command**: Run a non-interactive batch comparison with YAML output:
 
@@ -457,6 +461,8 @@ Examples of customizing:
 - Results persist until the comparison index is rebuilt (e.g., toggling comparison colors off/on or reloading directories).
 - Terminal support for underline and strikethrough varies; most modern terminals (iTerm2, gnome-terminal, Windows Terminal) render both attributes correctly.
 
+![demo_compare](.github/demo_compare.gif)
+
 **Configure the palette**
 
 The palette loads from a YAML file resolved in the usual precedence order: the `-compare-colors /path/to/colors.yaml` flag wins, next `GOFUL_COMPARE_COLORS=/path/to/colors.yaml`, then the default `~/.goful/compare_colors.yaml`. Edit or create the file, restart goful so the config is reloaded during startup, and press `` ` `` to see the new scheme:
@@ -641,19 +647,7 @@ $ goful ~/src/dotfiles ~/src/goful ~/Downloads
 - If an argument does not exist or is not a directory, goful prints `message.Errorf` output explaining the issue and continues processing the remaining entries. When every argument fails, startup falls back to the persisted workspace layout.
 - Set `GOFUL_DEBUG_WORKSPACE=1` to emit `DEBUG: [IMPL:WORKSPACE_START_DIRS] ...` lines that document the parsed arguments and window assignments—useful when debugging automation scripts or verifying CI launches.
 - Launching without trailing directories keeps the historical behavior (state restoration or default layout), so existing workflows continue to work unchanged.
-
-### Startup Workspace Directories
-
-`[REQ:WORKSPACE_START_DIRS]` and `[ARCH:WORKSPACE_BOOTSTRAP]` let you tell goful which directories to open **after** the usual CLI flags—every remaining positional argument seeds one workspace (tab) in the order provided:
-
-```bash
-$ goful ~/src/dotfiles ~/src/goful ~/Downloads
-```
-
-- When at least one directory is supplied, goful resizes the workspace list to match (creating or closing tabs as needed) and focuses the first entry. Provide duplicates if you want multiple tabs pointing to the same path; the order is preserved exactly as entered.
-- When no positional arguments are present, the historical startup behavior (state.json restoration or default layout) remains unchanged.
-- Invalid entries surface via `message.Errorf` before the UI launches so you can fix typos without guessing which path failed.
-- Set `GOFUL_DEBUG_WORKSPACE=1` to log `DEBUG: [IMPL:WORKSPACE_START_DIRS] ...` lines that describe how CLI arguments were parsed, which workspaces were created/removed, and which directories were applied—handy when automating project layouts.
+- When at least one directory is supplied, goful resizes the workspace list to match (creating or closing tabs as needed) and focuses the first entry.
 
 ## Documentation
 
