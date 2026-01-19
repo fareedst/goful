@@ -11,7 +11,9 @@ func newTestDirectory(t *testing.T, path string) *Directory {
 	t.Helper()
 	cwd, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("Getwd: %v", err)
+		// Fallback to system temp directory if current directory is deleted
+		// (can happen during parallel test execution on Ubuntu)
+		cwd = os.TempDir()
 	}
 	dir := NewDirectory(0, 0, 80, 20)
 	dir.Chdir(path)

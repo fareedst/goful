@@ -3,7 +3,7 @@
 **Cross-References**: [ARCH:TESTING_STRATEGY] [REQ:*]  
 **Status**: Active  
 **Created**: 2025-12-18  
-**Last Updated**: 2026-01-17
+**Last Updated**: 2026-01-18
 
 ---
 
@@ -58,6 +58,24 @@ function testIntegrationScenario_REQ_CONFIGURABLE_STATE_PATHS() {
 
 > **Log** the execution of these tests alongside your `[PROC:TOKEN_VALIDATION]` run so future audits see when behavior was last verified.
 
+### Test Reliability: Parallel Execution Compatibility
+
+Tests that change the working directory must handle cases where `os.Getwd()` fails during parallel test execution. This can occur on Ubuntu when the current working directory is deleted by another test's cleanup before `os.Getwd()` is called.
+
+**Fix Pattern** (2026-01-18):
+- Use `os.TempDir()` as a fallback when `os.Getwd()` fails
+- Ensures tests always have a valid directory to restore to, even if the original directory no longer exists
+- Applied to `newTestDirectory()` helper in `filer/integration_test.go` and `TestFindFileByName_REQ_SYNC_COMMANDS` in `app/window_wide_test.go`
+
+```go
+origDir, err := os.Getwd()
+if err != nil {
+    // Fallback to system temp directory if current directory is deleted
+    // (can happen during parallel test execution on Ubuntu)
+    origDir = os.TempDir()
+}
+```
+
 ## Code Markers
 
 - Test files include `[IMPL:TESTING] [ARCH:TESTING_STRATEGY]` comments
@@ -76,6 +94,7 @@ Tests that must reference `[REQ:*]`:
 | Date | Commit | Validation Result | Notes |
 |------|--------|-------------------|-------|
 | 2025-12-18 | — | ⏳ Pending | Template placeholder |
+| 2026-01-18 | — | ✅ Pass | Fixed Ubuntu test failures from `os.Getwd()` errors during parallel execution |
 
 ## Related Decisions
 

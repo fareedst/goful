@@ -15,7 +15,9 @@ func TestFindFileByName_REQ_SYNC_COMMANDS(t *testing.T) {
 	// Save original directory at the start (before any other tests might change it)
 	origDir, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("failed to get original directory: %v", err)
+		// Fallback to system temp directory if current directory is deleted
+		// (can happen during parallel test execution on Ubuntu)
+		origDir = os.TempDir()
 	}
 
 	// Create a temp directory with test files
