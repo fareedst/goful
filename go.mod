@@ -1,4 +1,4 @@
-module github.com/anmitsu/goful
+module github.com/fareedst/goful
 
 // [IMPL:GO_MOD_UPDATE] [ARCH:GO_RUNTIME_STRATEGY] [REQ:GO_TOOLCHAIN_LTS]
 // Adopt the Go 1.24 LTS baseline for consistent local + CI builds.

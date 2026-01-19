@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anmitsu/goful/filer"
+	"github.com/fareedst/goful/filer"
 )
 
 func resetExcludeState(t *testing.T) {

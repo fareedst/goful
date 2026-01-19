@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/widget"
 )
 
 type fakeMode struct {

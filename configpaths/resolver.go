@@ -3,7 +3,7 @@ package configpaths
 import (
 	"os"
 
-	"github.com/anmitsu/goful/util"
+	"github.com/fareedst/goful/util"
 )
 
 const (

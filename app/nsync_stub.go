@@ -8,7 +8,7 @@ package app
 import (
 	"fmt"
 
-	"github.com/anmitsu/goful/message"
+	"github.com/fareedst/goful/message"
 )
 
 // CopyAll displays a message that nsync is not available on this platform.

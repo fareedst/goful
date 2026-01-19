@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/anmitsu/goful/filer"
+	"github.com/fareedst/goful/filer"
 )
 
 // newTestGoful creates a minimal Goful instance with a workspace containing two directories.

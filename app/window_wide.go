@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/anmitsu/goful/cmdline"
-	"github.com/anmitsu/goful/message"
+	"github.com/fareedst/goful/cmdline"
+	"github.com/fareedst/goful/message"
 )
 
 // SyncResult holds the result of a sync operation.

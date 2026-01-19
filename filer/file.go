@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/anmitsu/goful/look"
-	"github.com/anmitsu/goful/message"
-	"github.com/anmitsu/goful/util"
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/look"
+	"github.com/fareedst/goful/message"
+	"github.com/fareedst/goful/util"
+	"github.com/fareedst/goful/widget"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 )

@@ -1,8 +1,8 @@
 # Goful
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/anmitsu/goful)](https://goreportcard.com/report/github.com/anmitsu/goful)
-[![Go Reference](https://pkg.go.dev/badge/github.com/anmitsu/goful.svg)](https://pkg.go.dev/github.com/anmitsu/goful)
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/anmitsu/goful/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fareedst/goful)](https://goreportcard.com/report/github.com/fareedst/goful)
+[![Go Reference](https://pkg.go.dev/badge/github.com/fareedst/goful.svg)](https://pkg.go.dev/github.com/fareedst/goful)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/fareedst/goful/blob/master/LICENSE)
 
 Goful is a CUI file manager written in Go.
 
@@ -17,17 +17,17 @@ Goful is a CUI file manager written in Go.
 
 ### Pre-build binaries
 
-See [releases](https://github.com/anmitsu/goful/releases).
+See [releases](https://github.com/fareedst/goful/releases).
 
 ### Go version >= 1.16
 
-    $ go install github.com/anmitsu/goful@latest
+    $ go install github.com/fareedst/goful@latest
     ...
     $ goful
 
 ### Go version < 1.16
 
-    $ go get github.com/anmitsu/goful
+    $ go get github.com/fareedst/goful
     ...
     $ goful
 
@@ -549,7 +549,7 @@ Recommend remain original `main.go` and copy to own `main.go` for example:
 
 Go to source directory
 
-    $ cd $GOPATH/src/github.com/anmitsu/goful
+    $ cd $GOPATH/src/github.com/fareedst/goful
 
 Copy original `main.go` to `my/goful` directory
 

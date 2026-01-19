@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/anmitsu/goful/look"
-	"github.com/anmitsu/goful/message"
-	"github.com/anmitsu/goful/util"
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/look"
+	"github.com/fareedst/goful/message"
+	"github.com/fareedst/goful/util"
+	"github.com/fareedst/goful/widget"
 )
 
 // Directory is a list box to store file stats.

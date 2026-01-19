@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/anmitsu/goful/util"
+	"github.com/fareedst/goful/util"
 	"github.com/google/shlex"
 )
 

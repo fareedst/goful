@@ -5,7 +5,7 @@ package look
 import (
 	"sync"
 
-	"github.com/anmitsu/goful/filer/comparecolors"
+	"github.com/fareedst/goful/filer/comparecolors"
 	"github.com/gdamore/tcell/v2"
 )
 

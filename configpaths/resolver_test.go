@@ -3,7 +3,7 @@ package configpaths
 import (
 	"testing"
 
-	"github.com/anmitsu/goful/util"
+	"github.com/fareedst/goful/util"
 )
 
 func stubLookup(values map[string]string) func(string) (string, bool) {

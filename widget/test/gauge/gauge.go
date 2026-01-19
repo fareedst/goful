@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/widget"
 )
 
 func main() {

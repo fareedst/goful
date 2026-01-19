@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/anmitsu/goful/filer"
-	"github.com/anmitsu/goful/message"
-	"github.com/anmitsu/goful/util"
+	"github.com/fareedst/goful/filer"
+	"github.com/fareedst/goful/message"
+	"github.com/fareedst/goful/util"
 )
 
 const startupDebugPrefix = "DEBUG: [IMPL:WORKSPACE_START_DIRS] [ARCH:WORKSPACE_BOOTSTRAP] [REQ:WORKSPACE_START_DIRS]"

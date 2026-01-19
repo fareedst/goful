@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/widget"
 )
 
 // mockFileInfo implements os.FileInfo for testing.

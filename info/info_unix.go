@@ -9,9 +9,9 @@ import (
 	"os/user"
 	"syscall"
 
-	"github.com/anmitsu/goful/look"
-	"github.com/anmitsu/goful/util"
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/look"
+	"github.com/fareedst/goful/util"
+	"github.com/fareedst/goful/widget"
 	"github.com/mattn/go-runewidth"
 )
 

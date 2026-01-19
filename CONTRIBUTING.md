@@ -7,7 +7,7 @@ Thanks for helping improve goful! This guide captures the workflow expectations 
 1. Install Go `1.24.x` (we track LTS per `[REQ:GO_TOOLCHAIN_LTS]`).
 2. Clone the repo and install dependencies:
    ```bash
-   git clone https://github.com/anmitsu/goful.git
+   git clone https://github.com/fareedst/goful.git
    cd goful
    go mod download
    ```

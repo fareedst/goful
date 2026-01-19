@@ -2,7 +2,7 @@
 package widget
 
 import (
-	"github.com/anmitsu/goful/look"
+	"github.com/fareedst/goful/look"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 )

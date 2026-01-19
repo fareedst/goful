@@ -3,10 +3,10 @@ package externalmenu
 import (
 	"strings"
 
-	"github.com/anmitsu/goful/app"
-	"github.com/anmitsu/goful/externalcmd"
-	"github.com/anmitsu/goful/menu"
-	"github.com/anmitsu/goful/message"
+	"github.com/fareedst/goful/app"
+	"github.com/fareedst/goful/externalcmd"
+	"github.com/fareedst/goful/menu"
+	"github.com/fareedst/goful/message"
 )
 
 const placeholderExternalCommandLabel = "no external commands configured"

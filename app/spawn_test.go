@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/anmitsu/goful/filer"
-	"github.com/anmitsu/goful/util"
+	"github.com/fareedst/goful/filer"
+	"github.com/fareedst/goful/util"
 )
 
 func TestExpandMacro(t *testing.T) {

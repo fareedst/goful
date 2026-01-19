@@ -3,11 +3,11 @@ package main
 import (
 	"testing"
 
-	"github.com/anmitsu/goful/app"
-	"github.com/anmitsu/goful/cmdline"
-	"github.com/anmitsu/goful/filer"
-	"github.com/anmitsu/goful/menu"
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/app"
+	"github.com/fareedst/goful/cmdline"
+	"github.com/fareedst/goful/filer"
+	"github.com/fareedst/goful/menu"
+	"github.com/fareedst/goful/widget"
 )
 
 // [TEST:KEYMAP_BASELINE] helper for asserting canonical bindings exist.

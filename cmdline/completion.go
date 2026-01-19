@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/anmitsu/goful/util"
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/util"
+	"github.com/fareedst/goful/widget"
 	"github.com/google/shlex"
 )
 

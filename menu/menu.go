@@ -4,7 +4,7 @@ package menu
 import (
 	"fmt"
 
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/widget"
 )
 
 var menusMap = map[string][]*menuItem{}

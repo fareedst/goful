@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/widget"
 )
 
 // DiffSearchState holds the state for a difference search session.

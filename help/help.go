@@ -6,8 +6,8 @@ package help
 import (
 	"strings"
 
-	"github.com/anmitsu/goful/look"
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/look"
+	"github.com/fareedst/goful/widget"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 )

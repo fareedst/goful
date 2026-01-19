@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/anmitsu/goful/filer"
+	"github.com/fareedst/goful/filer"
 )
 
 // TestFindFileByName_REQ_SYNC_COMMANDS tests the FindFileByName helper.

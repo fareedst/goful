@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anmitsu/goful/filer"
-	"github.com/anmitsu/goful/message"
-	"github.com/anmitsu/goful/progress"
-	"github.com/anmitsu/goful/util"
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/filer"
+	"github.com/fareedst/goful/message"
+	"github.com/fareedst/goful/progress"
+	"github.com/fareedst/goful/util"
+	"github.com/fareedst/goful/widget"
 )
 
 func (g *Goful) rename(src, dst string) {

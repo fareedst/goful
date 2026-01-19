@@ -3,7 +3,7 @@ package externalmenu
 import (
 	"testing"
 
-	"github.com/anmitsu/goful/externalcmd"
+	"github.com/fareedst/goful/externalcmd"
 )
 
 func TestEnsureMenuSpecsAddsPlaceholder_REQ_EXTERNAL_COMMAND_CONFIG(t *testing.T) {

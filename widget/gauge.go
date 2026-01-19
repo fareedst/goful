@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anmitsu/goful/look"
-	"github.com/anmitsu/goful/util"
+	"github.com/fareedst/goful/look"
+	"github.com/fareedst/goful/util"
 )
 
 // ProgressGauge is a progress bar changing with time.

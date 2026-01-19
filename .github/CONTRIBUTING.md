@@ -7,7 +7,7 @@ Conduct](CODE_OF_CONDUCT.md).
 
 ## Pull Request
 
-1. Fork [https://github.com/anmitsu/goful/fork](https://github.com/anmitsu/goful/fork)
+1. Fork [https://github.com/fareedst/goful/fork](https://github.com/fareedst/goful/fork)
 2. Create a feature branch
 3. Commit your changes (follow the [Conventional Commits](https://www.conventionalcommits.org/))
 4. Rebase your local changes against the `master` branch

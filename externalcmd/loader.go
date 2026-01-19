@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/anmitsu/goful/util"
+	"github.com/fareedst/goful/util"
 	"gopkg.in/yaml.v3"
 )
 

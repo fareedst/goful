@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/anmitsu/goful/cmdline"
-	"github.com/anmitsu/goful/look"
-	"github.com/anmitsu/goful/message"
-	"github.com/anmitsu/goful/util"
-	"github.com/anmitsu/goful/widget"
+	"github.com/fareedst/goful/cmdline"
+	"github.com/fareedst/goful/look"
+	"github.com/fareedst/goful/message"
+	"github.com/fareedst/goful/util"
+	"github.com/fareedst/goful/widget"
 )
 
 // match shell separators, macros, options and spaces.
