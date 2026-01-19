@@ -97,6 +97,8 @@ var keystrokeCatalog = []string{
 	":                    Shell suspend",
 	"",
 	"=== Application ===",
+	// [IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]
+	"Version: 1.0.0",
 	"?                    Help (this popup)",
 	"q, Q                 Quit",
 	"",

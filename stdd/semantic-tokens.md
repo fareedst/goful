@@ -150,6 +150,7 @@ When referencing other tokens:
 - `[REQ:DOCKER_WINDOWS_CONTAINER]` - Windows container support for Goful testing on Windows Server
 - `[REQ:CTRL_V_PAGE_DOWN]` - Control-V works as Page Down on macOS terminals with paste interception
 - `[REQ:CLICKABLE_WORKSPACE_TABS]` - Clickable workspace tabs with pill styling for macOS accessibility
+- `[REQ:VERSION_NUMBER]` - Application version number display in CLI help and help popup
 - Add your requirements tokens here
 
 ### Non-Functional Requirements
@@ -208,6 +209,7 @@ When referencing other tokens:
 - `[ARCH:DOCKER_WINDOWS_BUILD]` - Docker Windows build strategy for Windows container support [REQ:DOCKER_WINDOWS_CONTAINER]
 - `[ARCH:KEY_TRANSLATION]` - Key translation architecture for platform-specific key handling [REQ:CTRL_V_PAGE_DOWN]
 - `[ARCH:CLICKABLE_WORKSPACE_TABS]` - Clickable workspace tabs with pill styling and hit-testing [REQ:CLICKABLE_WORKSPACE_TABS]
+- `[ARCH:VERSION_DISPLAY]` - Version display architecture for CLI and TUI contexts [REQ:VERSION_NUMBER]
 - Add your architecture tokens here
 
 ## Implementation Tokens Registry
@@ -280,6 +282,7 @@ When referencing other tokens:
 - `[IMPL:DOCKERFILE_WINDOWS]` - Windows Dockerfile for Windows container support [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER]
 - `[IMPL:CTRL_V_MACOS]` - Control-V key translation for macOS terminal compatibility [ARCH:KEY_TRANSLATION] [REQ:CTRL_V_PAGE_DOWN]
 - `[IMPL:CLICKABLE_WORKSPACE_TABS]` - Clickable workspace tabs with pill styling [ARCH:CLICKABLE_WORKSPACE_TABS] [REQ:CLICKABLE_WORKSPACE_TABS]
+- `[IMPL:VERSION_NUMBER]` - Version number display implementation for CLI and TUI [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]
 - Add your implementation tokens here
 
 ## Test Tokens Registry

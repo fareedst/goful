@@ -109,6 +109,7 @@ Example: `[IMPL:CONFIG_STRUCT]` → `implementation-decisions/IMPL-CONFIG_STRUCT
 | `[IMPL:DOCKERFILE_MULTISTAGE]` | Multi-Stage Dockerfile | Active | [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP] | [Detail](implementation-decisions/IMPL-DOCKERFILE_MULTISTAGE.md) |
 | `[IMPL:DOCKER_COMPOSE_CONFIG]` | Docker Compose Configuration | Active | [ARCH:DOCKER_BUILD_STRATEGY] [REQ:DOCKER_INTERACTIVE_SETUP] | [Detail](implementation-decisions/IMPL-DOCKER_COMPOSE_CONFIG.md) |
 | `[IMPL:DOCKERFILE_WINDOWS]` | Windows Dockerfile | Active | [ARCH:DOCKER_WINDOWS_BUILD] [REQ:DOCKER_WINDOWS_CONTAINER] | [Detail](implementation-decisions/IMPL-DOCKERFILE_WINDOWS.md) |
+| `[IMPL:VERSION_NUMBER]` | Version Number Display | Active | [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER] | [Detail](implementation-decisions/IMPL-VERSION_NUMBER.md) |
 
 ### Status Values
 

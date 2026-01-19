@@ -58,6 +58,7 @@ Each requirement includes:
 | [REQ:ESCAPE_KEY_BEHAVIOR] | Escape key closes modal widgets | P0 | ✅ Implemented | [ARCH:ESCAPE_TRANSLATION] | [IMPL:ESCAPE_TRANSLATION] |
 | [REQ:DOCKER_INTERACTIVE_SETUP] | Docker-based interactive Goful execution | P2 | ✅ Implemented | [ARCH:DOCKER_BUILD_STRATEGY] | [IMPL:DOCKERFILE_MULTISTAGE], [IMPL:DOCKER_COMPOSE_CONFIG] |
 | [REQ:DOCKER_WINDOWS_CONTAINER] | Windows container support for Goful testing | P2 | ✅ Implemented | [ARCH:DOCKER_WINDOWS_BUILD] | [IMPL:DOCKERFILE_WINDOWS] |
+| [REQ:VERSION_NUMBER] | Application version number display | P2 | ✅ Implemented | [ARCH:VERSION_DISPLAY] | [IMPL:VERSION_NUMBER] |
 
 ### Non-Functional Requirements
 
@@ -1505,4 +1506,35 @@ These may be considered for future iterations but are not required for the initi
 - Implementation in `app/goful.go`: `handleLeftClick()` workspace tab check.
 - Implementation in `main.go`: Callback wiring to `SwitchToWorkspace()`.
 - Token validation: `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1823 token references across 85 files.`
+
+### [REQ:VERSION_NUMBER] Application Version Number Display
+
+**Priority: P2 (Nice-to-have)**
+
+- **Description**: The application must display a version number (1.0.0) in both CLI help output and the help popup within the TUI. A `--version` flag must print the version and exit without starting the TUI.
+- **Rationale**: Users need to identify which version they're running for support, compatibility checks, and bug reporting. Displaying version in both CLI and TUI contexts ensures accessibility regardless of how the application is invoked.
+- **Satisfaction Criteria**:
+  - Version constant defined in code as single source of truth
+  - Version appears in `--help` output (CLI help text)
+  - Version appears in help popup (press `?` key in TUI)
+  - `--version` flag prints version to stdout and exits with code 0
+  - Version is consistently displayed as "1.0.0" across all contexts
+- **Validation Criteria**:
+  - Manual verification of CLI help output shows version information
+  - Manual verification of help popup displays version
+  - Manual verification of `--version` flag prints version and exits
+  - Code review confirms single version constant exists
+  - Token validation confirms `[REQ:VERSION_NUMBER]`, `[ARCH:VERSION_DISPLAY]`, and `[IMPL:VERSION_NUMBER]` references exist
+- **Architecture**: See `architecture-decisions.md` § Version Display [ARCH:VERSION_DISPLAY]
+- **Implementation**: See `implementation-decisions/IMPL-VERSION_NUMBER.md`
+
+**Status**: ✅ Implemented
+
+**Validation Evidence (2026-01-20)**:
+- `goful --version` prints "1.0.0" and exits with code 0
+- `goful --help` displays "goful version 1.0.0" at the top of help output
+- Help popup (press `?` in TUI) displays "Version: 1.0.0" in "=== Application ===" section
+- Implementation in `main.go`: `const version = "1.0.0"`, `versionFlag`, `usage()` function, version check before TUI initialization
+- Implementation in `help/help.go`: version entry in `keystrokeCatalog`
+- Token validation: All code markers include `[IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]`
 

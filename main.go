@@ -31,6 +31,9 @@ import (
 
 const debugWorkspaceEnv = "GOFUL_DEBUG_WORKSPACE"
 
+// [IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]
+const version = "1.0.0"
+
 var (
 	stateFlag = flag.String(
 		"state",
@@ -69,10 +72,34 @@ var (
 		false,
 		"Suppress progress output to stderr (only with --diff-report)",
 	)
+	// [IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]
+	versionFlag = flag.Bool(
+		"version",
+		false,
+		"Print version and exit",
+	)
 )
 
+// [IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]
+// usage prints the help text including version information.
+func usage() {
+	fmt.Fprintf(os.Stderr, "goful version %s\n\n", version)
+	fmt.Fprintf(os.Stderr, "Usage: goful [flags] [directories...]\n\n")
+	fmt.Fprintf(os.Stderr, "Flags:\n")
+	flag.PrintDefaults()
+}
+
 func main() {
+	// [IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]
+	flag.Usage = usage
 	flag.Parse()
+
+	// [IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]
+	// Handle version flag before any TUI initialization
+	if *versionFlag {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	// [IMPL:BATCH_DIFF_REPORT] [ARCH:BATCH_DIFF_REPORT] [REQ:BATCH_DIFF_REPORT]
 	// Handle batch diff report mode before any TUI initialization

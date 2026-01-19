@@ -1459,3 +1459,39 @@ The following tasks were identified during an STDD documentation review to addre
 - `/opt/homebrew/bin/bash ./scripts/validate_tokens.sh` → `DIAGNOSTIC: [PROC:TOKEN_VALIDATION] verified 1823 token references across 85 files.`
 
 **Priority Rationale**: P1 because it enables macOS users to switch workspaces, which is currently blocked by unreliable Meta key handling in macOS terminals.
+
+## P2: Version Number Display [REQ:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [IMPL:VERSION_NUMBER]
+
+**Status**: ✅ Complete
+
+**Description**: Add version 1.0.0 display to CLI help output and help popup. Include `--version` flag that prints version and exits.
+
+**Dependencies**: None
+
+**Subtasks**:
+- [x] Define version constant (1.0.0) in main.go [REQ:VERSION_NUMBER] [IMPL:VERSION_NUMBER]
+- [x] Add --version flag that prints version and exits [REQ:VERSION_NUMBER] [IMPL:VERSION_NUMBER]
+- [x] Override flag.Usage() to include version in CLI help output [REQ:VERSION_NUMBER] [IMPL:VERSION_NUMBER]
+- [x] Add version display to help popup in help/help.go [REQ:VERSION_NUMBER] [IMPL:VERSION_NUMBER]
+- [x] Token audit & validation [PROC:TOKEN_AUDIT] [PROC:TOKEN_VALIDATION]
+
+**Completion Criteria**:
+- [x] All subtasks complete
+- [x] Version constant defined in code
+- [x] Version appears in --help output
+- [x] Version appears in help popup (press ?)
+- [x] --version flag prints version and exits
+- [x] Manual verification confirms all display locations
+- [x] Documentation updated
+- [x] `[PROC:TOKEN_AUDIT]` and `[PROC:TOKEN_VALIDATION]` outcomes logged
+
+**Validation Evidence (2026-01-20)**:
+- `go build ./...` - successful
+- `goful --version` prints "1.0.0" and exits with code 0
+- `goful --help` displays "goful version 1.0.0" at the top of help output
+- Help popup (press `?` in TUI) displays "Version: 1.0.0" in "=== Application ===" section
+- Implementation in `main.go`: `const version = "1.0.0"`, `versionFlag`, `usage()` function, version check before TUI initialization
+- Implementation in `help/help.go`: version entry in `keystrokeCatalog`
+- Token validation: All code markers include `[IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]`
+
+**Priority Rationale**: P2 because version display is a nice-to-have feature that improves user experience and support capabilities, but does not block core functionality.

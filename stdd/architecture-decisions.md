@@ -1595,3 +1595,31 @@ func executeSync(ws *Workspace, filename string, newName string, op Operation, i
 - Tests reference `[REQ:CLICKABLE_WORKSPACE_TABS]` in names/comments
 
 **Cross-References**: [REQ:CLICKABLE_WORKSPACE_TABS], [IMPL:CLICKABLE_WORKSPACE_TABS], [ARCH:TOOLBAR_LAYOUT], [REQ:MODULE_VALIDATION]
+
+## N. Version Display [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]
+
+### Decision: Version displayed in both CLI (help text) and TUI (help popup) contexts
+**Rationale:**
+- CLI display enables version checking without starting TUI, useful for scripts and automation
+- TUI display provides version information during normal usage without requiring CLI access
+- Single source of truth (constant) prevents version drift between different display locations
+- Consistent version format across all contexts improves user experience
+
+**Alternatives Considered:**
+- **Version only in CLI**: rejected - users in TUI should see version without exiting to CLI
+- **Version only in TUI**: rejected - CLI users need version without TUI startup overhead
+- **Build-time version injection**: rejected for initial implementation (can be enhanced later with build tags/ldflags)
+- **Separate version files**: rejected - single constant is simpler and prevents synchronization issues
+
+**Implementation:**
+- Define `const version = "1.0.0"` in `main.go` as single source of truth
+- Override `flag.Usage()` to include version at top of help text
+- Add `--version` flag that prints version and exits before TUI initialization
+- Add version entry to `help/help.go` keystroke catalog in "=== Application ===" section
+
+**Token Coverage** `[PROC:TOKEN_AUDIT]`:
+- `main.go`: `// [IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]` comments for version constant, flag handling, and usage override
+- `help/help.go`: `// [IMPL:VERSION_NUMBER] [ARCH:VERSION_DISPLAY] [REQ:VERSION_NUMBER]` comment for version entry in catalog
+- Tests: Manual verification tests reference `[REQ:VERSION_NUMBER]` in test names/comments
+
+**Cross-References**: [REQ:VERSION_NUMBER], [IMPL:VERSION_NUMBER]
